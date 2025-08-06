@@ -54,11 +54,11 @@ function initDatabase() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // 2. 蒙马特颜色表 (基础颜料) - 添加名称唯一约束
+    // 2. 蒙马特颜色表 (基础颜料)
     db.run(`CREATE TABLE IF NOT EXISTS mont_marte_colors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL,        -- 添加 UNIQUE 约束，确保颜色名称唯一
-        image_path TEXT,                   -- 颜色照片路径
+        name TEXT NOT NULL,               -- 颜色名称: 朱红, 桔黄等
+        image_path TEXT,                  -- 颜色照片路径
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
@@ -175,25 +175,13 @@ app.post('/api/mont-marte-colors', upload.single('image'), (req, res) => {
     const { name } = req.body;
     const imagePath = req.file ? req.file.filename : null;
     
-    // 先检查是否已存在相同名称的颜色
-    db.get('SELECT id FROM mont_marte_colors WHERE LOWER(name) = LOWER(?)', [name], (err, existing) => {
+    db.run('INSERT INTO mont_marte_colors (name, image_path) VALUES (?, ?)', 
+           [name, imagePath], function(err) {
         if (err) {
-            return res.status(500).json({ error: err.message });
+            res.status(400).json({ error: err.message });
+        } else {
+            res.json({ id: this.lastID, name, image_path: imagePath });
         }
-        
-        if (existing) {
-            return res.status(400).json({ error: '该颜色名称已存在' });
-        }
-        
-        // 插入新颜色
-        db.run('INSERT INTO mont_marte_colors (name, image_path) VALUES (?, ?)', 
-               [name, imagePath], function(err) {
-            if (err) {
-                res.status(400).json({ error: err.message });
-            } else {
-                res.json({ id: this.lastID, name, image_path: imagePath });
-            }
-        });
     });
 });
 
@@ -422,6 +410,83 @@ app.get('/api/artworks/:id', (req, res) => {
             });
         });
     });
+});
+
+// 删除蒙马特颜色
+app.delete('/api/mont-marte-colors/:id', (req, res) => {
+    const colorId = req.params.id;
+    
+    // 首先检查是否被自配颜色引用
+    // TODO: 当自配颜色功能完善后，需要检查 custom_colors 表中的 formula 字段
+    // 是否包含了这个颜色的名称
+    /*
+    db.get('SELECT name FROM mont_marte_colors WHERE id = ?', [colorId], (err, color) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        
+        if (!color) {
+            return res.status(404).json({ error: '颜色不存在' });
+        }
+        
+        // 检查是否在自配颜色配方中被引用
+        db.get(`
+            SELECT COUNT(*) as count 
+            FROM custom_colors 
+            WHERE formula LIKE '%' || ? || '%'
+        `, [color.name], (err, result) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            
+            if (result.count > 0) {
+                return res.status(400).json({ 
+                    error: '此颜色已被自配色引用，暂时无法删除' 
+                });
+            }
+            
+            // 执行删除
+            deleteColor();
+        });
+    });
+    */
+    
+    // 暂时直接删除，后续完善引用检查
+    function deleteColor() {
+        // 获取图片路径以便删除文件
+        db.get('SELECT image_path FROM mont_marte_colors WHERE id = ?', [colorId], (err, row) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            
+            // 删除数据库记录
+            db.run('DELETE FROM mont_marte_colors WHERE id = ?', [colorId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+                
+                if (this.changes === 0) {
+                    return res.status(404).json({ error: '颜色不存在' });
+                }
+                
+                // 如果有图片，尝试删除图片文件
+                if (row && row.image_path) {
+                    const imagePath = path.join(__dirname, 'uploads', row.image_path);
+                    fs.unlink(imagePath, (err) => {
+                        if (err) {
+                            console.error('删除图片文件失败:', err);
+                            // 图片删除失败不影响整体操作
+                        }
+                    });
+                }
+                
+                res.json({ success: true, message: '颜色删除成功' });
+            });
+        });
+    }
+    
+    // 直接调用删除函数（暂时跳过引用检查）
+    deleteColor();
 });
 
 // 启动服务器

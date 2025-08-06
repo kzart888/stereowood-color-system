@@ -889,6 +889,46 @@
                     }
                 },
                 
+                // 删除蒙马特颜色
+                async deleteMontMarteColor(color) {
+                    try {
+                        await this.$confirm(
+                            `确定要删除颜色 "${color.name}" 吗？`,
+                            '删除确认',
+                            {
+                                confirmButtonText: '确认',
+                                cancelButtonText: '取消',
+                                type: 'warning'
+                            }
+                        );
+                        
+                        // 用户点击确认，执行删除
+                        const response = await axios.delete(`${API_BASE_URL}/mont-marte-colors/${color.id}`);
+                        
+                        if (response.data.success) {
+                            this.$message.success('颜色删除成功');
+                            await this.loadMontMarteColors(); // 重新加载列表
+                        }
+                    } catch (error) {
+                        if (error === 'cancel') {
+                            // 用户点击取消，不做任何操作
+                            return;
+                        }
+                        
+                        // 处理删除错误
+                        if (error.response && error.response.data && error.response.data.error) {
+                            if (error.response.data.error.includes('被引用')) {
+                                this.$message.error('此颜色已被自配色引用，暂时无法删除');
+                            } else {
+                                this.$message.error(error.response.data.error || '删除失败');
+                            }
+                        } else {
+                            console.error('删除颜色失败:', error);
+                            this.$message.error('删除失败');
+                        }
+                    }
+                },
+                
                 // 重置表单
                 resetColorForm() {
                     this.colorForm = {
@@ -953,10 +993,6 @@
                 
                 editMontMarteColor(color) {
                     this.$message.info('修改蒙马特颜色功能待实现');
-                },
-                
-                deleteMontMarteColor(color) {
-                    this.$message.info('删除蒙马特颜色功能待实现');
                 }
             }
         }).use(ElementPlus).mount('#app');
