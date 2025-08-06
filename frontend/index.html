@@ -418,15 +418,34 @@
                 <!-- 第三个页面：蒙马特颜色列表 -->
                 <el-tab-pane label="颜色原料库" name="mont-marte">
                     <div class="tab-content">
-                        <!-- 添加新颜色按钮 -->
-                        <el-button 
-                            type="primary" 
-                            icon="Plus" 
-                            @click="showAddMontMarteDialog = true"
-                            style="margin-bottom: 20px;"
-                        >
-                            添加颜色原料
-                        </el-button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <!-- 添加新颜色按钮 -->
+                            <el-button 
+                                type="primary" 
+                                icon="Plus" 
+                                @click="showAddMontMarteDialog = true"
+                            >
+                                添加颜色原料
+                            </el-button>
+                            
+                            <!-- 排序按钮组 -->
+                            <el-button-group>
+                                <el-button 
+                                    :type="montMarteSortType === 'name' ? 'primary' : 'default'"
+                                    @click="sortByNameClick"
+                                    icon="Sort"
+                                >
+                                    按名称排序
+                                </el-button>
+                                <el-button 
+                                    :type="montMarteSortType === 'time' ? 'primary' : 'default'"
+                                    @click="sortByTimeClick"
+                                    icon="Clock"
+                                >
+                                    按时间排序
+                                </el-button>
+                            </el-button-group>
+                        </div>
                         
                         <!-- 蒙马特颜色列表 -->
                         <div v-if="loading" class="loading">
@@ -640,13 +659,14 @@
                     
                     // 蒙马特颜色相关
                     montMarteColors: [],
+                    montMarteSortType: 'name', // 默认按名称排序
                     showAddMontMarteDialog: false,
                     montMarteForm: {
-                        id: null,  // 添加id字段用于区分新增还是修改
+                        id: null,
                         name: '',
                         imageFile: null,
                         imagePreview: null,
-                        existingImagePath: null  // 保存现有图片路径
+                        existingImagePath: null
                     },
                     // 添加表单验证规则
                     montMarteRules: {
@@ -655,7 +675,10 @@
                             { min: 1, max: 50, message: '名称长度应在 1 到 50 个字符之间', trigger: 'blur' },
                             { validator: this.validateColorName, trigger: 'blur' }
                         ]
-                    }
+                    },
+                    
+                    // 添加滚动位置记录
+                    scrollPosition: 0
                 };
             },
             
@@ -723,11 +746,22 @@
                 },
                 
                 // 加载蒙马特颜色
-                async loadMontMarteColors() {
+                async loadMontMarteColors(keepPosition = false) {
                     try {
+                        if (keepPosition) {
+                            this.saveScrollPosition();
+                        }
+                        
                         this.loading = true;
                         const response = await axios.get(`${API_BASE_URL}/mont-marte-colors`);
                         this.montMarteColors = response.data;
+                        
+                        // 应用当前的排序方式
+                        this.sortMontMarteColors();
+                        
+                        if (keepPosition) {
+                            this.restoreScrollPosition();
+                        }
                     } catch (error) {
                         console.error('加载蒙马特颜色失败:', error);
                         this.$message.error('加载蒙马特颜色失败');
@@ -896,7 +930,7 @@
                         
                         this.showAddMontMarteDialog = false;
                         this.resetMontMarteForm();
-                        await this.loadMontMarteColors();
+                        await this.loadMontMarteColors(true); // 保持滚动位置并重新排序
                     } catch (error) {
                         console.error('保存颜色原料失败:', error);
                         // 检查是否是后端返回的重复错误
@@ -931,7 +965,7 @@
                         
                         if (response.data.success) {
                             this.$message.success('颜色删除成功');
-                            await this.loadMontMarteColors(); // 重新加载列表
+                            await this.loadMontMarteColors(true); // 保持滚动位置并重新排序
                         }
                     } catch (error) {
                         if (error === 'cancel') {
@@ -950,6 +984,115 @@
                             console.error('删除颜色失败:', error);
                             this.$message.error('删除失败');
                         }
+                    }
+                },
+                
+                // 保存滚动位置
+                saveScrollPosition() {
+                    this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+                },
+                
+                // 恢复滚动位置
+                restoreScrollPosition() {
+                    this.$nextTick(() => {
+                        window.scrollTo(0, this.scrollPosition);
+                    });
+                },
+                
+                // 点击按名称排序
+                sortByNameClick() {
+                    this.saveScrollPosition();
+                    this.montMarteSortType = 'name';
+                    this.sortByName();
+                    this.restoreScrollPosition();
+                    this.$message.success('已按名称排序');
+                },
+                
+                // 点击按时间排序
+                sortByTimeClick() {
+                    this.saveScrollPosition();
+                    this.montMarteSortType = 'time';
+                    this.sortByTime();
+                    this.restoreScrollPosition();
+                    this.$message.success('已按修改时间排序');
+                },
+                
+                // 排序蒙马特颜色
+                sortMontMarteColors() {
+                    if (this.montMarteSortType === 'name') {
+                        this.sortByName();
+                    } else if (this.montMarteSortType === 'time') {
+                        this.sortByTime();
+                    }
+                },
+                
+                // 按名称排序
+                sortByName() {
+                    this.montMarteColors.sort((a, b) => {
+                        return this.compareNames(a.name, b.name);
+                    });
+                },
+                
+                // 按修改时间排序（最新的在前）
+                sortByTime() {
+                    this.montMarteColors.sort((a, b) => {
+                        const timeA = new Date(a.updated_at || a.created_at).getTime();
+                        const timeB = new Date(b.updated_at || b.created_at).getTime();
+                        return timeB - timeA; // 降序，最新的在前
+                    });
+                },
+                
+                // 比较两个名称（实现特殊的排序规则）
+                compareNames(nameA, nameB) {
+                    // 获取字符类型：1=特殊字符, 2=数字, 3=英文, 4=中文
+                    const getCharType = (str) => {
+                        if (!str || str.length === 0) return 1;
+                        const firstChar = str[0];
+                        const code = firstChar.charCodeAt(0);
+                        
+                        // 特殊字符和标点符号
+                        if (code < 48 || (code > 57 && code < 65) || (code > 90 && code < 97) || (code > 122 && code < 0x4e00)) {
+                            return 1;
+                        }
+                        // 数字
+                        if (code >= 48 && code <= 57) {
+                            return 2;
+                        }
+                        // 英文字母
+                        if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+                            return 3;
+                        }
+                        // 中文
+                        if (code >= 0x4e00 && code <= 0x9fff) {
+                            return 4;
+                        }
+                        return 1; // 其他情况归为特殊字符
+                    };
+                    
+                    const typeA = getCharType(nameA);
+                    const typeB = getCharType(nameB);
+                    
+                    // 不同类型按优先级排序
+                    if (typeA !== typeB) {
+                        return typeA - typeB;
+                    }
+                    
+                    // 相同类型的处理
+                    if (typeA === 4) {
+                        // 中文使用 localeCompare 的中文排序
+                        return nameA.localeCompare(nameB, 'zh-CN', { numeric: true });
+                    } else if (typeA === 2) {
+                        // 数字按数值大小排序
+                        const numA = parseInt(nameA.match(/^\d+/)[0]);
+                        const numB = parseInt(nameB.match(/^\d+/)[0]);
+                        if (numA !== numB) {
+                            return numA - numB;
+                        }
+                        // 如果数字相同，比较后续部分
+                        return nameA.localeCompare(nameB);
+                    } else {
+                        // 特殊字符和英文使用默认比较
+                        return nameA.localeCompare(nameB);
                     }
                 },
                 
