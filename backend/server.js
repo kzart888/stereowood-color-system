@@ -185,6 +185,85 @@ app.post('/api/mont-marte-colors', upload.single('image'), (req, res) => {
     });
 });
 
+// 修改蒙马特颜色
+app.put('/api/mont-marte-colors/:id', upload.single('image'), (req, res) => {
+    const colorId = req.params.id;
+    const { name, existingImagePath } = req.body;
+    
+    // 先检查新名称是否与其他颜色重复
+    db.get('SELECT id FROM mont_marte_colors WHERE LOWER(name) = LOWER(?) AND id != ?', 
+           [name, colorId], (err, existing) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        
+        if (existing) {
+            return res.status(400).json({ error: '该颜色名称已存在' });
+        }
+        
+        // 获取旧的图片路径（用于后续删除）
+        db.get('SELECT image_path FROM mont_marte_colors WHERE id = ?', [colorId], (err, oldData) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            
+            if (!oldData) {
+                return res.status(404).json({ error: '颜色不存在' });
+            }
+            
+            // 确定新的图片路径
+            let newImagePath;
+            if (req.file) {
+                // 有新上传的图片
+                newImagePath = req.file.filename;
+            } else if (existingImagePath) {
+                // 保留原有图片
+                newImagePath = existingImagePath;
+            } else {
+                // 没有图片
+                newImagePath = null;
+            }
+            
+            // 更新数据库
+            db.run(`UPDATE mont_marte_colors 
+                    SET name = ?, image_path = ?, updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = ?`,
+                   [name, newImagePath, colorId], function(err) {
+                if (err) {
+                    // 如果更新失败且上传了新图片，删除新上传的图片
+                    if (req.file) {
+                        const newImageFullPath = path.join(__dirname, 'uploads', req.file.filename);
+                        fs.unlink(newImageFullPath, (unlinkErr) => {
+                            if (unlinkErr) console.error('删除新上传图片失败:', unlinkErr);
+                        });
+                    }
+                    return res.status(400).json({ error: err.message });
+                }
+                
+                // 如果更新成功且上传了新图片，删除旧图片
+                if (req.file && oldData.image_path && oldData.image_path !== newImagePath) {
+                    const oldImagePath = path.join(__dirname, 'uploads', oldData.image_path);
+                    fs.unlink(oldImagePath, (err) => {
+                        if (err) {
+                            console.error('删除旧图片文件失败:', err);
+                            // 旧图片删除失败不影响整体操作
+                        } else {
+                            console.log('旧图片已删除:', oldData.image_path);
+                        }
+                    });
+                }
+                
+                res.json({ 
+                    id: colorId, 
+                    name, 
+                    image_path: newImagePath,
+                    message: '颜色修改成功'
+                });
+            });
+        });
+    });
+});
+
 // 3. 自配颜色相关API
 // 根据分类获取自配颜色
 app.get('/api/custom-colors/:categoryId', (req, res) => {
