@@ -416,7 +416,7 @@
                 </el-tab-pane>
                 
                 <!-- 第三个页面：蒙马特颜色列表 -->
-                <el-tab-pane label="蒙马特颜色库" name="mont-marte">
+                <el-tab-pane label="颜色原料库" name="mont-marte">
                     <div class="tab-content">
                         <!-- 添加新颜色按钮 -->
                         <el-button 
@@ -425,7 +425,7 @@
                             @click="showAddMontMarteDialog = true"
                             style="margin-bottom: 20px;"
                         >
-                            添加蒙马特颜色
+                            添加颜色原料
                         </el-button>
                         
                         <!-- 蒙马特颜色列表 -->
@@ -556,13 +556,23 @@
             <!-- 添加蒙马特颜色对话框 -->
             <el-dialog 
                 v-model="showAddMontMarteDialog" 
-                title="添加蒙马特颜色" 
+                title="添加颜色原料" 
                 width="500px"
                 @close="resetMontMarteForm"
             >
-                <el-form :model="montMarteForm" label-width="100px">
-                    <el-form-item label="颜色名称">
-                        <el-input v-model="montMarteForm.name" placeholder="例如: 朱红, 桔黄"></el-input>
+                <el-form 
+                    :model="montMarteForm" 
+                    :rules="montMarteRules" 
+                    ref="montMarteFormRef" 
+                    label-width="100px"
+                    @submit.prevent="saveMontMarteColor"
+                >
+                    <el-form-item label="颜色名称" prop="name">
+                        <el-input 
+                            v-model="montMarteForm.name" 
+                            placeholder="例如: 朱红, 桔黄"
+                            @keyup.enter="saveMontMarteColor"
+                        ></el-input>
                     </el-form-item>
                     <el-form-item label="颜色照片">
                         <el-upload
@@ -635,6 +645,14 @@
                         name: '',
                         imageFile: null,
                         imagePreview: null
+                    },
+                    // 添加表单验证规则
+                    montMarteRules: {
+                        name: [
+                            { required: true, message: '颜色名称为必填项', trigger: 'blur' },
+                            { min: 1, max: 50, message: '名称长度应在 1 到 50 个字符之间', trigger: 'blur' },
+                            { validator: this.validateColorName, trigger: 'blur' }
+                        ]
                     }
                 };
             },
@@ -807,8 +825,40 @@
                     }
                 },
                 
+                // 验证颜色名称是否重复
+                validateColorName(rule, value, callback) {
+                    if (value) {
+                        // 检查颜色名称是否已存在（不区分大小写）
+                        const exists = this.montMarteColors.some(color => 
+                            color.name.toLowerCase() === value.toLowerCase()
+                        );
+                        if (exists) {
+                            callback(new Error('列表中已经存在该颜色！'));
+                        } else {
+                            callback();
+                        }
+                    } else {
+                        callback();
+                    }
+                },
+                
                 // 保存蒙马特颜色
                 async saveMontMarteColor() {
+                    // 验证表单
+                    const valid = await this.$refs.montMarteFormRef.validate().catch(() => false);
+                    if (!valid) {
+                        return;
+                    }
+                    
+                    // 再次检查是否重复（防止并发问题）
+                    const exists = this.montMarteColors.some(color => 
+                        color.name.toLowerCase() === this.montMarteForm.name.toLowerCase()
+                    );
+                    if (exists) {
+                        this.$message.error('列表中已经存在该颜色！');
+                        return;
+                    }
+                    
                     try {
                         const formData = new FormData();
                         formData.append('name', this.montMarteForm.name);
@@ -820,13 +870,22 @@
                             headers: { 'Content-Type': 'multipart/form-data' }
                         });
                         
-                        this.$message.success('蒙马特颜色添加成功');
+                        this.$message.success('颜色原料添加成功');
                         this.showAddMontMarteDialog = false;
                         this.resetMontMarteForm();
                         await this.loadMontMarteColors();
                     } catch (error) {
-                        console.error('保存蒙马特颜色失败:', error);
-                        this.$message.error('保存蒙马特颜色失败');
+                        console.error('保存颜色原料失败:', error);
+                        // 检查是否是后端返回的重复错误
+                        if (error.response && error.response.data && error.response.data.error) {
+                            if (error.response.data.error.includes('UNIQUE constraint')) {
+                                this.$message.error('列表中已经存在该颜色！');
+                            } else {
+                                this.$message.error('保存颜色原料失败');
+                            }
+                        } else {
+                            this.$message.error('保存颜色原料失败');
+                        }
                     }
                 },
                 
@@ -855,6 +914,10 @@
                         imageFile: null,
                         imagePreview: null
                     };
+                    // 重置表单验证状态
+                    if (this.$refs.montMarteFormRef) {
+                        this.$refs.montMarteFormRef.resetFields();
+                    }
                 },
                 
                 // 格式化日期

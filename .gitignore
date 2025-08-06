@@ -8,10 +8,10 @@ build/
 # VSCode 用户配置（非必要）
 .vscode/settings.json
 
-# 图片素材
-assets/
-
 # 临时文件
 *.log
 *.tmp
 *.bak
+
+# 忽略图片上传文件夹
+backend/uploads/

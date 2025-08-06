@@ -54,11 +54,11 @@ function initDatabase() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // 2. 蒙马特颜色表 (基础颜料)
+    // 2. 蒙马特颜色表 (基础颜料) - 添加名称唯一约束
     db.run(`CREATE TABLE IF NOT EXISTS mont_marte_colors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,               -- 颜色名称: 朱红, 桔黄等
-        image_path TEXT,                  -- 颜色照片路径
+        name TEXT UNIQUE NOT NULL,        -- 添加 UNIQUE 约束，确保颜色名称唯一
+        image_path TEXT,                   -- 颜色照片路径
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
@@ -175,13 +175,25 @@ app.post('/api/mont-marte-colors', upload.single('image'), (req, res) => {
     const { name } = req.body;
     const imagePath = req.file ? req.file.filename : null;
     
-    db.run('INSERT INTO mont_marte_colors (name, image_path) VALUES (?, ?)', 
-           [name, imagePath], function(err) {
+    // 先检查是否已存在相同名称的颜色
+    db.get('SELECT id FROM mont_marte_colors WHERE LOWER(name) = LOWER(?)', [name], (err, existing) => {
         if (err) {
-            res.status(400).json({ error: err.message });
-        } else {
-            res.json({ id: this.lastID, name, image_path: imagePath });
+            return res.status(500).json({ error: err.message });
         }
+        
+        if (existing) {
+            return res.status(400).json({ error: '该颜色名称已存在' });
+        }
+        
+        // 插入新颜色
+        db.run('INSERT INTO mont_marte_colors (name, image_path) VALUES (?, ?)', 
+               [name, imagePath], function(err) {
+            if (err) {
+                res.status(400).json({ error: err.message });
+            } else {
+                res.json({ id: this.lastID, name, image_path: imagePath });
+            }
+        });
     });
 });
 
