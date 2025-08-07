@@ -5,15 +5,14 @@ const FormulaEditorComponent = {
     name: 'FormulaEditor',
     template: `
         <div class="formula-editor">
-            <!-- 配方表格 -->
             <table class="formula-table">
                 <thead>
                     <tr>
-                        <th width="40">排序</th>
+                        <th width="30">排序</th>
                         <th>颜色原料</th>
                         <th width="100">用量</th>
                         <th width="80">单位</th>
-                        <th width="60">操作</th>
+                        <th width="45">操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -35,6 +34,7 @@ const FormulaEditorComponent = {
                                 placeholder="选择颜色原料"
                                 clearable
                                 filterable
+                                size="small"
                                 @change="onColorChange(index, item.colorId)"
                                 style="width: 100%"
                             >
@@ -54,6 +54,7 @@ const FormulaEditorComponent = {
                                 :precision="1"
                                 placeholder="用量"
                                 controls-position="right"
+                                size="small"
                                 style="width: 100%"
                             />
                         </td>
@@ -61,6 +62,7 @@ const FormulaEditorComponent = {
                             <el-select 
                                 v-model="item.unit" 
                                 placeholder="单位"
+                                size="small"
                                 style="width: 100%"
                             >
                                 <el-option label="g" value="g" />
@@ -69,7 +71,13 @@ const FormulaEditorComponent = {
                             </el-select>
                         </td>
                         <td>
-                            <el-button type="danger" size="small" circle @click="removeItem(index)">
+                            <el-button 
+                                type="danger" 
+                                size="small" 
+                                circle 
+                                @click="removeItem(index)"
+                                style="width: 24px; height: 24px; font-size: 14px; padding: 0;"
+                            >
                                 -
                             </el-button>
                         </td>
@@ -82,9 +90,13 @@ const FormulaEditorComponent = {
                 </tbody>
             </table>
             
-            <!-- 添加按钮 -->
             <div class="add-button-container">
-                <el-button type="primary" circle @click="addItem">
+                <el-button 
+                    type="primary" 
+                    circle 
+                    @click="addItem"
+                    style="width: 32px; height: 32px; padding: 0; font-size: 18px;"
+                >
                     +
                 </el-button>
                 <span class="add-hint">添加颜色原料</span>
@@ -133,17 +145,25 @@ const FormulaEditorComponent = {
         modelValue: {
             immediate: true,
             handler(newVal) {
-                if (newVal !== this.getFormulaString()) {
+                // 防止无限循环：只有当值真的不同时才更新
+                const currentString = this.getFormulaString();
+                if (newVal !== currentString) {
                     this.parseFormula(newVal);
                 }
             }
         },
         
-        // 监听内部数据变化，更新父组件
+        // 可以恢复 formulaItems 的深度监听
         formulaItems: {
             deep: true,
             handler() {
-                this.emitUpdate();
+                // 使用防抖避免频繁触发
+                if (this.updateTimer) {
+                    clearTimeout(this.updateTimer);
+                }
+                this.updateTimer = setTimeout(() => {
+                    this.emitUpdate();
+                }, 100);
             }
         }
     },
@@ -216,6 +236,7 @@ const FormulaEditorComponent = {
                 amount: null,
                 unit: 'g'
             });
+            // 不需要手动调用 emitUpdate，watcher 会处理
         },
         
         // 删除行
@@ -235,6 +256,7 @@ const FormulaEditorComponent = {
                 );
                 
                 this.formulaItems.splice(index, 1);
+                // 不需要手动调用 emitUpdate
             } catch {
                 // 用户取消
             }
@@ -253,6 +275,7 @@ const FormulaEditorComponent = {
                 // 清空当前选择
                 this.formulaItems[index].colorId = null;
             }
+            // 不需要手动调用 emitUpdate
         },
         
         // 拖拽开始
@@ -274,6 +297,7 @@ const FormulaEditorComponent = {
             this.formulaItems.splice(newIndex, 0, dragItem);
             
             this.dragIndex = null;
+            // 不需要手动调用 emitUpdate
         },
         
         // 发送更新事件

@@ -213,15 +213,16 @@ body {
 
 .formula-table th {
     background-color: #f5f7fa;
-    padding: 10px;
+    padding: 6px 8px;  /* 从10px改为6px 8px，更紧凑 */
     text-align: left;
     font-weight: normal;
+    font-size: 13px;  /* 添加字体大小控制 */
     color: #909399;
     border-bottom: 1px solid #ebeef5;
 }
 
 .formula-table td {
-    padding: 8px;
+    padding: 4px 6px;  /* 从8px改为4px 6px，更紧凑 */
     border-bottom: 1px solid #ebeef5;
 }
 
@@ -243,6 +244,7 @@ body {
     text-align: center;
     color: #909399;
     cursor: grab;
+    font-size: 16px;  /* 控制拖拽图标大小 */
 }
 
 .drag-handle:active {
@@ -257,11 +259,34 @@ body {
 
 .add-button-container {
     text-align: center;
-    padding: 10px;
+    padding: 8px;  /* 从10px改为8px */
 }
 
 .add-hint {
     margin-left: 10px;
     color: #909399;
     font-size: 14px;
+}
+
+/* 修复圆形按钮样式 */
+.add-button-container .el-button.is-circle {
+    width: 32px !important;  /* 确保宽高相等 */
+    height: 32px !important;
+    padding: 0 !important;
+    font-size: 18px;
+    line-height: 32px;
+}
+
+/* 调整表格内组件的高度 */
+.formula-table .el-input-number {
+    height: 28px;
+}
+
+.formula-table .el-input-number .el-input__wrapper {
+    padding: 0 8px;
+}
+
+.formula-table .el-select .el-input__wrapper {
+    height: 28px;
+    padding: 0 8px;
 }
