@@ -40,7 +40,27 @@ const CustomColorsComponent = {
                     ></div>
                     <div class="color-info">
                         <div class="color-code">{{ color.color_code }}</div>
-                        <div class="color-formula">配方: {{ color.formula }}</div>
+                        
+                        <!-- 优化的配方显示 -->
+                        <div class="color-formula" v-if="color.formula">
+                            <span class="formula-icon">🎨</span>
+                            <div class="formula-tags">
+                                <span 
+                                    v-for="(item, index) in parseFormulaToTags(color.formula)" 
+                                    :key="index"
+                                    class="formula-tag"
+                                    :title="item.fullText"
+                                >
+                                    <span class="tag-color">{{ item.colorName }}</span>
+                                    <span class="tag-amount">{{ item.amount }}{{ item.unit }}</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div v-else class="color-formula">
+                            <span class="formula-icon">🎨</span>
+                            <span class="no-formula">暂无配方</span>
+                        </div>
+                        
                         <div class="color-layers">适用层: {{ color.applicable_layers || '未指定' }}</div>
                     </div>
                     <div class="color-actions">
@@ -419,6 +439,42 @@ const CustomColorsComponent = {
             if (this.$refs.formRef) {
                 this.$refs.formRef.resetFields();
             }
+        },
+        
+        // 解析配方字符串为标签数组
+        parseFormulaToTags(formulaString) {
+            if (!formulaString || formulaString.trim() === '') {
+                return [];
+            }
+            
+            const tags = [];
+            const parts = formulaString.trim().split(/\s+/);
+            
+            // 解析格式如："钛白 15g 天蓝update1 3g 深绿 1g"
+            for (let i = 0; i < parts.length; i++) {
+                // 检查当前项是否是数量+单位
+                const amountMatch = parts[i].match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5]+)$/);
+                
+                if (amountMatch) {
+                    // 如果是数量+单位，与前一个颜色名组合
+                    if (tags.length > 0 && !tags[tags.length - 1].amount) {
+                        const lastTag = tags[tags.length - 1];
+                        lastTag.amount = amountMatch[1];
+                        lastTag.unit = amountMatch[2];
+                        lastTag.fullText = `${lastTag.colorName} ${amountMatch[1]}${amountMatch[2]}`;
+                    }
+                } else {
+                    // 否则作为新的颜色名
+                    tags.push({
+                        colorName: parts[i],
+                        amount: '',
+                        unit: '',
+                        fullText: parts[i]
+                    });
+                }
+            }
+            
+            return tags;
         }
     }
 };
