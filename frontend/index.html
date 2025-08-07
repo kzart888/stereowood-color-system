@@ -502,10 +502,20 @@
                 title="添加自配颜色" 
                 width="600px"
                 @close="resetColorForm"
+                @open="initColorForm"
             >
-                <el-form :model="colorForm" label-width="100px">
-                    <el-form-item label="颜色分类">
-                        <el-select v-model="colorForm.category_id" placeholder="请选择颜色分类">
+                <el-form 
+                    :model="colorForm" 
+                    :rules="colorRules"
+                    ref="colorFormRef"
+                    label-width="100px"
+                >
+                    <el-form-item label="颜色分类" prop="category_id">
+                        <el-select 
+                            v-model="colorForm.category_id" 
+                            placeholder="请选择颜色分类"
+                            @change="onCategoryChange"
+                        >
                             <el-option 
                                 v-for="category in categories" 
                                 :key="category.id"
@@ -514,10 +524,13 @@
                             ></el-option>
                         </el-select>
                     </el-form-item>
-                    <el-form-item label="颜色编号">
-                        <el-input v-model="colorForm.color_code" placeholder="例如: BU001, YE005"></el-input>
+                    <el-form-item label="颜色编号" prop="color_code">
+                        <el-input 
+                            v-model="colorForm.color_code" 
+                            placeholder="例如: BU001, YE005"
+                        ></el-input>
                     </el-form-item>
-                    <el-form-item label="配方">
+                    <el-form-item label="配方" prop="formula">
                         <el-input 
                             v-model="colorForm.formula" 
                             type="textarea"
@@ -646,6 +659,19 @@
                         applicable_layers: '',
                         imageFile: null,
                         imagePreview: null
+                    },
+                    // 添加表单验证规则
+                    colorRules: {
+                        category_id: [
+                            { required: true, message: '请选择颜色分类', trigger: 'change' }
+                        ],
+                        color_code: [
+                            { required: true, message: '颜色编号为必填项', trigger: 'blur' },
+                            { validator: this.validateColorCode, trigger: 'blur' }
+                        ],
+                        formula: [
+                            { required: true, message: '配方为必填项', trigger: 'blur' }
+                        ]
                     },
                     
                     // 作品管理相关
@@ -821,8 +847,116 @@
                     reader.readAsDataURL(file.raw);
                 },
                 
+                // 初始化颜色表单（对话框打开时）
+                initColorForm() {
+                    // 如果已选择分类，生成颜色编号
+                    if (this.colorForm.category_id) {
+                        this.generateColorCode(this.colorForm.category_id);
+                    } else if (this.activeCategory && this.activeCategory !== 'all') {
+                        // 使用当前选中的分类
+                        this.colorForm.category_id = parseInt(this.activeCategory);
+                        this.generateColorCode(this.colorForm.category_id);
+                    }
+                },
+                
+                // 当分类改变时，重新生成颜色编号
+                onCategoryChange(categoryId) {
+                    if (categoryId && !this.colorForm.color_code) {
+                        // 只有在颜色编号为空时才自动生成
+                        this.generateColorCode(categoryId);
+                    } else if (categoryId && this.colorForm.color_code) {
+                        // 如果已有编号，检查是否需要更新前缀
+                        const category = this.categories.find(c => c.id === categoryId);
+                        if (category) {
+                            const currentPrefix = this.colorForm.color_code.match(/^[A-Z]+/);
+                            if (currentPrefix && currentPrefix[0] !== category.code) {
+                                // 如果前缀不匹配，生成新编号
+                                this.generateColorCode(categoryId);
+                            }
+                        }
+                    }
+                },
+                
+                // 生成颜色编号
+                generateColorCode(categoryId) {
+                    const category = this.categories.find(c => c.id === categoryId);
+                    if (!category) return;
+                    
+                    // 获取该分类下的所有颜色编号
+                    const categoryColors = this.customColors.filter(c => c.category_id === categoryId);
+                    
+                    if (categoryColors.length === 0) {
+                        // 如果该分类下没有颜色，从001开始
+                        this.colorForm.color_code = `${category.code}001`;
+                        return;
+                    }
+                    
+                    // 提取所有编号中的数字部分
+                    const numbers = categoryColors
+                        .map(color => {
+                            const match = color.color_code.match(/\d+$/);
+                            return match ? parseInt(match[0]) : 0;
+                        })
+                        .filter(num => num > 0);
+                    
+                    if (numbers.length === 0) {
+                        this.colorForm.color_code = `${category.code}001`;
+                        return;
+                    }
+                    
+                    // 找到最大的编号
+                    const maxNumber = Math.max(...numbers);
+                    
+                    // 生成下一个编号（最大编号+1，并保持位数）
+                    const nextNumber = maxNumber + 1;
+                    const paddedNumber = String(nextNumber).padStart(3, '0');
+                    
+                    this.colorForm.color_code = `${category.code}${paddedNumber}`;
+                },
+                
+                // 验证颜色编号是否重复
+                validateColorCode(rule, value, callback) {
+                    if (value) {
+                        // 检查颜色编号是否已存在
+                        const exists = this.customColors.some(color => 
+                            color.color_code === value
+                        );
+                        if (exists) {
+                            callback(new Error('该颜色编号已存在！'));
+                        } else {
+                            // 检查编号格式是否正确（可选）
+                            const pattern = /^[A-Z]{2}\d{3}$/;
+                            if (!pattern.test(value)) {
+                                callback(new Error('颜色编号格式应为：两个大写字母+三位数字，如BU001'));
+                            } else {
+                                callback();
+                            }
+                        }
+                    } else {
+                        callback();
+                    }
+                },
+                
                 // 保存自配颜色
                 async saveColor() {
+                    // 保存滚动位置
+                    this.saveScrollPosition();
+                    
+                    // 验证表单
+                    const valid = await this.$refs.colorFormRef.validate().catch(() => false);
+                    if (!valid) {
+                        return;
+                    }
+                    
+                    // 再次检查是否重复（防止并发问题）
+                    const exists = this.customColors.some(color => 
+                        color.color_code === this.colorForm.color_code
+                    );
+                    if (exists) {
+                        this.$message.error('该颜色编号已存在！');
+                        return;
+                    }
+                    
                     try {
                         const formData = new FormData();
                         formData.append('category_id', this.colorForm.category_id);
@@ -841,9 +975,22 @@
                         this.showAddColorDialog = false;
                         this.resetColorForm();
                         await this.loadCustomColors();
+                        
+                        // 恢复滚动位置
+                        this.restoreScrollPosition();
                     } catch (error) {
                         console.error('保存自配颜色失败:', error);
-                        this.$message.error('保存自配颜色失败');
+                        if (error.response && error.response.data && error.response.data.error) {
+                            if (error.response.data.error.includes('UNIQUE constraint')) {
+                                this.$message.error('该颜色编号已存在！');
+                            } else {
+                                this.$message.error(error.response.data.error || '保存自配颜色失败');
+                            }
+                        } else {
+                            this.$message.error('保存自配颜色失败');
+                        }
+                        // 如果保存失败也恢复滚动位置
+                        this.restoreScrollPosition();
                     }
                 },
                 
@@ -1106,6 +1253,10 @@
                         imageFile: null,
                         imagePreview: null
                     };
+                    // 重置表单验证状态
+                    if (this.$refs.colorFormRef) {
+                        this.$refs.colorFormRef.resetFields();
+                    }
                 },
                 
                 resetArtworkForm() {
