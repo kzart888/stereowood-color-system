@@ -385,6 +385,81 @@ app.get('/api/custom-colors/:id/history', (req, res) => {
     });
 });
 
+// 删除自配颜色
+app.delete('/api/custom-colors/:id', (req, res) => {
+    const colorId = req.params.id;
+    
+    // 首先检查颜色是否存在，并获取图片路径
+    db.get('SELECT * FROM custom_colors WHERE id = ?', [colorId], (err, color) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        
+        if (!color) {
+            return res.status(404).json({ error: '颜色不存在' });
+        }
+        
+        // 检查是否被配色方案引用
+        db.get(`
+            SELECT COUNT(*) as count 
+            FROM scheme_layers 
+            WHERE custom_color_id = ?
+        `, [colorId], (err, result) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            
+            if (result && result.count > 0) {
+                return res.status(400).json({ 
+                    error: '此颜色已被配色方案使用，无法删除' 
+                });
+            }
+            
+            // 保存到历史记录（可选）
+            db.run(`INSERT INTO custom_colors_history 
+                    (custom_color_id, color_code, image_path, formula, applicable_layers) 
+                    VALUES (?, ?, ?, ?, ?)`,
+                   [colorId, color.color_code, color.image_path, 
+                    color.formula, color.applicable_layers], (err) => {
+                if (err) {
+                    console.error('保存历史记录失败:', err);
+                    // 历史记录保存失败不影响删除操作
+                }
+            });
+            
+            // 删除数据库记录
+            db.run('DELETE FROM custom_colors WHERE id = ?', [colorId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+                
+                if (this.changes === 0) {
+                    return res.status(404).json({ error: '颜色不存在' });
+                }
+                
+                // 如果有图片，尝试删除图片文件
+                if (color.image_path) {
+                    const imagePath = path.join(__dirname, 'uploads', color.image_path);
+                    fs.unlink(imagePath, (err) => {
+                        if (err) {
+                            console.error('删除图片文件失败:', err);
+                            // 图片删除失败不影响整体操作
+                        } else {
+                            console.log('旧图片已删除:', color.image_path);
+                        }
+                    });
+                }
+                
+                res.json({ 
+                    success: true, 
+                    message: '自配颜色删除成功',
+                    deletedColor: color.color_code
+                });
+            });
+        });
+    });
+});
+
 // 4. 画作品相关API
 // 获取所有画作品及其配色方案
 app.get('/api/artworks', (req, res) => {

@@ -360,12 +360,35 @@ const CustomColorsComponent = {
                     }
                 );
                 
-                await api.customColors.delete(color.id);
+                const response = await api.customColors.delete(color.id);
+                
                 ElementPlus.ElMessage.success('删除成功');
                 await this.globalData.loadCustomColors();
             } catch (error) {
-                if (error !== 'cancel') {
-                    ElementPlus.ElMessage.error('删除失败');
+                // 检查是否是用户取消操作
+                if (error === 'cancel' || error.message === 'cancel') {
+                    return; // 用户取消，不显示错误信息
+                }
+                
+                // 显示友好的错误提示
+                if (error.response && error.response.data && error.response.data.error) {
+                    // 从后端获取具体的错误信息
+                    const errorMsg = error.response.data.error;
+                    
+                    // 根据不同的错误信息显示不同的提示
+                    if (errorMsg.includes('配色方案使用')) {
+                        ElementPlus.ElMessage.warning('该颜色正在被配色方案使用，无法删除');
+                    } else if (errorMsg.includes('不存在')) {
+                        ElementPlus.ElMessage.error('该颜色不存在');
+                    } else {
+                        ElementPlus.ElMessage.error(errorMsg);
+                    }
+                } else if (error.response && error.response.status === 404) {
+                    ElementPlus.ElMessage.error('删除功能暂时不可用');
+                } else if (error.request) {
+                    ElementPlus.ElMessage.error('无法连接到服务器，请检查网络连接');
+                } else {
+                    ElementPlus.ElMessage.error('删除失败，请稍后重试');
                 }
             }
         },
