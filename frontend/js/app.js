@@ -3,15 +3,8 @@
 
 const { createApp } = Vue;
 
+// 创建Vue应用
 const app = createApp({
-    // ===== 组件注册 =====
-    // 注册三个主要组件（组件必须在此之前定义为全局变量）
-    components: {
-        'custom-colors-component': typeof CustomColorsComponent !== 'undefined' ? CustomColorsComponent : {},
-        'artworks-component': typeof ArtworksComponent !== 'undefined' ? ArtworksComponent : {},
-        'mont-marte-component': typeof MontMarteComponent !== 'undefined' ? MontMarteComponent : {}
-    },
-    
     // ===== 响应式数据 =====
     data() {
         return {
@@ -127,6 +120,19 @@ const app = createApp({
         }
     }
 });
+
+// ===== 注册组件 =====
+// 注册组件
+app.component('custom-colors-component', CustomColorsComponent);
+app.component('artworks-component', ArtworksComponent);  
+app.component('mont-marte-component', MontMarteComponent);
+// 添加配方编辑器组件注册
+if (typeof FormulaEditorComponent !== 'undefined') {
+    app.component('formula-editor', FormulaEditorComponent);
+    console.log('配方编辑器组件已注册');
+} else {
+    console.error('FormulaEditorComponent 未定义');
+}
 
 // ===== 挂载应用 =====
 // 使用Element Plus UI库并挂载到#app元素

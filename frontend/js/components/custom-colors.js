@@ -8,7 +8,7 @@ const CustomColorsComponent = {
             <!-- 顶部操作栏 -->
             <div style="margin-bottom: 20px;">
                 <el-button type="primary" @click="openAddDialog">
-                    <el-icon><Plus /></el-icon> 添加新的自配色
+                    + 添加新的自配色
                 </el-button>
             </div>
             
@@ -25,7 +25,6 @@ const CustomColorsComponent = {
             
             <!-- 颜色列表 -->
             <div v-if="loading" class="loading">
-                <el-icon class="is-loading"><Loading /></el-icon>
                 加载中...
             </div>
             
@@ -82,8 +81,12 @@ const CustomColorsComponent = {
                             @input="onColorCodeInput"
                         ></el-input>
                     </el-form-item>
-                    <el-form-item label="配方" prop="formula">
-                        <el-input v-model="form.formula" type="textarea" rows="3"></el-input>
+                    <el-form-item label="配方">
+                        <formula-editor 
+                            v-if="showAddDialog"
+                            v-model="form.formula"
+                            :mont-marte-colors="montMarteColors"
+                        />
                     </el-form-item>
                     <el-form-item label="适用画层">
                         <el-input v-model="form.applicable_layers"></el-input>
@@ -132,8 +135,8 @@ const CustomColorsComponent = {
                 color_code: [
                     { required: true, message: '请输入颜色编号', trigger: 'blur' },
                     { validator: this.validateColorCode, trigger: 'blur' }
-                ],
-                formula: [{ required: true, message: '请输入配方', trigger: 'blur' }]
+                ]
+                // 删除 formula 的必填验证，因为现在允许空配方
             }
         };
     },
@@ -171,6 +174,10 @@ const CustomColorsComponent = {
                 });
             }
             return this.customColors.filter(c => c.category_id === parseInt(this.activeCategory));
+        },
+        // 从注入的全局数据获取颜色原料库
+        montMarteColors() {
+            return this.globalData.montMarteColors.value || [];
         }
     },
     

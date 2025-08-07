@@ -198,3 +198,70 @@ body {
     float: right;
     margin-bottom: 20px;
 }
+
+
+/* ==================== 配方编辑器样式 ==================== */
+.formula-editor {
+    width: 100%;
+}
+
+.formula-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+.formula-table th {
+    background-color: #f5f7fa;
+    padding: 10px;
+    text-align: left;
+    font-weight: normal;
+    color: #909399;
+    border-bottom: 1px solid #ebeef5;
+}
+
+.formula-table td {
+    padding: 8px;
+    border-bottom: 1px solid #ebeef5;
+}
+
+.formula-table tbody tr {
+    transition: background-color 0.3s;
+    cursor: move;
+}
+
+.formula-table tbody tr:hover {
+    background-color: #f5f7fa;
+}
+
+.formula-table tbody tr.dragging {
+    opacity: 0.5;
+    background-color: #ecf5ff;
+}
+
+.drag-handle {
+    text-align: center;
+    color: #909399;
+    cursor: grab;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.empty-message {
+    text-align: center;
+    color: #909399;
+    padding: 20px !important;
+}
+
+.add-button-container {
+    text-align: center;
+    padding: 10px;
+}
+
+.add-hint {
+    margin-left: 10px;
+    color: #909399;
+    font-size: 14px;
+}
