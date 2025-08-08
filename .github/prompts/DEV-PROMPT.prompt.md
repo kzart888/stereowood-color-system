@@ -1,0 +1,47 @@
+Always follow these commenting and documentation rules when writing or refactoring code in this repository.
+
+1) File-level Roadmap header (MUST)
+   - Module: <path/filename>
+   - Responsibility: what problem this file solves; what it exports
+   - Imports/Relations: who uses this file; what it depends on
+   - Origin: where this code comes from (old file/function, date)
+   - Contract: external URL/exports/IO; breaking changes & compatibility
+   - Notes: concurrency/transactions/migrations/FS side effects/perf & security
+   - Related: strongly connected files for quick navigation
+
+2) JSDoc for functions (MUST)
+   For every exported function, route handler, and key helper, add JSDoc:
+   /**
+    * <purpose>
+    * @param {Type} arg Description
+    * @returns {Type} Description
+    * Side effects / Errors / Transactions
+    */
+
+3) Route handler annotations (MUST)
+   Above each route: method, URL, purpose, body/query, response, status codes, idempotency.
+
+4) Database migrations (MUST)
+   - Idempotent: CREATE IF NOT EXISTS, PRAGMA table_info checks before ALTER
+   - Order & dependencies
+   - Rollback considerations; wrap multi-step writes in transactions
+
+5) Cross-file references (MUST)
+   - Explicitly state who calls whom and why
+   - Keep field names compatible with the frontend (e.g., color_code, scheme_name)
+
+6) Keep comments in sync with code (MUST)
+   - Update comments when behavior changes
+   - When moving code: mark old location with a note "moved to <new path>"
+
+7) Submission checklist (MUST)
+   - File headers present
+   - JSDoc present
+   - Migrations idempotent
+   - API contracts preserved or documented
+   - Transactions & FS side effects documented
+   - server.js Roadmap updated with stage status
+
+8) Style
+   - Short sentences; focus on WHY and edge cases
+   - Bilingual friendly (zh-CN + English for terms)

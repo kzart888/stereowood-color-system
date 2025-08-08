@@ -8,16 +8,17 @@
 const ArtworksComponent = {
   template: `
     <div class="tab-content">
+      <!-- 顶部：左侧新作品，右侧视图切换 -->
       <div class="artwork-header">
-        <div class="meta-text">作品配色管理</div>
+        <div>
+          <el-button type="primary" size="small" @click="addArtwork">
+            <el-icon><Plus /></el-icon> 新作品
+          </el-button>
+        </div>
         <div>
           <el-button size="small" @click="toggleViewMode">
             <el-icon><Switch /></el-icon>
             {{ viewMode === 'byLayer' ? '切换为：按自配色归集' : '切换为：按层号平铺' }}
-          </el-button>
-          <el-button type="primary" size="small" @click="addArtwork">
-            <el-icon><Plus /></el-icon>
-            新作品
           </el-button>
         </div>
       </div>
@@ -51,7 +52,7 @@ const ArtworksComponent = {
                   }">
                 </div>
                 <div style="flex: 1;">
-                  <div class="scheme-name">{{ scheme.name }}</div>
+                  <div class="scheme-name">{{ scheme.name || scheme.scheme_name }}</div>
                   <div class="meta-text">
                     层数：{{ (scheme.layers || []).length }}
                     <span v-if="scheme.updated_at"> · 更新：{{ formatDate(scheme.updated_at) }}</span>
@@ -179,9 +180,9 @@ const ArtworksComponent = {
                       <el-select v-model="m.colorCode" filterable clearable placeholder="选择自配色号">
                         <el-option
                           v-for="c in customColors"
-                          :key="c.id || c.code"
-                          :label="c.code"
-                          :value="c.code"
+                          :key="c.id"
+                          :label="c.color_code"
+                          :value="c.color_code"
                         />
                       </el-select>
                       <div class="meta-text" v-if="m.colorCode && colorByCode(m.colorCode)" style="margin-top:4px;">
@@ -243,10 +244,34 @@ const ArtworksComponent = {
   },
   methods: {
     async refreshAll() {
+      // 先拉基础列表
       await Promise.all([
         this.globalData.loadArtworks(),
         this.globalData.loadCustomColors()
       ]);
+      // 再补拉每个作品详情，把 layers 合并到现有列表的 scheme 上
+      const arts = this.artworks || [];
+      await Promise.all(arts.map(async (art) => {
+        try {
+          const { data } = await axios.get(`${this.baseURL}/api/artworks/${art.id}`);
+          const detailSchemes = data?.schemes || [];
+          // 合并 layers 到全局 artworks 中对应的 scheme
+          (art.schemes || []).forEach(s => {
+            const found = detailSchemes.find(ds => ds.id === s.id);
+            if (found) {
+              // 标准化为 [{layer, colorCode}]
+              s.layers = (found.layers || []).map(x => ({
+                layer: Number(x.layer_number),
+                colorCode: x.color_code || ''
+              }));
+              // 兼容名称字段
+              s.name = s.name || s.scheme_name;
+            }
+          });
+        } catch (e) {
+          console.warn('拉取作品详情失败', art.id, e);
+        }
+      }));
     },
     formatDate(ts) {
       if (!ts) return '';
@@ -302,19 +327,25 @@ const ArtworksComponent = {
         const { value, action } = await ElementPlus.ElMessageBox.prompt('请输入作品标题（如：078-太极鱼）', '新作品', {
           confirmButtonText: '创建',
           cancelButtonText: '取消',
-          inputPlaceholder: '支持任意文本',
+          inputPlaceholder: '支持“编号-名称”格式',
           inputValidator: v => !!String(v || '').trim() || '标题不能为空'
         });
         if (action !== 'confirm') return;
         const title = String(value).trim();
-        // 优先调用封装 API
-        if (window.api?.artworks?.create) {
-          await window.api.artworks.create({ title });
+        // 拆分为 code/name
+        let code = '', name = '';
+        const idx = title.indexOf('-');
+        if (idx > 0) {
+          code = title.slice(0, idx).trim();
+          name = title.slice(idx + 1).trim();
         } else {
-          await axios.post(`${this.baseURL}/api/artworks`, { title });
+          // 无连字符时，尽量生成 code 与 name
+          code = title;
+          name = title;
         }
+        await axios.post(`${this.baseURL}/api/artworks`, { code, name });
         ElementPlus.ElMessage.success('已创建新作品');
-        await this.globalData.loadArtworks();
+        await this.refreshAll();
       } catch (e) {
         if (e === 'cancel' || e === 'close') return;
         console.error(e);
