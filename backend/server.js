@@ -50,10 +50,7 @@ const fs = require('fs');
 const { db } = require('./db/index');                // 从 db/index.js 获取数据库连接
 const { initDatabase, runMigrations } = require('./db/migrations'); // 表初始化与迁移
 const { cascadeRenameInFormulas } = require('./services/formula');
-const dictionariesRouter = require('./routes/dictionaries');
-const montMarteRouter = require('./routes/mont-marte-colors');
-const customColorsRouter = require('./routes/custom-colors');
-const artworksRouter = require('./routes/artworks');
+const apiRouter = require('./routes');
 
 const app = express();
 const PORT = 3000;
@@ -63,10 +60,7 @@ app.use(cors()); // 允许跨域请求
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('uploads')); // 静态文件服务
-app.use('/api', dictionariesRouter);
-app.use('/api', montMarteRouter);
-app.use('/api', customColorsRouter);
-app.use('/api', artworksRouter);
+app.use('/api', apiRouter);
 
 // 确保上传目录存在
 const uploadDir = 'uploads';
@@ -93,33 +87,7 @@ runMigrations();
 // 级联工具迁至 services/formula.js
 
 // ==================== API 路由 ====================
-
-// 1. 颜色分类相关API
-// 获取所有颜色分类
-app.get('/api/categories', (req, res) => {
-    db.all('SELECT * FROM color_categories ORDER BY code', (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json(rows);
-        }
-    });
-});
-
-// 添加新的颜色分类
-app.post('/api/categories', (req, res) => {
-    const { code, name } = req.body;
-    db.run('INSERT INTO color_categories (code, name) VALUES (?, ?)', [code, name], function(err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-        } else {
-            res.json({ id: this.lastID, code, name });
-        }
-    });
-});
-
-// 注意：自配颜色与作品相关路由已迁移至 routes/custom-colors.js 与 routes/artworks.js
-// 此处不再保留 /api/custom-colors* 与 /api/artworks* 的定义，避免重复。
+// 路由已聚合至 backend/routes/index.js，server.js 不直接声明 API
 
 // 统一 404 处理（必须在所有路由之后）
 app.use((req, res) => {
