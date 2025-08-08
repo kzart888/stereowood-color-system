@@ -1,7 +1,7 @@
 // 自配颜色管理组件
 // 文件路径: frontend/js/components/custom-colors.js
 // 定义全局变量 CustomColorsComponent，被 app.js 引用并注册
-
+//test
 const CustomColorsComponent = {
     template: `
         <div class="tab-content">
