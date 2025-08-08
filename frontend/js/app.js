@@ -9,15 +9,19 @@ const app = createApp({
     data() {
         return {
             // 基础配置
-            baseURL: 'http://localhost:3000',  // 后端服务器地址
-            loading: false,                     // 全局加载状态
-            activeTab: 'custom-colors',         // 当前激活的标签页
-            
-            // 核心数据（由各组件共享）
-            categories: [],      // 颜色分类列表
-            customColors: [],    // 自配颜色列表
-            artworks: [],        // 作品列表
-            montMarteColors: []  // 蒙马特颜色（原料库）列表
+            baseURL: 'http://localhost:3000',
+            loading: false,
+            activeTab: 'custom-colors',
+
+            // 核心数据
+            categories: [],
+            customColors: [],
+            artworks: [],
+            montMarteColors: [],
+
+            // 新增：全局字典数据
+            suppliers: [],          // 供应商字典
+            purchaseLinks: []       // 线上采购地址字典
         };
     },
     
@@ -26,20 +30,26 @@ const app = createApp({
     provide() {
         return {
             globalData: {
-                // 基础配置
                 baseURL: this.baseURL,
-                
-                // 响应式数据（使用computed包装）
+
                 categories: Vue.computed(() => this.categories),
                 customColors: Vue.computed(() => this.customColors),
                 artworks: Vue.computed(() => this.artworks),
                 montMarteColors: Vue.computed(() => this.montMarteColors),
-                
+
+                // 新增：字典数据
+                suppliers: Vue.computed(() => this.suppliers),
+                purchaseLinks: Vue.computed(() => this.purchaseLinks),
+
                 // 数据加载方法
                 loadCategories: () => this.loadCategories(),
                 loadCustomColors: () => this.loadCustomColors(),
                 loadArtworks: () => this.loadArtworks(),
-                loadMontMarteColors: () => this.loadMontMarteColors()
+                loadMontMarteColors: () => this.loadMontMarteColors(),
+
+                // 新增：字典加载方法
+                loadSuppliers: () => this.loadSuppliers(),
+                loadPurchaseLinks: () => this.loadPurchaseLinks()
             }
         };
     },
@@ -61,7 +71,9 @@ const app = createApp({
                     this.loadCategories(),
                     this.loadCustomColors(),
                     this.loadArtworks(),
-                    this.loadMontMarteColors()
+                    this.loadMontMarteColors(),
+                    this.loadSuppliers(),        // 新增
+                    this.loadPurchaseLinks()     // 新增
                 ]);
                 console.log('所有数据加载完成');
             } catch (error) {
@@ -117,15 +129,49 @@ const app = createApp({
                 console.error('加载蒙马特颜色失败:', error);
                 ElementPlus.ElMessage.error('加载蒙马特颜色失败');
             }
+        },
+
+        // 新增：加载供应商
+        async loadSuppliers() {
+            try {
+                const res = await axios.get(`${this.baseURL}/api/suppliers`);
+                this.suppliers = res.data || [];
+                // console.log(`加载了 ${this.suppliers.length} 个供应商`);
+            } catch (e) {
+                console.error('加载供应商失败:', e);
+            }
+        },
+
+        // 新增：加载线上采购地址
+        async loadPurchaseLinks() {
+            try {
+                const res = await axios.get(`${this.baseURL}/api/purchase-links`);
+                this.purchaseLinks = res.data || [];
+                // console.log(`加载了 ${this.purchaseLinks.length} 个采购地址`);
+            } catch (e) {
+                console.error('加载采购地址失败:', e);
+            }
         }
     }
 });
 
 // ===== 注册组件 =====
-// 注册组件
+
+// 注册 Element Plus 图标组件（新增）
+if (window.ElementPlusIconsVue) {
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+        app.component(key, component);
+    }
+    console.log('Element Plus 图标组件已注册');
+} else {
+    console.warn('Element Plus 图标库未加载');
+}
+
+// 注册自定义组件
 app.component('custom-colors-component', CustomColorsComponent);
 app.component('artworks-component', ArtworksComponent);  
 app.component('mont-marte-component', MontMarteComponent);
+
 // 添加配方编辑器组件注册
 if (typeof FormulaEditorComponent !== 'undefined') {
     app.component('formula-editor', FormulaEditorComponent);

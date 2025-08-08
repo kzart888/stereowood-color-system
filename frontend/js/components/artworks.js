@@ -14,8 +14,7 @@ const ArtworksComponent = {
             
             <!-- 作品列表 -->
             <div v-if="loading" class="loading">
-                <el-icon class="is-loading"><Loading /></el-icon>
-                加载中...
+                <el-icon><Loading /></el-icon>
             </div>
             
             <div v-else>

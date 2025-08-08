@@ -13,7 +13,8 @@ const PORT = 3000;
 
 // 中间件设置
 app.use(cors()); // 允许跨域请求
-app.use(express.json({ limit: '10mb' })); // 解析JSON，支持大文件
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static('uploads')); // 静态文件服务
 
 // 确保上传目录存在
@@ -132,6 +133,53 @@ function initDatabase() {
     console.log('数据库表初始化完成');
 }
 
+// 辅助函数：把配方字符串中出现的旧颜色名精确替换为新颜色名
+function replaceColorNameInFormula(formula, oldName, newName) {
+    if (!formula || !oldName || oldName === newName) return formula;
+    // 公式格式为：颜色名 数量单位 颜色名 数量单位 ...
+    // 我们按空白拆分，只在“非数量+单位”的token上做精确匹配替换
+    const isAmountToken = (t) => /^[\d.]+[a-zA-Z\u4e00-\u9fa5]+$/.test(t);
+    const parts = String(formula).trim().split(/\s+/);
+    let changed = false;
+    for (let i = 0; i < parts.length; i++) {
+        if (!isAmountToken(parts[i]) && parts[i] === oldName) {
+            parts[i] = newName;
+            changed = true;
+        }
+    }
+    return changed ? parts.join(' ') : formula;
+}
+
+// 批量级联更新：把所有自配色配方里旧名称替换成新名称，返回被更新的条数
+function cascadeRenameInFormulas(oldName, newName) {
+    return new Promise((resolve, reject) => {
+        db.all('SELECT id, formula FROM custom_colors', [], (err, rows) => {
+            if (err) return reject(err);
+
+            let updatedCount = 0;
+            db.serialize(() => {
+                db.run('BEGIN TRANSACTION');
+                rows.forEach(row => {
+                    const newFormula = replaceColorNameInFormula(row.formula, oldName, newName);
+                    if (newFormula !== row.formula) {
+                        updatedCount++;
+                        db.run(
+                            `UPDATE custom_colors 
+                               SET formula = ?, updated_at = CURRENT_TIMESTAMP 
+                             WHERE id = ?`,
+                            [newFormula, row.id]
+                        );
+                    }
+                });
+                db.run('COMMIT', (commitErr) => {
+                    if (commitErr) return reject(commitErr);
+                    resolve(updatedCount);
+                });
+            });
+        });
+    });
+}
+
 // ==================== API 路由 ====================
 
 // 1. 颜色分类相关API
@@ -161,129 +209,55 @@ app.post('/api/categories', (req, res) => {
 // 2. 蒙马特颜色相关API
 // 获取所有蒙马特颜色
 app.get('/api/mont-marte-colors', (req, res) => {
-    db.all('SELECT * FROM mont_marte_colors ORDER BY name', (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json(rows);
-        }
-    });
+  const sql = `
+    SELECT m.id, m.name, m.image_path, m.updated_at,
+           m.supplier_id, s.name AS supplier_name,
+           m.purchase_link_id, p.url AS purchase_link_url
+      FROM mont_marte_colors m
+      LEFT JOIN suppliers s ON s.id = m.supplier_id
+      LEFT JOIN purchase_links p ON p.id = m.purchase_link_id
+     ORDER BY LOWER(m.name) ASC
+  `;
+  db.all(sql, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
 
-// 添加蒙马特颜色
+// 新增颜色原料（支持 supplier_id / purchase_link_id）
 app.post('/api/mont-marte-colors', upload.single('image'), (req, res) => {
-    const { name } = req.body;
-    const imagePath = req.file ? req.file.filename : null;
-    
-    db.run('INSERT INTO mont_marte_colors (name, image_path) VALUES (?, ?)', 
-           [name, imagePath], function(err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-        } else {
-            res.json({ id: this.lastID, name, image_path: imagePath });
+  const { name } = req.body;
+  const supplier_id = req.body.supplier_id ? Number(req.body.supplier_id) : null;
+  const purchase_link_id = req.body.purchase_link_id ? Number(req.body.purchase_link_id) : null;
+  const image_path = req.file ? req.file.filename : null;
+
+  if (!name || !name.trim()) return res.status(400).json({ error: '颜色名称不能为空' });
+
+  db.run(
+    `INSERT INTO mont_marte_colors(name, image_path, supplier_id, purchase_link_id)
+     VALUES (?, ?, ?, ?)`,
+    [name.trim(), image_path, supplier_id, purchase_link_id],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      const id = this.lastID;
+      db.get(
+        `SELECT m.id, m.name, m.image_path, m.updated_at,
+                m.supplier_id, s.name AS supplier_name,
+                m.purchase_link_id, p.url AS purchase_link_url
+           FROM mont_marte_colors m
+           LEFT JOIN suppliers s ON s.id = m.supplier_id
+           LEFT JOIN purchase_links p ON p.id = m.purchase_link_id
+          WHERE m.id = ?`,
+        [id],
+        (err2, row) => {
+          if (err2) return res.status(500).json({ error: err2.message });
+          res.json(row);
         }
-    });
+      );
+    }
+  );
 });
 
-// 修改蒙马特颜色
-app.put('/api/mont-marte-colors/:id', upload.single('image'), (req, res) => {
-    const colorId = req.params.id;
-    const { name, existingImagePath } = req.body;
-    
-    // 先检查新名称是否与其他颜色重复
-    db.get('SELECT id FROM mont_marte_colors WHERE LOWER(name) = LOWER(?) AND id != ?', 
-           [name, colorId], (err, existing) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        
-        if (existing) {
-            return res.status(400).json({ error: '该颜色名称已存在' });
-        }
-        
-        // 获取旧的图片路径（用于后续删除）
-        db.get('SELECT image_path FROM mont_marte_colors WHERE id = ?', [colorId], (err, oldData) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            
-            if (!oldData) {
-                return res.status(404).json({ error: '颜色不存在' });
-            }
-            
-            // 确定新的图片路径
-            let newImagePath;
-            if (req.file) {
-                // 有新上传的图片
-                newImagePath = req.file.filename;
-            } else if (existingImagePath) {
-                // 保留原有图片
-                newImagePath = existingImagePath;
-            } else {
-                // 没有图片
-                newImagePath = null;
-            }
-            
-            // 更新数据库
-            db.run(`UPDATE mont_marte_colors 
-                    SET name = ?, image_path = ?, updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = ?`,
-                   [name, newImagePath, colorId], function(err) {
-                if (err) {
-                    // 如果更新失败且上传了新图片，删除新上传的图片
-                    if (req.file) {
-                        const newImageFullPath = path.join(__dirname, 'uploads', req.file.filename);
-                        fs.unlink(newImageFullPath, (unlinkErr) => {
-                            if (unlinkErr) console.error('删除新上传图片失败:', unlinkErr);
-                        });
-                    }
-                    return res.status(400).json({ error: err.message });
-                }
-                
-                // 如果更新成功且上传了新图片，删除旧图片
-                if (req.file && oldData.image_path && oldData.image_path !== newImagePath) {
-                    const oldImagePath = path.join(__dirname, 'uploads', oldData.image_path);
-                    fs.unlink(oldImagePath, (err) => {
-                        if (err) {
-                            console.error('删除旧图片文件失败:', err);
-                            // 旧图片删除失败不影响整体操作
-                        } else {
-                            console.log('旧图片已删除:', oldData.image_path);
-                        }
-                    });
-                }
-                
-                res.json({ 
-                    id: colorId, 
-                    name, 
-                    image_path: newImagePath,
-                    message: '颜色修改成功'
-                });
-            });
-        });
-    });
-});
-
-// 3. 自配颜色相关API
-// 根据分类获取自配颜色
-app.get('/api/custom-colors/:categoryId', (req, res) => {
-    const categoryId = req.params.categoryId;
-    const sql = `
-        SELECT cc.*, cat.name as category_name, cat.code as category_code
-        FROM custom_colors cc
-        LEFT JOIN color_categories cat ON cc.category_id = cat.id
-        WHERE cc.category_id = ?
-        ORDER BY cc.color_code
-    `;
-    
-    db.all(sql, [categoryId], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json(rows);
-        }
-    });
-});
 
 // 获取所有自配颜色
 app.get('/api/custom-colors', (req, res) => {
@@ -327,49 +301,95 @@ app.post('/api/custom-colors', upload.single('image'), (req, res) => {
     });
 });
 
-// 更新自配颜色 (同时创建历史记录)
-app.put('/api/custom-colors/:id', upload.single('image'), (req, res) => {
-    const colorId = req.params.id;
-    const { category_id, color_code, formula, applicable_layers } = req.body;
-    const imagePath = req.file ? req.file.filename : req.body.existing_image;
-    
-    // 首先获取当前数据，用于创建历史记录
-    db.get('SELECT * FROM custom_colors WHERE id = ?', [colorId], (err, currentData) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
+// 更新颜色原料时同步级联更新自配色配方中的原料名
+app.put('/api/mont-marte-colors/:id', upload.single('image'), (req, res) => {
+  const colorId = req.params.id;
+  const { name, existingImagePath } = req.body;
+  const supplier_id = req.body.supplier_id ? Number(req.body.supplier_id) : null;
+  const purchase_link_id = req.body.purchase_link_id ? Number(req.body.purchase_link_id) : null;
+
+  db.get('SELECT name, image_path FROM mont_marte_colors WHERE id = ?', [colorId], (err, oldData) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!oldData) return res.status(404).json({ error: '颜色不存在' });
+
+    let newImagePath;
+    if (req.file) newImagePath = req.file.filename;
+    else if (existingImagePath) newImagePath = existingImagePath;
+    else newImagePath = null;
+
+    db.run(
+      `UPDATE mont_marte_colors
+         SET name = ?, image_path = ?, supplier_id = ?, purchase_link_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [name, newImagePath, supplier_id, purchase_link_id, colorId],
+      function (updateErr) {
+        if (updateErr) return res.status(400).json({ error: updateErr.message });
+
+        // 删除旧图片文件（若替换了）
+        if (req.file && oldData.image_path && oldData.image_path !== newImagePath) {
+          const oldPath = path.join(__dirname, 'uploads', oldData.image_path);
+          fs.unlink(oldPath, () => {});
         }
-        
-        // 创建历史记录
-        if (currentData) {
-            db.run(`INSERT INTO custom_colors_history 
-                    (custom_color_id, color_code, image_path, formula, applicable_layers) 
-                    VALUES (?, ?, ?, ?, ?)`,
-                   [colorId, currentData.color_code, currentData.image_path, 
-                    currentData.formula, currentData.applicable_layers]);
-        }
-        
-        // 更新当前数据
-        db.run(`UPDATE custom_colors 
-                SET category_id = ?, color_code = ?, image_path = ?, formula = ?, 
-                    applicable_layers = ?, updated_at = CURRENT_TIMESTAMP 
-                WHERE id = ?`,
-               [category_id, color_code, imagePath, formula, applicable_layers, colorId],
-               function(err) {
-            if (err) {
-                res.status(400).json({ error: err.message });
-            } else {
-                res.json({ 
-                    id: colorId, 
-                    category_id, 
-                    color_code, 
-                    image_path: imagePath, 
-                    formula, 
-                    applicable_layers 
-                });
+
+        const doRespond = (updatedReferences = 0, warn) => {
+          db.get(
+            `SELECT m.id, m.name, m.image_path, m.updated_at,
+                    m.supplier_id, s.name AS supplier_name,
+                    m.purchase_link_id, p.url AS purchase_link_url
+               FROM mont_marte_colors m
+               LEFT JOIN suppliers s ON s.id = m.supplier_id
+               LEFT JOIN purchase_links p ON p.id = m.purchase_link_id
+              WHERE m.id = ?`,
+            [colorId],
+            (qErr, row) => {
+              if (qErr) return res.status(500).json({ error: qErr.message });
+              res.json({ ...row, updatedReferences, warn });
             }
+          );
+        };
+
+        // 若名称未变更，直接返回
+        if (!oldData.name || oldData.name === name) {
+          return doRespond(0);
+        }
+
+        // 级联替换 custom_colors.formula 中的旧名称为新名称（按 token 精确替换）
+        db.all('SELECT id, formula FROM custom_colors', [], (selErr, rows) => {
+          if (selErr) return doRespond(0, '读取配方失败，未做级联');
+
+          let updated = 0;
+          db.serialize(() => {
+            db.run('BEGIN');
+            rows.forEach(row => {
+              const original = String(row.formula || '').trim();
+              if (!original) return;
+
+              const parts = original.split(/\s+/);
+              const isAmount = (t) => /^[\d.]+[a-zA-Z\u4e00-\u9fa5]+$/.test(t);
+              let changed = false;
+              for (let i = 0; i < parts.length; i++) {
+                if (!isAmount(parts[i]) && parts[i] === oldData.name) {
+                  parts[i] = name;
+                  changed = true;
+                }
+              }
+              if (changed) {
+                updated++;
+                const newFormula = parts.join(' ');
+                db.run(
+                  `UPDATE custom_colors
+                      SET formula = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?`,
+                  [newFormula, row.id]
+                );
+              }
+            });
+            db.run('COMMIT', () => doRespond(updated));
+          });
         });
-    });
+      }
+    );
+  });
 });
 
 // 获取自配颜色历史记录
@@ -642,6 +662,133 @@ app.delete('/api/mont-marte-colors/:id', (req, res) => {
     // 直接调用删除函数（暂时跳过引用检查）
     deleteColor();
 });
+
+// 字典表 API：供应商
+app.get('/api/suppliers', (req, res) => {
+  db.all(`SELECT id, name FROM suppliers ORDER BY LOWER(name) ASC`, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Upsert 供应商（name 不区分大小写去重）
+app.post('/api/suppliers/upsert', (req, res) => {
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'name 不能为空' });
+  db.get(`SELECT id, name FROM suppliers WHERE LOWER(name) = LOWER(?)`, [name], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row) return res.json(row);
+    db.run(`INSERT INTO suppliers(name) VALUES (?)`, [name], function (err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ id: this.lastID, name });
+    });
+  });
+});
+
+// 删除供应商（若被引用则 409）
+app.delete('/api/suppliers/:id', (req, res) => {
+  const id = Number(req.params.id);
+  db.get(`SELECT COUNT(*) AS cnt FROM mont_marte_colors WHERE supplier_id = ?`, [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row.cnt > 0) return res.status(409).json({ error: `有 ${row.cnt} 处引用，无法删除` });
+    db.run(`DELETE FROM suppliers WHERE id = ?`, [id], function (err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ deleted: this.changes > 0 });
+    });
+  });
+});
+
+// 字典表 API：线上采购地址
+app.get('/api/purchase-links', (req, res) => {
+  db.all(`SELECT id, url FROM purchase_links ORDER BY LOWER(url) ASC`, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/purchase-links/upsert', (req, res) => {
+  const url = String(req.body.url || '').trim();
+  if (!url) return res.status(400).json({ error: 'url 不能为空' });
+  db.get(`SELECT id, url FROM purchase_links WHERE LOWER(url) = LOWER(?)`, [url], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row) return res.json(row);
+    db.run(`INSERT INTO purchase_links(url) VALUES (?)`, [url], function (err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ id: this.lastID, url });
+    });
+  });
+});
+
+app.delete('/api/purchase-links/:id', (req, res) => {
+  const id = Number(req.params.id);
+  db.get(`SELECT COUNT(*) AS cnt FROM mont_marte_colors WHERE purchase_link_id = ?`, [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row.cnt > 0) return res.status(409).json({ error: `有 ${row.cnt} 处引用，无法删除` });
+    db.run(`DELETE FROM purchase_links WHERE id = ?`, [id], function (err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ deleted: this.changes > 0 });
+    });
+  });
+});
+
+// SQLite 初始化后，添加以下“确保表/列存在”的工具与迁移调用
+
+// 工具：检查列是否存在
+function columnExists(db, table, column) {
+  return new Promise((resolve, reject) => {
+    db.all(`PRAGMA table_info(${table})`, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows.some(r => r.name === column));
+    });
+  });
+}
+
+// 工具：执行无失败的 run
+function runSafe(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) return reject(err);
+      resolve(this);
+    });
+  });
+}
+
+// 启动迁移：创建字典表 + 为 mont_marte_colors 增加可空外键列
+async function runMigrations() {
+  try {
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS purchase_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // 为 mont_marte_colors 增加列（如果不存在）
+    if (!(await columnExists(db, 'mont_marte_colors', 'supplier_id'))) {
+      await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN supplier_id INTEGER NULL`);
+    }
+    if (!(await columnExists(db, 'mont_marte_colors', 'purchase_link_id'))) {
+      await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN purchase_link_id INTEGER NULL`);
+    }
+
+    console.log('数据库迁移完成');
+  } catch (e) {
+    console.error('数据库迁移失败:', e);
+  }
+}
+
+// 服务器启动时执行迁移
+runMigrations();
 
 // 启动服务器
 app.listen(PORT, () => {
