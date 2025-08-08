@@ -107,12 +107,12 @@ const app = createApp({
             }
         },
         
-        // 加载作品列表
+        // 加载作品列表（后端已内联 layers）
         async loadArtworks() {
             try {
                 const response = await api.artworks.getAll();
-                this.artworks = response.data;
-                console.log(`加载了 ${this.artworks.length} 个作品`);
+                this.artworks = response.data || [];
+                console.log(`加载了 ${this.artworks.length} 个作品（含方案层信息）`);
             } catch (error) {
                 console.error('加载作品列表失败:', error);
                 ElementPlus.ElMessage.error('加载作品列表失败');

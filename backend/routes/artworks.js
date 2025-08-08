@@ -24,29 +24,64 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// GET /api/artworks (unified, includes scheme name alias)
+// GET /api/artworks (unified, includes scheme name alias and layers)
 router.get('/artworks', (req, res) => {
   db.all('SELECT * FROM artworks ORDER BY code', [], (err, artworks) => {
     if (err) return res.status(500).json({ error: err.message });
 
-    db.all(`SELECT cs.*, a.code as artwork_code FROM color_schemes cs LEFT JOIN artworks a ON cs.artwork_id = a.id`, [], (err2, schemes) => {
-      if (err2) return res.status(500).json({ error: err2.message });
+    db.all(
+      `SELECT cs.*, a.code as artwork_code 
+         FROM color_schemes cs 
+         LEFT JOIN artworks a ON cs.artwork_id = a.id`,
+      [],
+      (err2, schemes) => {
+        if (err2) return res.status(500).json({ error: err2.message });
 
-      const result = artworks.map(artwork => {
-        const artworkSchemes = schemes.filter(s => s.artwork_id === artwork.id);
-        return {
-          ...artwork,
-          schemes: artworkSchemes.map(s => ({
-            id: s.id,
-            scheme_name: s.scheme_name,
-            name: s.scheme_name,              // alias for frontend display
-            thumbnail_path: s.thumbnail_path,
-            updated_at: s.updated_at
-          }))
-        };
-      });
-      res.json(result);
-    });
+        const schemeIds = schemes.map(s => s.id);
+        if (schemeIds.length === 0) {
+          const result = artworks.map(art => ({ ...art, schemes: [] }));
+          return res.json(result);
+        }
+
+        // 拉取所有层并分组到 scheme_id
+        const placeholders = schemeIds.map(() => '?').join(',');
+        db.all(
+          `SELECT sl.scheme_id,
+                  sl.layer_number AS layer,
+                  COALESCE(cc.color_code, '') AS colorCode
+             FROM scheme_layers sl
+             LEFT JOIN custom_colors cc ON cc.id = sl.custom_color_id
+            WHERE sl.scheme_id IN (${placeholders})
+            ORDER BY sl.scheme_id ASC, sl.layer_number ASC`,
+          schemeIds,
+          (err3, layers) => {
+            if (err3) return res.status(500).json({ error: err3.message });
+
+            const layersByScheme = new Map();
+            layers.forEach(row => {
+              if (!layersByScheme.has(row.scheme_id)) layersByScheme.set(row.scheme_id, []);
+              layersByScheme.get(row.scheme_id).push({ layer: Number(row.layer), colorCode: row.colorCode || '' });
+            });
+
+            const result = artworks.map(artwork => {
+              const artworkSchemes = schemes.filter(s => s.artwork_id === artwork.id);
+              return {
+                ...artwork,
+                schemes: artworkSchemes.map(s => ({
+                  id: s.id,
+                  scheme_name: s.scheme_name,
+                  name: s.scheme_name, // alias for frontend display
+                  thumbnail_path: s.thumbnail_path,
+                  updated_at: s.updated_at,
+                  layers: layersByScheme.get(s.id) || []
+                }))
+              };
+            });
+            res.json(result);
+          }
+        );
+      }
+    );
   });
 });
 

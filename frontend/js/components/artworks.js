@@ -47,7 +47,7 @@ const ArtworksComponent = {
               <div class="scheme-header">
                 <div class="scheme-thumbnail"
                   :style="{
-                    backgroundImage: scheme.thumbnail_path ? 'url(' + baseURL + '/uploads/' + scheme.thumbnail_path + ')' : 'none',
+                    backgroundImage: scheme.thumbnail_path ? 'url(' + baseURL + '/' + scheme.thumbnail_path + ')' : 'none',
                     backgroundColor: scheme.thumbnail_path ? 'transparent' : '#f0f0f0'
                   }">
                 </div>
@@ -244,34 +244,11 @@ const ArtworksComponent = {
   },
   methods: {
     async refreshAll() {
-      // 先拉基础列表
+      // 依赖全局 loadArtworks（已包含 schemes 的 layers）避免重复拉取导致覆盖
       await Promise.all([
+        this.globalData.loadCustomColors(),
         this.globalData.loadArtworks(),
-        this.globalData.loadCustomColors()
       ]);
-      // 再补拉每个作品详情，把 layers 合并到现有列表的 scheme 上
-      const arts = this.artworks || [];
-      await Promise.all(arts.map(async (art) => {
-        try {
-          const { data } = await axios.get(`${this.baseURL}/api/artworks/${art.id}`);
-          const detailSchemes = data?.schemes || [];
-          // 合并 layers 到全局 artworks 中对应的 scheme
-          (art.schemes || []).forEach(s => {
-            const found = detailSchemes.find(ds => ds.id === s.id);
-            if (found) {
-              // 标准化为 [{layer, colorCode}]
-              s.layers = (found.layers || []).map(x => ({
-                layer: Number(x.layer_number),
-                colorCode: x.color_code || ''
-              }));
-              // 兼容名称字段
-              s.name = s.name || s.scheme_name;
-            }
-          });
-        } catch (e) {
-          console.warn('拉取作品详情失败', art.id, e);
-        }
-      }));
     },
     formatDate(ts) {
       if (!ts) return '';
@@ -376,7 +353,7 @@ const ArtworksComponent = {
         id: scheme.id,
         name: scheme.name || '',
         thumbnailFile: null,
-        thumbnailPreview: scheme.thumbnail_path ? `${this.baseURL}/uploads/${scheme.thumbnail_path}` : null,
+  thumbnailPreview: scheme.thumbnail_path ? `${this.baseURL}/${scheme.thumbnail_path}` : null,
         mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }]
       };
       this.showSchemeDialog = true;
