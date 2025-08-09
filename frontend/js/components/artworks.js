@@ -1,11 +1,16 @@
 /* 作品配色管理组件
-  - 顶部“视图切换”按钮：层号优先 / 自配色优先 两种矩阵视图切换（全局作用）
+  - 顶部“视图切换”双按钮：层号优先 / 自配色优先
+  - 顶部“排序”双按钮：按时间 / 按名称（外部传入 sortMode）
    - 顶部“+ 新作品”按钮：新增母bar（作品）
    - 母bar：作品标题 + “+ 新增配色方案”
    - 子bar：方案名、缩略图、矩阵视图、修改/历史（历史占位）
    - 编辑对话框：方案名、缩略图上传/替换/删除、层-自配色映射（可增删行），回车=保存
 */
 const ArtworksComponent = {
+  props: {
+    sortMode: { type: String, default: 'time' } // time | name
+  },
+  emits: ['view-mode-changed'],
   template: `
     <div>
       <div v-if="loading" class="loading">
@@ -34,7 +39,11 @@ const ArtworksComponent = {
                   :style="{
                     backgroundImage: scheme.thumbnail_path ? 'url(' + baseURL + '/' + scheme.thumbnail_path + ')' : 'none',
                     backgroundColor: scheme.thumbnail_path ? 'transparent' : '#f0f0f0'
-                  }">
+                  }"
+                  :class="{ 'no-image': !scheme.thumbnail_path }"
+                  @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, baseURL + '/' + scheme.thumbnail_path)"
+                >
+                  <template v-if="!scheme.thumbnail_path">未上传图片</template>
                 </div>
                 <div style="flex: 1;">
                   <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
@@ -94,8 +103,8 @@ const ArtworksComponent = {
                 </table>
               </div>
 
-              <div v-else>
-        <table class="layer-table">
+      <div v-else>
+    <table class="layer-table bycolor-table">
                   <thead>
                     <tr>
           <th v-for="g in groupedByColorWithFlags(scheme)" :key="'hc'+g.code">{{ g.code || '-' }}</th>
@@ -103,26 +112,38 @@ const ArtworksComponent = {
                   </thead>
                   <tbody>
                     <tr>
-          <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text" style="text-align:left;">
-                        <span v-if="colorByCode(g.code)">{{ colorByCode(g.code).formula || '（无配方）' }}</span>
+                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text formula-chip-row">
+                        <template v-if="colorByCode(g.code)">
+                          <div
+                            v-if="parseFormulaLines(colorByCode(g.code).formula).length"
+                            class="mapping-formula-chips"
+                          >
+                            <el-tooltip v-for="(line,i) in parseFormulaLines(colorByCode(g.code).formula)" :key="'bcf'+g.code+'-'+i" :content="line" placement="top">
+                              <span class="mf-chip">{{ line }}</span>
+                            </el-tooltip>
+                          </div>
+                          <span v-else>（无配方）</span>
+                        </template>
                         <span v-else>（未匹配到自配色：{{ g.code || '-' }}）</span>
                       </td>
                     </tr>
-                    <tr>
-          <td v-for="g in groupedByColorWithFlags(scheme)" :key="'lc'+g.code" style="text-align:left;">
-                        <span>第 </span>
-                        <template v-for="(l, i) in g.layers" :key="'l'+g.code+'-'+l+'-'+i">
-                          <span class="layer-cell">
-                            <template v-if="dupCountFor(scheme, l) > 1">
-                              <el-tooltip :content="'检测到第' + l + '层被分配了' + dupCountFor(scheme, l) + '次颜色'" placement="top">
-                                <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(l) }">!</span>
-                              </el-tooltip>
-                            </template>
-                            <span>{{ l }}</span>
-                          </span>
-                          <span v-if="i < g.layers.length - 1">、</span>
-                        </template>
-                        <span> 层</span>
+                    <tr class="layers-row">
+                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'lc'+g.code" class="layers-cell">
+                        <div class="layers-line">
+                          <span>第 </span>
+                          <template v-for="(l, i) in g.layers" :key="'l'+g.code+'-'+l+'-'+i">
+                            <span class="layer-cell">
+                              <template v-if="dupCountFor(scheme, l) > 1">
+                                <el-tooltip :content="'检测到第' + l + '层被分配了' + dupCountFor(scheme, l) + '次颜色'" placement="top">
+                                  <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(l) }">!</span>
+                                </el-tooltip>
+                              </template>
+                              <span>{{ l }}</span>
+                            </span>
+                            <span v-if="i < g.layers.length - 1">、</span>
+                          </template>
+                          <span> 层</span>
+                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -137,20 +158,21 @@ const ArtworksComponent = {
 
       <!-- 方案编辑/新增对话框 -->
       <el-dialog
+        class="scheme-dialog"
         v-model="showSchemeDialog"
-        :title="schemeEditing?.id ? '修改配色方案' : '新增配色方案'"
+        :title="schemeForm.id ? '修改配色方案' : '新增配色方案'"
         width="760px"
         :close-on-click-modal="false"
         :close-on-press-escape="false"
         @open="onOpenDialog"
       >
-        <el-form ref="schemeFormRef" :model="schemeForm" label-width="110px" @submit.prevent @keydown.enter.stop.prevent="saveScheme">
+        <el-form ref="schemeFormRef" :model="schemeForm" label-width="80px" @submit.prevent @keydown.enter.stop.prevent="saveScheme">
           <el-form-item label="方案名称" required>
             <div class="inline-scheme-name">
               <span class="inline-art-title">{{ editingArtTitle }}</span>
-              <span> - [</span>
-              <el-input v-model.trim="schemeForm.name" placeholder="例如：金黄" style="display:inline-block; width: 240px; vertical-align: middle;" />
-              <span>]</span>
+              <span class="scheme-sep"> - [</span>
+              <el-input v-model.trim="schemeForm.name" placeholder="例如：金黄" class="scheme-name-input" :maxlength="10" />
+              <span class="scheme-bracket-end">]</span>
             </div>
           </el-form-item>
 
@@ -158,10 +180,14 @@ const ArtworksComponent = {
             <div style="display:flex; align-items:center; gap:12px;">
               <div class="scheme-thumbnail"
                 :style="{
-                  width:'140px', height:'100px',
                   backgroundImage: schemeForm.thumbnailPreview ? 'url(' + schemeForm.thumbnailPreview + ')' : 'none',
                   backgroundColor: schemeForm.thumbnailPreview ? 'transparent' : '#f0f0f0'
-                }"></div>
+                }"
+                :class="{ 'no-image': !schemeForm.thumbnailPreview }"
+                @click="schemeForm.thumbnailPreview && $thumbPreview && $thumbPreview.show($event, schemeForm.thumbnailPreview)"
+              >
+                <template v-if="!schemeForm.thumbnailPreview">未上传图片</template>
+              </div>
               <div style="display:flex; gap:8px;">
                 <el-upload
                   :auto-upload="false"
@@ -180,11 +206,11 @@ const ArtworksComponent = {
 
           <el-form-item label="层-自配色">
             <div style="width:100%;">
-              <table class="layer-table">
+              <table class="layer-table mapping-table">
                 <thead>
                   <tr>
-                    <th style="width:120px;">层号</th>
-                    <th>自配色号</th>
+                    <th style="width:80px;">层号</th>
+                    <th style="width:260px;">自配色号</th>
                     <th style="width:110px;">操作</th>
                   </tr>
                 </thead>
@@ -192,11 +218,13 @@ const ArtworksComponent = {
                   <tr v-for="(m, idx) in schemeForm.mappings" :key="idx">
                     <td>
                       <span class="layer-cell">
-                        <template v-if="formDupCounts[m.layer] > 1">
-                          <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + formDupCounts[m.layer] + '次颜色'" placement="top">
-                            <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(m.layer) }">!</span>
-                          </el-tooltip>
-                        </template>
+                        <span class="badge-slot">
+                          <template v-if="formDupCounts[m.layer] > 1">
+                            <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + formDupCounts[m.layer] + '次颜色'" placement="top">
+                              <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(m.layer) }">!</span>
+                            </el-tooltip>
+                          </template>
+                        </span>
                         <el-input-number v-model="m.layer" :min="1" :max="200" controls-position="right" />
                       </span>
                     </td>
@@ -209,8 +237,13 @@ const ArtworksComponent = {
                           :value="c.color_code"
                         />
                       </el-select>
-                      <div class="meta-text" v-if="m.colorCode && colorByCode(m.colorCode)" style="margin-top:4px;">
-                        {{ colorByCode(m.colorCode).formula || '（无配方）' }}
+                      <div v-if="m.colorCode && colorByCode(m.colorCode)" class="mapping-formula-chips">
+                        <template v-if="parseFormulaLines(colorByCode(m.colorCode).formula).length">
+                          <template v-for="(line,i) in parseFormulaLines(colorByCode(m.colorCode).formula)" :key="'mf'+idx+'-'+i">
+                            <span class="mf-chip">{{ line }}</span>
+                          </template>
+                        </template>
+                        <span v-else class="meta-text">（无配方）</span>
                       </div>
                     </td>
                     <td>
@@ -239,7 +272,7 @@ const ArtworksComponent = {
   data() {
     return {
       loading: false,
-      viewMode: 'byLayer', // byLayer | byColor（全局切换）
+  viewMode: 'byLayer', // byLayer | byColor（全局切换）
       showSchemeDialog: false,
       schemeEditing: null,      // {art, scheme} 或 null
       editingArtId: null,
@@ -251,11 +284,20 @@ const ArtworksComponent = {
         mappings: [] // [{ layer: Number, colorCode: String }]
       },
       saving: false
+  , _formulaCache: null
     };
   },
   computed: {
     baseURL() { return this.globalData.baseURL; },
-    artworks() { return this.globalData.artworks.value || []; },
+    artworks() {
+      const arr = (this.globalData.artworks.value || []).slice();
+      if (this.sortMode === 'name') {
+        arr.sort((a,b) => this.artworkTitle(a).localeCompare(this.artworkTitle(b)));
+      } else {
+        arr.sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
+      }
+      return arr;
+    },
     customColors() { return this.globalData.customColors.value || []; },
     colorMap() {
       const map = {};
@@ -275,6 +317,14 @@ const ArtworksComponent = {
         }
       });
       return counts;
+    },
+    editingArtTitle() {
+      // 优先从 schemeEditing.art 取，回退按 editingArtId 查找
+      if (this.schemeEditing && this.schemeEditing.art) {
+        return this.artworkTitle(this.schemeEditing.art);
+      }
+      const art = this.artworks.find(a => a.id === this.editingArtId);
+      return art ? this.artworkTitle(art) : '';
     }
   },
   methods: {
@@ -312,7 +362,9 @@ const ArtworksComponent = {
       return code || name || `作品 #${art.id}`;
     },
     toggleViewMode() {
-      this.viewMode = this.viewMode === 'byLayer' ? 'byColor' : 'byLayer';
+  this.viewMode = this.viewMode === 'byLayer' ? 'byColor' : 'byLayer';
+  try { localStorage.setItem('sw_artworks_view_mode', this.viewMode); } catch(e) {}
+  this.$emit('view-mode-changed', this.viewMode);
     },
     colorByCode(code) {
       return code ? this.colorMap[code] : null;
@@ -589,9 +641,18 @@ const ArtworksComponent = {
   async mounted() {
     try {
       this.loading = true;
+      // 恢复视图模式
+      try {
+        const vm = localStorage.getItem('sw_artworks_view_mode');
+        if (vm === 'byLayer' || vm === 'byColor') {
+          this.viewMode = vm;
+        }
+      } catch(e) {}
       await this.refreshAll();
     } finally {
       this.loading = false;
     }
+    // 首次 emit 供父级按钮文本响应式
+    this.$emit('view-mode-changed', this.viewMode);
   }
 };

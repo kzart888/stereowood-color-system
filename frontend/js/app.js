@@ -12,6 +12,12 @@ const app = createApp({
             baseURL: 'http://localhost:3000',
             loading: false,
             activeTab: 'custom-colors',
+            // 当前作品配色视图模式（由 artworks 子组件 emit 更新）
+            artworksViewMode: 'byLayer',
+            // 排序模式：time | name （三个页面各自独立）
+            customColorsSortMode: 'time',
+            artworksSortMode: 'time',
+            montMarteSortMode: 'time',
 
             // 核心数据
             categories: [],
@@ -55,9 +61,41 @@ const app = createApp({
     },
     
     // ===== 生命周期 =====
+    created() {
+        // 恢复上次活跃标签
+        try {
+            const t = localStorage.getItem('sw_active_tab');
+            if (t && ['custom-colors','artworks','mont-marte'].includes(t)) {
+                this.activeTab = t;
+            }
+            const vm = localStorage.getItem('sw_artworks_view_mode');
+            if (vm === 'byLayer' || vm === 'byColor') {
+                this.artworksViewMode = vm;
+            }
+            const scc = localStorage.getItem('sw_sort_customColors');
+            if (scc === 'time' || scc === 'name') this.customColorsSortMode = scc;
+            const saw = localStorage.getItem('sw_sort_artworks');
+            if (saw === 'time' || saw === 'name') this.artworksSortMode = saw;
+            const smm = localStorage.getItem('sw_sort_montMarte');
+            if (smm === 'time' || smm === 'name') this.montMarteSortMode = smm;
+        } catch(e) { /* ignore */ }
+    },
     mounted() {
         console.log('应用已挂载，开始初始化数据...');
-        this.initApp();
+        const savedScroll = Number(localStorage.getItem('sw_scroll_y') || 0);
+        this.initApp().finally(() => {
+            this.$nextTick(() => {
+                requestAnimationFrame(() => {
+                    if (Number.isFinite(savedScroll) && savedScroll > 0) {
+                        window.scrollTo(0, savedScroll);
+                    }
+                });
+            });
+        });
+        window.addEventListener('beforeunload', this.persistState);
+    },
+    beforeUnmount() {
+        window.removeEventListener('beforeunload', this.persistState);
     },
     
     // ===== 方法 =====
@@ -101,6 +139,9 @@ const app = createApp({
                 const response = await api.customColors.getAll();
                 this.customColors = response.data;
                 console.log(`加载了 ${this.customColors.length} 个自配颜色`);
+                // 自配色列表变化后，重新拉取作品，保证方案中引用显示的自配色编号最新
+                // （以后若引入 diff，可以只在发生变更时刷新）
+                try { await this.loadArtworks(); } catch(e) { console.warn('刷新作品以同步自配色引用失败', e); }
             } catch (error) {
                 console.error('加载自配颜色失败:', error);
                 ElementPlus.ElMessage.error('加载自配颜色失败');
@@ -152,6 +193,48 @@ const app = createApp({
                 console.error('加载采购地址失败:', e);
             }
         }
+        ,
+        // 持久化当前 tab 与滚动位置
+        persistState() {
+            try {
+                localStorage.setItem('sw_active_tab', this.activeTab);
+                localStorage.setItem('sw_scroll_y', String(window.scrollY || window.pageYOffset || 0));
+                localStorage.setItem('sw_sort_customColors', this.customColorsSortMode);
+                localStorage.setItem('sw_sort_artworks', this.artworksSortMode);
+                localStorage.setItem('sw_sort_montMarte', this.montMarteSortMode);
+            } catch(e) { /* ignore */ }
+        },
+        // 返回顶部
+        scrollTop() {
+            try { window.scrollTo({ top:0, behavior:'smooth' }); } catch(e) { window.scrollTo(0,0); }
+        },
+        // 接收子组件视图模式变化
+        onArtworksViewMode(mode) {
+            if (mode === 'byLayer' || mode === 'byColor') this.artworksViewMode = mode;
+        },
+        setArtworksViewMode(mode) {
+            if (mode !== this.artworksViewMode && (mode === 'byLayer' || mode === 'byColor')) {
+                this.artworksViewMode = mode;
+                try { localStorage.setItem('sw_artworks_view_mode', mode); } catch(e) {}
+                if (this.$refs.artworksRef && this.$refs.artworksRef.viewMode !== mode) {
+                    this.$refs.artworksRef.viewMode = mode;
+                }
+            }
+        },
+        setSortMode(section, mode) {
+            if (!(mode === 'time' || mode === 'name')) return;
+            if (section === 'customColors') { this.customColorsSortMode = mode; }
+            else if (section === 'artworks') { this.artworksSortMode = mode; }
+            else if (section === 'montMarte') { this.montMarteSortMode = mode; }
+            this.persistState();
+        }
+    }
+    ,
+    watch: {
+        activeTab(val) {
+            // 即时记录当前标签
+            try { localStorage.setItem('sw_active_tab', val); } catch(e) { /* ignore */ }
+        }
     }
 });
 
@@ -182,5 +265,8 @@ if (typeof FormulaEditorComponent !== 'undefined') {
 
 // ===== 挂载应用 =====
 // 使用Element Plus UI库并挂载到#app元素
+// 暴露缩略图预览工具到全局属性，供模板中通过 $thumbPreview 使用（避免直接访问 window 在模板沙箱下报错）
+app.config.globalProperties.$thumbPreview = (typeof window !== 'undefined' && window.thumbPreview) ? window.thumbPreview : null;
+
 app.use(ElementPlus).mount('#app');
 console.log('Vue应用已挂载到#app');

@@ -3,77 +3,67 @@
 // 定义全局变量 CustomColorsComponent，被 app.js 引用并注册
 
 const CustomColorsComponent = {
-    template: `
-        <div class="tab-content">
-            <!-- 顶部操作栏已迁移到主 tabs #extra -->
-            
-            <!-- 分类标签页 -->
-            <el-tabs v-model="activeCategory" class="category-tabs">
-                <el-tab-pane label="全部" name="all"></el-tab-pane>
-                <el-tab-pane 
-                    v-for="cat in categoriesWithOther" 
-                    :key="cat.id || 'other'"
-                    :label="cat.name" 
-                    :name="String(cat.id || 'other')"
-                ></el-tab-pane>
-            </el-tabs>
-            
-            <!-- 颜色列表 -->
-            <div v-if="loading" class="loading">
-                加载中...
-            </div>
-            
-            <div v-else>
-                <div 
-                    v-for="color in filteredColors" 
-                    :key="color.id" 
-                    class="color-bar"
-                >
-                    <div 
-                        class="color-sample" 
-                        :style="{ backgroundImage: color.image_path ? 'url(' + baseURL + '/' + color.image_path + ')' : 'none', backgroundColor: color.image_path ? 'transparent' : '#f0f0f0' }"
-                    ></div>
-                    <div class="color-info">
-                        <div class="color-code">{{ color.color_code }}</div>
-                        
-                        <!-- 优化的配方显示 -->
-                        <div class="color-formula" v-if="color.formula">
-                            <span class="formula-icon">🎨</span>
-                            <div class="formula-tags">
-                                <span 
-                                    v-for="(item, index) in parseFormulaToTags(color.formula)" 
-                                    :key="index"
-                                    class="formula-tag"
-                                    :title="item.fullText"
-                                >
-                                    <span class="tag-color">{{ item.colorName }}</span>
-                                    <span class="tag-amount">{{ item.amount }}{{ item.unit }}</span>
-                                </span>
+        props: {
+            sortMode: { type: String, default: 'time' } // time | name
+        },
+        template: `
+                <div>
+                        <el-tabs v-model="activeCategory" class="category-tabs">
+                                <el-tab-pane label="全部" name="all"></el-tab-pane>
+                                <el-tab-pane 
+                                        v-for="cat in categoriesWithOther" 
+                                        :key="cat.id || 'other'"
+                                        :label="cat.name" 
+                                        :name="String(cat.id || 'other')"
+                                ></el-tab-pane>
+                        </el-tabs>
+                        <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
+                        <div v-else>
+                            <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角“新自配色”添加</div>
+                            <div v-for="color in filteredColors" :key="color.id" class="artwork-bar">
+                                <div class="artwork-header">
+                                    <div class="artwork-title">{{ color.color_code }}</div>
+                                    <div class="color-actions">
+                                        <el-button size="small" type="primary" @click="editColor(color)"><el-icon><Edit /></el-icon> 修改</el-button>
+                                        <el-button size="small" @click="viewHistory(color)" disabled><el-icon><Clock /></el-icon> 历史</el-button>
+                                        <el-button size="small" type="danger" @click="deleteColor(color)"><el-icon><Delete /></el-icon> 删除</el-button>
+                                    </div>
+                                </div>
+                                                <div style="display:flex; gap:12px; padding:6px 4px 4px;">
+                                                    <div class="scheme-thumbnail" :style="{
+                                                        backgroundImage: color.image_path ? 'url(' + baseURL + '/' + color.image_path + ')' : 'none',
+                                                        backgroundColor: color.image_path ? 'transparent' : '#f0f0f0'
+                                                    }" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, baseURL + '/' + color.image_path)">
+                                                        <template v-if="!color.image_path">未上传图片</template>
+                                                    </div>
+                                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
+                                                            <div class="meta-text" v-if="color.formula">
+                                                                <div class="mapping-formula-chips">
+                                                                    <el-tooltip v-for="(seg,i) in formulaSegments(color.formula)" :key="'ccf'+color.id+'-'+i" :content="seg" placement="top">
+                                                                        <span class="mf-chip">{{ seg }}</span>
+                                                                    </el-tooltip>
+                                                                </div>
+                                                            </div>
+                                           <div class="meta-text">分类：{{ categoryName(color) }}</div>
+                                           <div class="meta-text" v-if="color.updated_at">更新：{{ formatDate(color.updated_at) }}</div>
+                                        <div class="meta-text" v-else>（暂无配方）</div>
+                    <div class="meta-text">适用层：
+                                            <template v-if="usageGroups(color).length">
+                        <span class="usage-chips">
+                                                    <span v-for="g in usageGroups(color)" :key="'ug'+color.id+g" class="mf-chip usage-chip" :title="g">{{ g }}</span>
+                                                </span>
+                                            </template>
+                                            <span v-else>（未使用）</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div v-else class="color-formula">
-                            <span class="formula-icon">🎨</span>
-                            <span class="no-formula">暂无配方</span>
-                        </div>
-                        
-                        <div class="color-layers">适用层: {{ color.applicable_layers || '未指定' }}</div>
-                    </div>
-                    <div class="color-actions">
-                        <el-button type="primary" size="small" @click="editColor(color)">修改</el-button>
-                        <el-button type="info" size="small" @click="viewHistory(color)">历史</el-button>
-                        <el-button type="danger" size="small" @click="deleteColor(color)">删除</el-button>
-                    </div>
-                </div>
-                
-                <div v-if="filteredColors.length === 0" class="loading">
-                    暂无数据
-                </div>
-            </div>
-            
-            <!-- 添加/编辑对话框 -->
+                        <!-- 添加/编辑对话框 -->
             <el-dialog 
                 v-model="showAddDialog" 
-                :title="editingColor ? '修改自配颜色' : '添加自配颜色'"
+                                class="scheme-dialog"
+                                :title="editingColor ? '修改自配色' : '添加自配色'"
                 width="600px"
                 @close="resetForm"
                 @open="initForm"
@@ -103,9 +93,7 @@ const CustomColorsComponent = {
                             :mont-marte-colors="montMarteColors"
                         />
                     </el-form-item>
-                    <el-form-item label="适用画层">
-                        <el-input v-model="form.applicable_layers"></el-input>
-                    </el-form-item>
+                    <!-- 适用画层改为自动统计，不再手动输入 -->
                     <el-form-item label="颜色样本">
                         <el-upload
                             :auto-upload="false"
@@ -116,7 +104,7 @@ const CustomColorsComponent = {
                             <el-button>选择图片</el-button>
                         </el-upload>
                         <div v-if="form.imagePreview" style="margin-top: 10px;">
-                            <img :src="form.imagePreview" style="width: 100px; height: 80px; object-fit: cover;">
+                            <div class="scheme-thumbnail" :style="{ backgroundImage: 'url(' + form.imagePreview + ')', backgroundColor: 'transparent' }" @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)"></div>
                         </div>
                     </el-form-item>
                 </el-form>
@@ -141,7 +129,6 @@ const CustomColorsComponent = {
                 category_id: '',
                 color_code: '',
                 formula: '',
-                applicable_layers: '',
                 imageFile: null,
                 imagePreview: null
             },
@@ -178,17 +165,25 @@ const CustomColorsComponent = {
         },
         // 根据当前选中的分类过滤颜色
         filteredColors() {
+            let list;
             if (this.activeCategory === 'all') {
-                return this.customColors;
+                list = this.customColors.slice();
             } else if (this.activeCategory === 'other') {
-                // 显示无法匹配到任何分类的颜色
-                return this.customColors.filter(color => {
+                list = this.customColors.filter(color => {
                     const prefix = color.color_code.substring(0, 2).toUpperCase();
                     const matchedCategory = this.categories.find(cat => cat.code === prefix);
                     return !matchedCategory;
                 });
+            } else {
+                list = this.customColors.filter(c => c.category_id === parseInt(this.activeCategory));
             }
-            return this.customColors.filter(c => c.category_id === parseInt(this.activeCategory));
+            // 排序
+            if (this.sortMode === 'name') {
+                list.sort((a,b) => (a.color_code||'').localeCompare(b.color_code||''));
+            } else { // time 默认
+                list.sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
+            }
+            return list;
         },
         // 从注入的全局数据获取颜色原料库
         montMarteColors() {
@@ -197,6 +192,73 @@ const CustomColorsComponent = {
     },
     
     methods: {
+        formatDate(ts) {
+            if (!ts) return '';
+            const d = new Date(ts);
+            const p = n => n < 10 ? '0'+n : ''+n;
+            return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+        },
+        artworkTitle(art) {
+            if (!art) return '';
+            const code = art.code || art.no || '';
+            const name = art.name || art.title || '';
+            if (code && name) return `${code}-${name}`;
+            return code || name || `作品#${art.id}`;
+        },
+        usageGroups(color) {
+            if (!color) return [];
+            const code = color.color_code;
+            if (!code) return [];
+            const artworks = (this.globalData.artworks?.value) || [];
+            const groups = [];
+            artworks.forEach(a => {
+                (a.schemes || []).forEach(s => {
+                    const layers = [];
+                    (s.layers || []).forEach(l => {
+                        if (l.colorCode === code) {
+                            const num = Number(l.layer);
+                            if (Number.isFinite(num)) layers.push(num);
+                        }
+                    });
+                    if (layers.length) {
+                        layers.sort((x,y)=>x-y);
+                        const schemeName = s.name || s.scheme_name || '-';
+                        const header = `${this.artworkTitle(a)}-[${schemeName}]`;
+                        const suffix = layers.map(n=>`(${n})`).join('');
+                        groups.push(header + suffix);
+                    }
+                });
+            });
+            return groups;
+        },
+        categoryName(color) {
+            if (!color) return '-';
+            const cat = this.categories.find(c => c.id === color.category_id);
+            if (cat) return cat.name;
+            // 前缀推断
+            const prefix = (color.color_code || '').substring(0,2).toUpperCase();
+            const byPrefix = this.categories.find(c => c.code === prefix);
+            return byPrefix ? byPrefix.name : '其他';
+        },
+        formulaSegments(formula) {
+            const str = (formula || '').trim();
+            if (!str) return [];
+            const parts = str.split(/\s+/);
+            const segs = [];
+            let pending = null;
+            for (const t of parts) {
+                const m = t.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/);
+                if (m && pending) {
+                    segs.push(pending + ' ' + m[1] + m[2]);
+                    pending = null;
+                } else {
+                    if (pending) segs.push(pending);
+                    pending = t;
+                }
+            }
+            if (pending) segs.push(pending);
+            return segs;
+        },
         // 打开添加对话框
         openAddDialog() {
             // 重置编辑状态
@@ -222,7 +284,6 @@ const CustomColorsComponent = {
             
             // 清空其他字段
             this.form.formula = '';
-            this.form.applicable_layers = '';
             this.form.imageFile = null;
             this.form.imagePreview = null;
             
@@ -329,7 +390,6 @@ const CustomColorsComponent = {
                 formData.append('category_id', actualCategoryId);
                 formData.append('color_code', this.form.color_code);
                 formData.append('formula', this.form.formula);
-                formData.append('applicable_layers', this.form.applicable_layers);
                 if (this.form.imageFile) {
                     formData.append('image', this.form.imageFile);
                 }
@@ -344,7 +404,9 @@ const CustomColorsComponent = {
                 
                 this.showAddDialog = false;
                 this.resetForm();
+                // 先刷新自配色，再刷新作品（同步更新作品方案中引用的自配色编号）
                 await this.globalData.loadCustomColors();
+                await this.globalData.loadArtworks();
             } catch (error) {
                 ElementPlus.ElMessage.error('操作失败');
             }
@@ -362,7 +424,6 @@ const CustomColorsComponent = {
                 category_id: matchedCategory ? color.category_id : 'other',
                 color_code: color.color_code,
                 formula: color.formula,
-                applicable_layers: color.applicable_layers,
                 imageFile: null,
                 imagePreview: color.image_path ? `${this.baseURL}/${color.image_path}` : null
             };
@@ -386,6 +447,8 @@ const CustomColorsComponent = {
                 
                 ElementPlus.ElMessage.success('删除成功');
                 await this.globalData.loadCustomColors();
+                // 删除后也刷新作品（虽然后端阻止引用中删除，这里保持一致）
+                await this.globalData.loadArtworks();
             } catch (error) {
                 // 检查是否是用户取消操作
                 if (error === 'cancel' || error.message === 'cancel') {
@@ -427,7 +490,6 @@ const CustomColorsComponent = {
                 category_id: '',
                 color_code: '',
                 formula: '',
-                applicable_layers: '',
                 imageFile: null,
                 imagePreview: null
             };

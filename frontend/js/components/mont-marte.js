@@ -3,40 +3,47 @@
 // 定义全局变量 MontMarteComponent，被 app.js 引用并注册
 
 const MontMarteComponent = {
-    template: `
-        <div class="tab-content">
-            <!-- 顶部操作栏已迁移到主 tabs #extra -->
-
-            <!-- 列表 -->
-            <div v-if="loading" class="loading">
-                <el-icon class="is-loading"><Loading /></el-icon>
-                加载中...
-            </div>
-            <div v-else>
-                <div v-for="color in montMarteColors" :key="color.id" class="mont-marte-bar">
-                    <div class="color-sample"
-                         :style="{ backgroundImage: color.image_path ? 'url(' + baseURL + '/uploads/' + color.image_path + ')' : 'none', backgroundColor: color.image_path ? 'transparent' : '#f0f0f0' }"></div>
-                    <div class="color-info">
-                        <div class="color-code">{{ color.name }}</div>
-                        <div class="meta-text">
-                            更新时间：{{ formatDate(color.updated_at) }}
+        props: {
+            sortMode: { type: String, default: 'time' } // time | name
+        },
+        template: `
+                <div>
+                        <div v-if="loading" class="loading">
+                                <el-icon class="is-loading"><Loading /></el-icon> 加载中...
                         </div>
-                        <div class="meta-text" v-if="color.supplier_name">供应商：{{ color.supplier_name }}</div>
-                        <div class="meta-text" v-if="color.purchase_link_url">采购：{{ color.purchase_link_url }}</div>
-                    </div>
-                    <div class="color-actions">
-                        <el-button size="small" type="primary" @click="editColor(color)">
-                            <el-icon><Edit /></el-icon> 修改
-                        </el-button>
-                        <el-button size="small" type="danger" @click="deleteColor(color)">
-                            <el-icon><Delete /></el-icon> 删除
-                        </el-button>
-                    </div>
-                </div>
-            </div>
+                        <div v-else>
+                                <div v-if="montMarteColors.length === 0" class="empty-message">暂无原料，点击右上角“新原料”添加</div>
+                                <div v-for="color in montMarteColors" :key="color.id" class="artwork-bar">
+                                    <div class="artwork-header">
+                                        <div class="artwork-title">{{ color.name }}</div>
+                                        <div class="color-actions">
+                                                <el-button size="small" type="primary" @click="editColor(color)">
+                                                    <el-icon><Edit /></el-icon> 修改
+                                                </el-button>
+                                                <el-button size="small" type="danger" @click="deleteColor(color)">
+                                                    <el-icon><Delete /></el-icon> 删除
+                                                </el-button>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; gap:12px; padding:6px 4px 4px;">
+                                                            <div class="scheme-thumbnail" :style="{
+                                                                    backgroundImage: color.image_path ? 'url(' + baseURL + '/uploads/' + color.image_path + ')' : 'none',
+                                                                    backgroundColor: color.image_path ? 'transparent' : '#f0f0f0'
+                                                                }" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, baseURL + '/uploads/' + color.image_path)">
+                                                                <template v-if="!color.image_path">未上传图片</template>
+                                                            </div>
+                                        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
+                                            <div class="meta-text" v-if="color.updated_at">更新时间：{{ formatDate(color.updated_at) }}</div>
+                                            <div class="meta-text" v-if="color.supplier_name">供应商：{{ color.supplier_name }}</div>
+                                            <div class="meta-text" v-if="color.purchase_link_url" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="color.purchase_link_url">采购：{{ color.purchase_link_url }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                        </div>
 
             <!-- 新增/编辑对话框 -->
             <el-dialog
+                class="scheme-dialog"
                 v-model="showDialog"
                 :title="editing ? '修改颜色原料' : '新增颜色原料'"
                 width="640px"
@@ -48,7 +55,7 @@ const MontMarteComponent = {
                     ref="formRef"
                     :model="form"
                     :rules="rules"
-                    label-width="110px"
+                    label-width="100px"
                     @submit.prevent
                     @keydown.enter.stop.prevent="onFormEnter"
                 >
@@ -144,7 +151,7 @@ const MontMarteComponent = {
                             <el-button><el-icon><Upload /></el-icon> 选择图片</el-button>
                         </el-upload>
                         <div v-if="form.imagePreview" style="margin-top: 8px;">
-                            <img :src="form.imagePreview" style="width: 120px; height: 90px; object-fit: cover; border-radius: 4px;">
+                            <div class="scheme-thumbnail" :style="{ backgroundImage: 'url(' + form.imagePreview + ')', backgroundColor: 'transparent' }" @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)"></div>
                         </div>
                     </el-form-item>
                 </el-form>
@@ -189,7 +196,15 @@ const MontMarteComponent = {
     },
     computed: {
         baseURL() { return this.globalData.baseURL; },
-        montMarteColors() { return this.globalData.montMarteColors.value || []; },
+        montMarteColors() {
+            const list = (this.globalData.montMarteColors.value || []).slice();
+            if (this.sortMode === 'name') {
+                list.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+            } else {
+                list.sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
+            }
+            return list;
+        },
         supplierOptions() { return this.globalData.suppliers.value || []; },
         purchaseLinkOptions() { return this.globalData.purchaseLinks.value || []; }
     },
