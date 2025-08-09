@@ -1,5 +1,5 @@
 /* 作品配色管理组件
-   - 顶部“视图切换”按钮：按层号查看 / 按自配色归集 两种矩阵视图切换（全局作用）
+  - 顶部“视图切换”按钮：层号优先 / 自配色优先 两种矩阵视图切换（全局作用）
    - 顶部“+ 新作品”按钮：新增母bar（作品）
    - 母bar：作品标题 + “+ 新增配色方案”
    - 子bar：方案名、缩略图、矩阵视图、修改/历史（历史占位）
@@ -18,7 +18,7 @@ const ArtworksComponent = {
         <div>
           <el-button size="small" @click="toggleViewMode">
             <el-icon><Switch /></el-icon>
-            {{ viewMode === 'byLayer' ? '切换为：按自配色归集' : '切换为：按层号平铺' }}
+            {{ viewMode === 'byLayer' ? '层号优先' : '自配色优先' }}
           </el-button>
         </div>
       </div>
@@ -52,7 +52,7 @@ const ArtworksComponent = {
                   }">
                 </div>
                 <div style="flex: 1;">
-                  <div class="scheme-name">{{ scheme.name || scheme.scheme_name }}</div>
+                  <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
                   <div class="meta-text">
                     层数：{{ (scheme.layers || []).length }}
                     <span v-if="scheme.updated_at"> · 更新：{{ formatDate(scheme.updated_at) }}</span>
@@ -73,7 +73,16 @@ const ArtworksComponent = {
                 <table class="layer-table">
                   <thead>
                     <tr>
-                      <th v-for="m in normalizedMappings(scheme)" :key="'h'+m.layer">第{{ m.layer }}层</th>
+                      <th v-for="m in normalizedMappings(scheme)" :key="'h'+m.layer">
+                        <span class="layer-cell">
+                          <template v-if="dupCountFor(scheme, m.layer) > 1">
+                            <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + dupCountFor(scheme, m.layer) + '次颜色'" placement="top">
+                              <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(m.layer) }">!</span>
+                            </el-tooltip>
+                          </template>
+                          <span>第{{ m.layer }}层</span>
+                        </span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -95,22 +104,34 @@ const ArtworksComponent = {
               </div>
 
               <div v-else>
-                <table class="layer-table">
+        <table class="layer-table">
                   <thead>
                     <tr>
-                      <th v-for="g in groupedByColor(scheme)" :key="'hc'+g.code">{{ g.code || '-' }}</th>
+          <th v-for="g in groupedByColorWithFlags(scheme)" :key="'hc'+g.code">{{ g.code || '-' }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td v-for="g in groupedByColor(scheme)" :key="'fc'+g.code" class="meta-text" style="text-align:left;">
+          <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text" style="text-align:left;">
                         <span v-if="colorByCode(g.code)">{{ colorByCode(g.code).formula || '（无配方）' }}</span>
                         <span v-else>（未匹配到自配色：{{ g.code || '-' }}）</span>
                       </td>
                     </tr>
                     <tr>
-                      <td v-for="g in groupedByColor(scheme)" :key="'lc'+g.code">
-                        第 {{ g.layers.join('、') }} 层
+          <td v-for="g in groupedByColorWithFlags(scheme)" :key="'lc'+g.code" style="text-align:left;">
+                        <span>第 </span>
+                        <template v-for="(l, i) in g.layers" :key="'l'+g.code+'-'+l+'-'+i">
+                          <span class="layer-cell">
+                            <template v-if="dupCountFor(scheme, l) > 1">
+                              <el-tooltip :content="'检测到第' + l + '层被分配了' + dupCountFor(scheme, l) + '次颜色'" placement="top">
+                                <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(l) }">!</span>
+                              </el-tooltip>
+                            </template>
+                            <span>{{ l }}</span>
+                          </span>
+                          <span v-if="i < g.layers.length - 1">、</span>
+                        </template>
+                        <span> 层</span>
                       </td>
                     </tr>
                   </tbody>
@@ -134,7 +155,12 @@ const ArtworksComponent = {
       >
         <el-form ref="schemeFormRef" :model="schemeForm" label-width="110px" @submit.prevent @keydown.enter.stop.prevent="saveScheme">
           <el-form-item label="方案名称" required>
-            <el-input v-model.trim="schemeForm.name" placeholder="例如：金黄"></el-input>
+            <div class="inline-scheme-name">
+              <span class="inline-art-title">{{ editingArtTitle }}</span>
+              <span> - [</span>
+              <el-input v-model.trim="schemeForm.name" placeholder="例如：金黄" style="display:inline-block; width: 240px; vertical-align: middle;" />
+              <span>]</span>
+            </div>
           </el-form-item>
 
           <el-form-item label="缩略图">
@@ -174,7 +200,14 @@ const ArtworksComponent = {
                 <tbody>
                   <tr v-for="(m, idx) in schemeForm.mappings" :key="idx">
                     <td>
-                      <el-input-number v-model="m.layer" :min="1" :max="200" controls-position="right" />
+                      <span class="layer-cell">
+                        <template v-if="formDupCounts[m.layer] > 1">
+                          <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + formDupCounts[m.layer] + '次颜色'" placement="top">
+                            <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(m.layer) }">!</span>
+                          </el-tooltip>
+                        </template>
+                        <el-input-number v-model="m.layer" :min="1" :max="200" controls-position="right" />
+                      </span>
                     </td>
                     <td>
                       <el-select v-model="m.colorCode" filterable clearable placeholder="选择自配色号">
@@ -198,7 +231,7 @@ const ArtworksComponent = {
               </table>
               <div class="add-button-container">
                 <el-button size="small" @click="addRow"><el-icon><Plus /></el-icon> 添加一行</el-button>
-                <span class="add-hint">按层号顺序填写，保存时会自动排序并合并相同层号</span>
+                <span class="add-hint">按层号顺序填写；保存时会按层号排序（允许相同层号）</span>
               </div>
             </div>
           </el-form-item>
@@ -240,9 +273,33 @@ const ArtworksComponent = {
         if (code) map[code] = c;
       });
       return map;
+    },
+    formDupCounts() {
+      const counts = {};
+      const rows = (this.schemeForm && Array.isArray(this.schemeForm.mappings)) ? this.schemeForm.mappings : [];
+      rows.forEach(m => {
+        const l = Number(m.layer);
+        if (Number.isFinite(l) && l > 0) {
+          counts[l] = (counts[l] || 0) + 1;
+        }
+      });
+      return counts;
     }
   },
   methods: {
+    dupCountFor(scheme, layer) {
+      const l = Number(layer);
+      if (!Number.isFinite(l)) return 0;
+      const rows = this.normalizedMappings(scheme);
+      let c = 0;
+      for (const r of rows) if (Number(r.layer) === l) c++;
+      return c;
+    },
+    displaySchemeName(art, scheme) {
+      const title = this.artworkTitle(art);
+      const sn = (scheme && (scheme.name || scheme.scheme_name)) || '-';
+      return `${title}-[${sn}]`;
+    },
     async refreshAll() {
       // 依赖全局 loadArtworks（已包含 schemes 的 layers）避免重复拉取导致覆盖
       await Promise.all([
@@ -296,6 +353,22 @@ const ArtworksComponent = {
       // 将空 code 放到最后
       arr.sort((a, b) => (a.code ? 0 : 1) - (b.code ? 0 : 1) || a.code.localeCompare(b.code));
       return arr;
+    },
+    duplicateLayerSet(scheme) {
+      const dupSet = new Set();
+      const seen = new Map();
+      const rows = this.normalizedMappings(scheme);
+      rows.forEach(r => {
+        const cnt = (seen.get(r.layer) || 0) + 1;
+        seen.set(r.layer, cnt);
+        if (cnt > 1) dupSet.add(r.layer);
+      });
+      return dupSet;
+    },
+    groupedByColorWithFlags(scheme) {
+      const groups = this.groupedByColor(scheme);
+      const dup = this.duplicateLayerSet(scheme);
+      return groups.map(g => ({ ...g, hasDup: (g.layers || []).some(l => dup.has(l)) }));
     },
 
     // 顶部“新作品”
@@ -395,16 +468,31 @@ const ArtworksComponent = {
       }
     },
 
-    // 序列化层映射，去重（后者覆盖前者）、按层排序
+    // 序列化层映射，保留重复层，按层排序
     buildLayerPayload() {
-      const map = new Map();
-      this.schemeForm.mappings.forEach(m => {
+      const arr = [];
+      (this.schemeForm.mappings || []).forEach(m => {
         const layer = Number(m.layer);
         const code = String(m.colorCode || '').trim();
-        if (Number.isFinite(layer) && layer > 0) map.set(layer, code);
+        if (Number.isFinite(layer) && layer > 0) arr.push({ layer, colorCode: code });
       });
-      const ordered = Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
-      return ordered.map(([layer, colorCode]) => ({ layer, colorCode }));
+      arr.sort((a, b) => a.layer - b.layer);
+      return arr;
+    },
+    // 重复层的小圆叹号颜色（最多18种）
+    dupPalette() {
+      return [
+        '#E57373', '#64B5F6', '#81C784', '#FFD54F', '#BA68C8', '#4DB6AC', '#FF8A65', '#A1887F',
+        '#90A4AE', '#F06292', '#9575CD', '#4FC3F7', '#AED581', '#FFB74D', '#7986CB', '#4DB6F3',
+        '#DCE775', '#FFF176'
+      ];
+    },
+    dupBadgeColor(layer) {
+      const l = Number(layer);
+      const palette = this.dupPalette();
+      if (!Number.isFinite(l) || l <= 0) return '#999';
+      // 题设中所有画作层数 < 18，直接按层号分配颜色
+      return palette[(l - 1) % palette.length];
     },
 
     async saveScheme() {

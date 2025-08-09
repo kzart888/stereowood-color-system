@@ -16,17 +16,24 @@ body {
 .main-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 8px 12px;
 }
 
 .system-header {
     text-align: center;
-    margin-bottom: 30px;
-    padding: 20px;
+    margin-bottom: 8px;
+    padding: 12px 20px; /* compact vertical */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 10px;
     color: white;
 }
+.system-header h1 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 600;
+}
+.system-header.compact p { display: none; }
 
 /* ============================================
    自配颜色管理 - 相关样式
@@ -144,13 +151,13 @@ body {
     background: white;
     margin-bottom: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
     overflow: hidden;
 }
 
 .artwork-header {
-    padding: 20px;
-    background: #f8f9fa;
+    padding: 8px 20px;
+    background: #ffffff;
     border-bottom: 1px solid #eee;
     display: flex;
     justify-content: space-between;
@@ -165,7 +172,7 @@ body {
 
 /* 配色方案样式 */
 .scheme-bar {
-    padding: 20px;
+    padding: 8px 20px;
     border-bottom: 1px solid #f0f0f0;
 }
 
@@ -177,7 +184,7 @@ body {
     display: flex;
     align-items: center;
     gap: 20px;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
 }
 
 .scheme-thumbnail {
@@ -199,7 +206,6 @@ body {
 /* 表格样式 */
 .layer-table {
     width: 100%;
-    margin-top: 15px;
     border-collapse: collapse;
 }
 
@@ -300,6 +306,26 @@ body {
     font-size: 14px;
 }
 
+/* 层号输入单元格：保持内容水平排列且垂直居中，不影响行高 */
+.layer-cell {
+    display: inline-flex;
+    align-items: center;
+}
+.dup-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 16px;
+    margin-right: 6px;
+    user-select: none;
+}
+
 /* Element Plus 组件微调 */
 .formula-table .el-input-number {
     height: 28px;
@@ -326,7 +352,7 @@ body {
 .tab-content {
     background: white;
     border-radius: 8px;
-    padding: 20px;
+    padding: 4px 20px; /* 垂直压缩为 4px，左右保持 20px */
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
@@ -346,6 +372,42 @@ body {
     color: #909399;   /* Element Plus 次要文字色 */
     font-size: 12px;
     line-height: 1.4;
+}
+
+/* （已清理）重复层冲突提示旧样式 .dup-conflict */
+
+/* ============================================
+   全局紧凑化 Tabs（Element Plus）
+   - 统一缩小标签高度 / 去掉 header 底部空隙
+   - 激活标签与内容面板无缝衔接
+============================================ */
+.el-tabs__header { margin: 0; padding: 0; }
+.el-tabs--card > .el-tabs__header .el-tabs__nav { border-bottom: 1px solid #e4e7ed; }
+.el-tabs--card > .el-tabs__header .el-tabs__item {
+    padding: 4px 14px; /* 压缩水平与垂直空间 */
+    height: 30px;
+    line-height: 22px;
+    font-size: 14px; /* 字号保持 */
+    transition: background-color .15s ease, color .15s ease;
+}
+.el-tabs--card > .el-tabs__header .el-tabs__item.is-active {
+    background: #fff;
+    border-bottom-color: #fff;
+    position: relative;
+    z-index: 2;
+}
+.el-tabs--card > .el-tabs__content { padding-top: 0; }
+/* 内容容器与激活标签衔接：去掉上边圆角 */
+.tab-content { border-top-left-radius: 0; border-top-right-radius: 0; margin-top: 0; }
+
+/* 方案名称内联展示 */
+.inline-scheme-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.inline-art-title {
+    font-weight: 600;
 }
 
 /* ============================================
