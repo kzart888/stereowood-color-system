@@ -35,15 +35,9 @@ const ArtworksComponent = {
           <div v-if="(art.schemes && art.schemes.length) > 0">
             <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id">
               <div class="scheme-header">
-                <div class="scheme-thumbnail"
-                  :style="{
-                    backgroundImage: scheme.thumbnail_path ? 'url(' + baseURL + '/' + scheme.thumbnail_path + ')' : 'none',
-                    backgroundColor: scheme.thumbnail_path ? 'transparent' : '#f0f0f0'
-                  }"
-                  :class="{ 'no-image': !scheme.thumbnail_path }"
-                  @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, baseURL + '/' + scheme.thumbnail_path)"
-                >
+                <div class="scheme-thumbnail" :class="{ 'no-image': !scheme.thumbnail_path }" @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, scheme.thumbnail_path))">
                   <template v-if="!scheme.thumbnail_path">未上传图片</template>
+                  <img v-else :src="$helpers.buildUploadURL(baseURL, scheme.thumbnail_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                 </div>
                 <div style="flex: 1;">
                   <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
@@ -602,7 +596,7 @@ const ArtworksComponent = {
         id: scheme.id,
         name: scheme.name || '',
         thumbnailFile: null,
-  thumbnailPreview: scheme.thumbnail_path ? `${this.baseURL}/${scheme.thumbnail_path}` : null,
+  thumbnailPreview: scheme.thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.thumbnail_path) : null,
         mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }]
       };
       this.showSchemeDialog = true;

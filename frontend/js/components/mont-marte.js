@@ -1,4 +1,4 @@
-// 颜色原料库组件
+// 颜色原料管理组件（原“颜色原料库”）
 // 文件路径: frontend/js/components/mont-marte.js
 // 定义全局变量 MontMarteComponent，被 app.js 引用并注册
 
@@ -26,16 +26,22 @@ const MontMarteComponent = {
                                         </div>
                                     </div>
                                     <div style="display:flex; gap:12px; padding:6px 4px 4px;">
-                                                            <div class="scheme-thumbnail" :style="{
-                                                                    backgroundImage: color.image_path ? 'url(' + baseURL + '/uploads/' + color.image_path + ')' : 'none',
-                                                                    backgroundColor: color.image_path ? 'transparent' : '#f0f0f0'
-                                                                }" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, baseURL + '/uploads/' + color.image_path)">
+                                                            <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, buildImageURL(color.image_path))">
                                                                 <template v-if="!color.image_path">未上传图片</template>
+                                                                <img v-else :src="buildImageURL(color.image_path)" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                                                             </div>
                                         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
-                                            <div class="meta-text" v-if="color.updated_at">更新时间：{{ formatDate(color.updated_at) }}</div>
-                                            <div class="meta-text" v-if="color.supplier_name">供应商：{{ color.supplier_name }}</div>
-                                            <div class="meta-text" v-if="color.purchase_link_url" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="color.purchase_link_url">采购：{{ color.purchase_link_url }}</div>
+                                            <div class="meta-text" v-if="color.updated_at">更新：{{ formatDate(color.updated_at) }}</div>
+                                            <div class="meta-text">供应商：<template v-if="color.supplier_name">{{ color.supplier_name }}</template><template v-else>（未填）</template></div>
+                                            <div class="meta-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="color.purchase_link_url || ''">采购：<template v-if="color.purchase_link_url">{{ color.purchase_link_url }}</template><template v-else>（未填）</template></div>
+                                            <div class="meta-text">适用色：
+                                                <template v-if="rawUsageCodes(color).length">
+                                                    <span class="usage-chips">
+                                                        <span v-for="c in rawUsageCodes(color)" :key="c" class="mf-chip usage-chip" :title="c" @click="$root && $root.focusCustomColor && $root.focusCustomColor(c)" style="cursor:pointer;">{{ c }}</span>
+                                                    </span>
+                                                </template>
+                                                <template v-else>（未使用）</template>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -152,7 +158,9 @@ const MontMarteComponent = {
                             <el-button><el-icon><Upload /></el-icon> 选择图片</el-button>
                         </el-upload>
                         <div v-if="form.imagePreview" style="margin-top: 8px;">
-                            <div class="scheme-thumbnail" :style="{ backgroundImage: 'url(' + form.imagePreview + ')', backgroundColor: 'transparent' }" @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)"></div>
+                            <div class="scheme-thumbnail" @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)">
+                                <img :src="form.imagePreview" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                            </div>
                         </div>
                     </el-form-item>
                 </el-form>
@@ -212,6 +220,48 @@ const MontMarteComponent = {
         purchaseLinkOptions() { return this.globalData.purchaseLinks.value || []; }
     },
     methods: {
+        // 返回引用该原料的自配色编号列表（去重、按字母/数字排序）
+        rawUsageCodes(color) {
+            if (!color || !color.name) return [];
+            const target = color.name.trim();
+            if (!target) return [];
+            const customList = (this.globalData.customColors?.value) || [];
+            const set = new Set();
+            customList.forEach(cc => {
+                const formula = (cc.formula || '').trim();
+                if (!formula) return;
+                // 粗粒度匹配：按空白拆分，名称 token 后可能跟数量
+                const tokens = formula.split(/\s+/);
+                for (let i=0;i<tokens.length;i++) {
+                    const t = tokens[i];
+                    // 若下一个是数字+单位，则当前 t 视为原料名
+                    const next = tokens[i+1] || '';
+                    const amountMatch = next.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/);
+                    if (amountMatch) {
+                        if (t === target) {
+                            const code = cc.color_code || cc.code;
+                            if (code) set.add(code);
+                        }
+                        i++; // 跳过数量 token
+                        continue;
+                    }
+                    // 若 token 本身等于原料名且后面不是数量，也允许记一次
+                    if (t === target) {
+                        const code = cc.color_code || cc.code;
+                        if (code) set.add(code);
+                    }
+                }
+            });
+            return Array.from(set).sort((a,b)=>a.localeCompare(b));
+        },
+    buildImageURL(raw) { return this.$helpers ? this.$helpers.buildUploadURL(this.baseURL, raw) : ''; },
+        onThumbError(e) {
+            // 若加载失败，移除背景以显示占位文本
+            const el = e.currentTarget;
+            if (el) {
+                el.classList.add('no-image');
+            }
+        },
         formatDate(ts) {
             if (!ts) return '';
             const d = new Date(ts);
@@ -235,7 +285,7 @@ const MontMarteComponent = {
             this.form.supplier_id = row.supplier_id || null;
             this.form.purchase_link_id = row.purchase_link_id || null;
             this.form.imageFile = null;
-            this.form.imagePreview = row.image_path ? `${this.baseURL}/uploads/${row.image_path}` : null;
+            this.form.imagePreview = row.image_path ? this.buildImageURL(row.image_path) : null;
             this.showDialog = true;
         },
         closeDialog() {

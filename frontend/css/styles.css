@@ -434,6 +434,14 @@ table.mapping-table .mapping-formula-chips { display:flex; flex-wrap:wrap; gap:4
 .usage-chip { background:#f5f7f2; border:1px solid #d9e2cc; color:#56624a; }
 .usage-chips { display:inline-flex; flex-wrap:wrap; gap:var(--sw-chip-gap); }
 
+/* 寻迹高亮动画 */
+.highlight-pulse { position:relative; animation:highlightPulseSym 2s ease-in-out 0s 1; border-radius:4px; }
+@keyframes highlightPulseSym {
+    0% { box-shadow:0 0 0 0 rgba(255,213,79,0); }
+    50% { box-shadow:0 0 0 3px rgba(255,213,79,0.95), 0 0 22px 6px rgba(255,213,79,0.85); }
+    100% { box-shadow:0 0 0 0 rgba(255,213,79,0); }
+}
+
 /* 自配色优先视图专用紧凑表格 */
 .bycolor-table { table-layout:auto; }
 .bycolor-table th, .bycolor-table td { white-space:nowrap; vertical-align:top; }

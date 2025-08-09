@@ -20,7 +20,7 @@ const CustomColorsComponent = {
                         <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
                         <div v-else>
                             <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角“新自配色”添加</div>
-                            <div v-for="color in filteredColors" :key="color.id" class="artwork-bar">
+                            <div v-for="color in filteredColors" :key="color.id" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code}">
                                 <div class="artwork-header">
                                     <div class="artwork-title">{{ color.color_code }}</div>
                                     <div class="color-actions">
@@ -30,11 +30,9 @@ const CustomColorsComponent = {
                                     </div>
                                 </div>
                                                 <div style="display:flex; gap:12px; padding:6px 4px 4px;">
-                                                    <div class="scheme-thumbnail" :style="{
-                                                        backgroundImage: color.image_path ? 'url(' + baseURL + '/' + color.image_path + ')' : 'none',
-                                                        backgroundColor: color.image_path ? 'transparent' : '#f0f0f0'
-                                                    }" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, baseURL + '/' + color.image_path)">
+                                                    <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, color.image_path))">
                                                         <template v-if="!color.image_path">未上传图片</template>
+                                                        <img v-else :src="$helpers.buildUploadURL(baseURL, color.image_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                                                     </div>
                                     <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
                                                             <div class="meta-text" v-if="color.formula">
@@ -127,6 +125,8 @@ const CustomColorsComponent = {
             activeCategory: 'all',
             showAddDialog: false,
             editingColor: null,
+            _colorItemRefs: new Map(),
+            highlightCode: null,
             form: {
                 category_id: '',
                 color_code: '',
@@ -196,6 +196,30 @@ const CustomColorsComponent = {
     },
     
     methods: {
+        setColorItemRef(color) {
+            return (el) => {
+                if (el) this._colorItemRefs.set(color.color_code, el); else this._colorItemRefs.delete(color.color_code);
+            };
+        },
+        focusCustomColor(code) {
+            // 确保在“全部”标签下便于查找
+            if (this.activeCategory !== 'all') this.activeCategory = 'all';
+            this.$nextTick(() => {
+                const el = this._colorItemRefs.get(code);
+                if (el && el.scrollIntoView) {
+                    // 居中尝试：计算位置
+                    try {
+                        const rect = el.getBoundingClientRect();
+                        const vh = window.innerHeight || document.documentElement.clientHeight;
+                        const current = window.pageYOffset || document.documentElement.scrollTop;
+                        const targetScroll = current + rect.top - (vh/2 - rect.height/2);
+                        window.scrollTo(0, Math.max(0, targetScroll));
+                    } catch(e) { el.scrollIntoView(); }
+                    this.highlightCode = code;
+                    setTimeout(()=>{ this.highlightCode = null; }, 2000);
+                }
+            });
+        },
         formatDate(ts) {
             if (!ts) return '';
             const d = new Date(ts);

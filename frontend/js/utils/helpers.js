@@ -5,6 +5,24 @@
 
 const helpers = {
     /**
+     * 构建上传图片的完整访问 URL
+     * 兼容：
+     *  - 传入已是 http(s) 绝对地址
+     *  - 传入包含 uploads/ 前缀路径
+     *  - 仅文件名（数据库保存的情况）
+     * @param {String} baseURL 例如 http://localhost:3000
+     * @param {String} raw 后端存储的文件名 / 路径
+     */
+    buildUploadURL(baseURL, raw) {
+        if (!raw) return '';
+        if (/^https?:\/\//i.test(raw)) return raw; // absolute URL
+        const cleaned = String(raw).replace(/^\/+/, '');
+        // 服务器使用 app.use(express.static('uploads')) 将 uploads 目录挂在根路径
+        // 因此文件名直接位于根路径，若路径含 uploads/ 需要去掉前缀
+        const stripped = cleaned.replace(/^uploads\//i, '');
+        return `${baseURL}/${stripped}`;
+    },
+    /**
      * 格式化日期为中文格式
      * @param {String} dateString - 日期字符串
      * @returns {String} 格式化后的日期

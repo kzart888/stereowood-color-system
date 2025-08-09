@@ -227,6 +227,17 @@ const app = createApp({
             else if (section === 'artworks') { this.artworksSortMode = mode; }
             else if (section === 'montMarte') { this.montMarteSortMode = mode; }
             this.persistState();
+        },
+        // 跨页寻迹：跳转到自配色并高亮指定编号
+        focusCustomColor(colorCode) {
+            if (!colorCode) return;
+            this.activeTab = 'custom-colors';
+            this.$nextTick(() => {
+                const comp = this.$refs.customColorsRef;
+                if (comp && typeof comp.focusCustomColor === 'function') {
+                    comp.focusCustomColor(String(colorCode));
+                }
+            });
         }
     }
     ,
@@ -267,6 +278,8 @@ if (typeof FormulaEditorComponent !== 'undefined') {
 // 使用Element Plus UI库并挂载到#app元素
 // 暴露缩略图预览工具到全局属性，供模板中通过 $thumbPreview 使用（避免直接访问 window 在模板沙箱下报错）
 app.config.globalProperties.$thumbPreview = (typeof window !== 'undefined' && window.thumbPreview) ? window.thumbPreview : null;
+// 统一提供 helpers 给模板中通过 $helpers 使用，避免直接访问 window 触发沙箱限制
+app.config.globalProperties.$helpers = (typeof helpers !== 'undefined') ? helpers : (typeof window !== 'undefined' ? window.helpers : null);
 
 app.use(ElementPlus).mount('#app');
 console.log('Vue应用已挂载到#app');
