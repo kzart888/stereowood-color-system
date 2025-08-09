@@ -7,22 +7,7 @@
 */
 const ArtworksComponent = {
   template: `
-    <div class="tab-content">
-      <!-- 顶部：左侧新作品，右侧视图切换 -->
-      <div class="artwork-header">
-        <div>
-          <el-button type="primary" size="small" @click="addArtwork">
-            <el-icon><Plus /></el-icon> 新作品
-          </el-button>
-        </div>
-        <div>
-          <el-button size="small" @click="toggleViewMode">
-            <el-icon><Switch /></el-icon>
-            {{ viewMode === 'byLayer' ? '层号优先' : '自配色优先' }}
-          </el-button>
-        </div>
-      </div>
-
+    <div>
       <div v-if="loading" class="loading">
         <el-icon class="is-loading"><Loading /></el-icon> 加载中...
       </div>
@@ -53,10 +38,8 @@ const ArtworksComponent = {
                 </div>
                 <div style="flex: 1;">
                   <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
-                  <div class="meta-text">
-                    层数：{{ (scheme.layers || []).length }}
-                    <span v-if="scheme.updated_at"> · 更新：{{ formatDate(scheme.updated_at) }}</span>
-                  </div>
+                  <div class="meta-text">层数：{{ (scheme.layers || []).length }}</div>
+                  <div class="meta-text" v-if="scheme.updated_at">更新：{{ formatDate(scheme.updated_at) }}</div>
                 </div>
                 <div class="color-actions">
                   <el-button size="small" type="primary" @click="editScheme(art, scheme)">
@@ -93,9 +76,17 @@ const ArtworksComponent = {
                     </tr>
                     <tr>
                       <td v-for="m in normalizedMappings(scheme)" :key="'f'+m.layer" class="meta-text" style="text-align:left;">
-                        <span v-if="colorByCode(m.colorCode)">
-                          {{ colorByCode(m.colorCode).formula || '（无配方）' }}
-                        </span>
+                        <template v-if="colorByCode(m.colorCode)">
+                          <template v-if="structuredFormula(colorByCode(m.colorCode).formula).lines.length">
+                            <div class="formula-lines" :style="{ '--max-name-ch': structuredFormula(colorByCode(m.colorCode).formula).maxNameChars }">
+                              <div class="fl" v-for="(p,i) in structuredFormula(colorByCode(m.colorCode).formula).lines" :key="'pfl'+i">
+                                <span class="fl-name">{{ p.name }}</span>
+                                <span class="fl-amt" v-if="p.amount">{{ p.amount }}{{ p.unit }}</span>
+                              </div>
+                            </div>
+                          </template>
+                          <span v-else>（无配方）</span>
+                        </template>
                         <span v-else>（未匹配到自配色：{{ m.colorCode || '-' }}）</span>
                       </td>
                     </tr>
@@ -325,6 +316,58 @@ const ArtworksComponent = {
     },
     colorByCode(code) {
       return code ? this.colorMap[code] : null;
+    },
+    // 将配方字符串拆成一行一条成分：匹配 “名称 数值单位” 组合
+    parseFormulaLines(formula) {
+      const str = (formula || '').trim();
+      if (!str) return [];
+      const parts = str.split(/\s+/);
+      const lines = [];
+      let buffer = null; // { name }
+      for (const token of parts) {
+        const m = token.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/);
+        if (m && buffer) {
+          lines.push(`${buffer} ${m[1]}${m[2]}`);
+          buffer = null;
+        } else {
+          // 新的颜色名
+          if (buffer) {
+            // 上一个没有数量，直接推入
+            lines.push(buffer);
+          }
+          buffer = token;
+        }
+      }
+      if (buffer) lines.push(buffer);
+      return lines;
+    },
+    // 结构化配方：返回 { lines: [{name,amount,unit}], maxNameChars }
+    structuredFormula(formula) {
+      if (!this._formulaCache) this._formulaCache = new Map();
+      const key = formula || '';
+      if (this._formulaCache.has(key)) return this._formulaCache.get(key);
+      const str = (key).trim();
+      if (!str) { const empty = { lines: [], maxNameChars: 0 }; this._formulaCache.set(key, empty); return empty; }
+      const parts = str.split(/\s+/);
+      const lines = [];
+      let current = null;
+      for (const token of parts) {
+        const m = token.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/);
+        if (m && current) {
+          lines.push({ name: current, amount: m[1], unit: m[2] });
+          current = null;
+        } else {
+          if (current) { // 上一个没有匹配到数量
+            lines.push({ name: current, amount: '', unit: '' });
+          }
+            current = token;
+        }
+      }
+      if (current) lines.push({ name: current, amount: '', unit: '' });
+      const maxNameChars = lines.reduce((m, l) => Math.max(m, l.name.length), 0);
+      const result = { lines, maxNameChars };
+      this._formulaCache.set(key, result);
+      return result;
     },
     normalizedMappings(scheme) {
       // scheme.layers: [{layer, colorCode}] or { [layer]: colorCode }

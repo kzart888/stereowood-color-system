@@ -32,25 +32,43 @@
             
             <!-- 主要导航标签页 -->
             <!-- activeTab: 在 app.js 中定义，控制当前激活的标签页 -->
-            <el-tabs v-model="activeTab" type="card">
-                <!-- 自配颜色管理标签页 -->
-                <!-- 组件定义在: js/components/custom-colors.js -->
-                <el-tab-pane label="自配颜色管理" name="custom-colors">
-                    <custom-colors-component></custom-colors-component>
-                </el-tab-pane>
-                
-                <!-- 作品配色管理标签页 -->
-                <!-- 组件定义在: js/components/artworks.js -->
-                <el-tab-pane label="作品配色管理" name="artworks">
-                    <artworks-component></artworks-component>
-                </el-tab-pane>
-                
-                <!-- 颜色原料库标签页 -->
-                <!-- 组件定义在: js/components/mont-marte.js -->
-                <el-tab-pane label="颜色原料库" name="mont-marte">
-                    <mont-marte-component></mont-marte-component>
-                </el-tab-pane>
-            </el-tabs>
+            <div class="tabs-wrapper">
+                <el-tabs v-model="activeTab" type="card">
+                    <!-- Tab panes inside -->
+                    <el-tab-pane label="自配颜色管理" name="custom-colors">
+                        <custom-colors-component ref="customColorsRef"></custom-colors-component>
+                    </el-tab-pane>
+                    <el-tab-pane label="作品配色管理" name="artworks">
+                        <artworks-component ref="artworksRef"></artworks-component>
+                    </el-tab-pane>
+                    <el-tab-pane label="颜色原料库" name="mont-marte">
+                        <mont-marte-component ref="montMarteRef"></mont-marte-component>
+                    </el-tab-pane>
+                </el-tabs>
+                <div class="floating-tab-tools">
+                    <template v-if="activeTab==='artworks'">
+                        <el-button size="small" type="primary" @click="$refs.artworksRef && $refs.artworksRef.addArtwork()">
+                            <el-icon><Plus /></el-icon> 新作品
+                        </el-button>
+                        <el-button size="small" @click="$refs.artworksRef && $refs.artworksRef.toggleViewMode()" title="切换视图">
+                            <!-- 使用 Operation 图标，兼容性更好；若需再改可替换 -->
+                            <el-icon><Operation /></el-icon>
+                            {{ ($refs.artworksRef && $refs.artworksRef.viewMode==='byColor') ? '自配色优先' : '层号优先' }}
+                        </el-button>
+                    </template>
+                    <template v-else-if="activeTab==='custom-colors'">
+                        <el-button size="small" type="primary" @click="$refs.customColorsRef && $refs.customColorsRef.openAddDialog()">
+                            <el-icon><Plus /></el-icon> 新自配色
+                        </el-button>
+                    </template>
+                    <template v-else-if="activeTab==='mont-marte'">
+                        <el-button size="small" type="primary" @click="$refs.montMarteRef && $refs.montMarteRef.openDialog()">
+                            <el-icon><Plus /></el-icon> 新原料
+                        </el-button>
+                    </template>
+                </div>
+            </div>
+            
         </div>
     </div>
 

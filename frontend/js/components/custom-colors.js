@@ -5,12 +5,7 @@
 const CustomColorsComponent = {
     template: `
         <div class="tab-content">
-            <!-- 顶部操作栏 -->
-            <div style="margin-bottom: 20px;">
-                <el-button type="primary" @click="openAddDialog">
-                    + 添加新的自配色
-                </el-button>
-            </div>
+            <!-- 顶部操作栏已迁移到主 tabs #extra -->
             
             <!-- 分类标签页 -->
             <el-tabs v-model="activeCategory" class="category-tabs">
