@@ -157,14 +157,39 @@ const ArtworksComponent = {
       </div>
 
       <!-- 方案编辑/新增对话框 -->
+      <!-- 新作品对话框 -->
+      <el-dialog
+        class="scheme-dialog"
+        v-model="showArtworkDialog"
+        title="新作品"
+        width="480px"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
+        @open="onOpenArtworkDialog"
+        @close="onCloseArtworkDialog"
+      >
+        <el-form ref="artworkFormRef" :model="artworkForm" :rules="artworkRules" label-width="80px" @keydown.enter.stop.prevent="saveNewArtwork">
+          <el-form-item label="作品" prop="title" required>
+            <el-input v-model.trim="artworkForm.title" placeholder="示例：C02-中国结02" @input="onArtworkTitleInput"></el-input>
+            <div class="form-hint">格式：作品编号-作品名称<br>作品编号=3~5位字母/数字（自动转大写）<br>作品名称=中英文或数字，不含特殊符号（- * / 等）</div>
+            <div v-if="artworkTitleStatus==='ok'" class="form-hint success-hint">可添加此新作品</div>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="attemptCloseArtworkDialog"><el-icon><Close /></el-icon> 取消</el-button>
+          <el-button type="primary" @click="saveNewArtwork"><el-icon><Check /></el-icon> 创建</el-button>
+        </template>
+      </el-dialog>
+
       <el-dialog
         class="scheme-dialog"
         v-model="showSchemeDialog"
         :title="schemeForm.id ? '修改配色方案' : '新增配色方案'"
         width="760px"
-        :close-on-click-modal="false"
-        :close-on-press-escape="false"
-        @open="onOpenDialog"
+  :close-on-click-modal="false"
+  :close-on-press-escape="false"
+  @open="onOpenDialog"
+  @close="onCloseDialog"
       >
         <el-form ref="schemeFormRef" :model="schemeForm" label-width="80px" @submit.prevent @keydown.enter.stop.prevent="saveScheme">
           <el-form-item label="方案名称" required>
@@ -262,7 +287,7 @@ const ArtworksComponent = {
         </el-form>
 
         <template #footer>
-          <el-button @click="showSchemeDialog = false"><el-icon><Close /></el-icon> 取消</el-button>
+          <el-button @click="attemptCloseSchemeDialog"><el-icon><Close /></el-icon> 取消</el-button>
           <el-button type="primary" :loading="saving" @click="saveScheme"><el-icon><Check /></el-icon> 保存</el-button>
         </template>
       </el-dialog>
@@ -274,6 +299,7 @@ const ArtworksComponent = {
       loading: false,
   viewMode: 'byLayer', // byLayer | byColor（全局切换）
       showSchemeDialog: false,
+  showArtworkDialog: false,
       schemeEditing: null,      // {art, scheme} 或 null
       editingArtId: null,
       schemeForm: {
@@ -285,6 +311,17 @@ const ArtworksComponent = {
       },
       saving: false
   , _formulaCache: null
+  , _schemeOriginalSnapshot: null
+  , _escHandler: null
+  , artworkForm: { title: '' }
+  , artworkRules: {
+    title: [
+      { required: true, message: '请输入“编号-名称”', trigger: 'blur' },
+      { validator: (r,v,cb)=>cb(), trigger: ['blur','change'] } // 真正的校验器在 mounted 中替换
+    ]
+  }
+  , _artworkSnapshot: null
+  , artworkTitleStatus: '' // '' | 'ok'
     };
   },
   computed: {
@@ -468,34 +505,78 @@ const ArtworksComponent = {
 
     // 顶部“新作品”
     async addArtwork() {
+      this.artworkForm = { title: '' };
+      this.showArtworkDialog = true;
+    },
+    onOpenArtworkDialog() {
+      this._artworkSnapshot = JSON.stringify(this._normalizedArtworkForm());
+      this._bindEsc(); // 复用 ESC 逻辑（同方案对话框）
+    },
+    onCloseArtworkDialog() {
+      this._artworkSnapshot = null;
+      if (!this.showSchemeDialog) this._unbindEsc();
+    },
+    _normalizedArtworkForm() {
+      return { title: this.artworkForm.title || '' };
+    },
+    _isArtworkDirty() {
+      if (!this._artworkSnapshot) return false;
+      return JSON.stringify(this._normalizedArtworkForm()) !== this._artworkSnapshot;
+    },
+    async attemptCloseArtworkDialog() {
+      if (this._isArtworkDirty()) {
+        try {
+          await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存的修改', {
+            confirmButtonText: '丢弃修改',
+            cancelButtonText: '继续编辑',
+            type: 'warning'
+          });
+        } catch(e) { return; }
+      }
+      this.showArtworkDialog = false;
+    },
+    async saveNewArtwork() {
+  const valid = await this.$refs.artworkFormRef.validate().catch(()=>false);
+  if (!valid) return; // 校验失败，错误信息已在输入框下显示
+  const parsed = this._parseArtworkTitle(this.artworkForm.title);
+  if (!parsed) return; // 理论上不会到这
+  const { code, name } = parsed;
       try {
-        const { value, action } = await ElementPlus.ElMessageBox.prompt('请输入作品标题（如：078-太极鱼）', '新作品', {
-          confirmButtonText: '创建',
-          cancelButtonText: '取消',
-          inputPlaceholder: '支持“编号-名称”格式',
-          inputValidator: v => !!String(v || '').trim() || '标题不能为空'
-        });
-        if (action !== 'confirm') return;
-        const title = String(value).trim();
-        // 拆分为 code/name
-        let code = '', name = '';
-        const idx = title.indexOf('-');
-        if (idx > 0) {
-          code = title.slice(0, idx).trim();
-          name = title.slice(idx + 1).trim();
-        } else {
-          // 无连字符时，尽量生成 code 与 name
-          code = title;
-          name = title;
-        }
         await axios.post(`${this.baseURL}/api/artworks`, { code, name });
         ElementPlus.ElMessage.success('已创建新作品');
         await this.refreshAll();
-      } catch (e) {
-        if (e === 'cancel' || e === 'close') return;
+        this.showArtworkDialog = false;
+      } catch(e) {
         console.error(e);
         ElementPlus.ElMessage.error('创建失败');
       }
+    },
+    onArtworkTitleInput() {
+      // 自动将连字符前的编号转大写
+      const v = this.artworkForm.title || '';
+      const idx = v.indexOf('-');
+      if (idx > 0) {
+        const left = v.slice(0, idx).toUpperCase();
+        const right = v.slice(idx + 1);
+        const combined = left + '-' + right;
+        if (combined !== v) this.artworkForm.title = combined;
+      }
+      // 即时判定是否可添加
+      const parsed = this._parseArtworkTitle(this.artworkForm.title);
+      if (!parsed) { this.artworkTitleStatus=''; return; }
+  const codeRe = /^[A-Z0-9]{3,5}$/; // 已大写 3-5 位
+      const nameRe = /^[A-Za-z0-9\u4e00-\u9fa5 ]+$/;
+      if (!codeRe.test(parsed.code) || !nameRe.test(parsed.name) || parsed.name.includes('-')) { this.artworkTitleStatus=''; return; }
+      // duplicate check
+      const norm = (x)=>String(x||'').replace(/\s+/g,'').toLowerCase();
+      const pCode = norm(parsed.code);
+      const pName = norm(parsed.name);
+      const dup = (this.artworks||[]).some(a => {
+        const aCode = norm(a.code || a.no || '');
+        const aName = norm(a.name || a.title || '');
+        return aCode===pCode && aName===pName;
+      });
+      this.artworkTitleStatus = dup ? '' : 'ok';
     },
 
     // 母bar“新增方案”
@@ -532,7 +613,83 @@ const ArtworksComponent = {
     },
 
     onOpenDialog() {
-      // no-op
+      // 创建初始快照
+      this._schemeOriginalSnapshot = JSON.stringify(this._normalizedSchemeForm());
+      this._bindEsc();
+    },
+    onCloseDialog() {
+      this._schemeOriginalSnapshot = null;
+      this._unbindEsc();
+    },
+    _normalizedSchemeForm() {
+      return {
+        id: this.schemeForm.id || null,
+        name: this.schemeForm.name || '',
+        thumbnail: this.schemeForm.thumbnailPreview ? '1' : '',
+        mappings: (this.schemeForm.mappings||[]).map(m=>({layer:Number(m.layer)||0, code:String(m.colorCode||'').trim()}))
+          .sort((a,b)=>a.layer-b.layer)
+      };
+    },
+    _isSchemeDirty() {
+      if (!this._schemeOriginalSnapshot) return false;
+      return JSON.stringify(this._normalizedSchemeForm()) !== this._schemeOriginalSnapshot;
+    },
+    async attemptCloseSchemeDialog() {
+      if (this._isSchemeDirty()) {
+        try {
+          await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存的修改', {
+            confirmButtonText: '丢弃修改',
+            cancelButtonText: '继续编辑',
+            type: 'warning'
+          });
+        } catch(e) { return; }
+      }
+      this.showSchemeDialog = false;
+    },
+    _bindEsc() {
+      if (this._escHandler) return;
+      this._escHandler = (e)=>{
+        if (e.key === 'Escape') {
+          if (this.showSchemeDialog) return this.attemptCloseSchemeDialog();
+          if (this.showArtworkDialog) return this.attemptCloseArtworkDialog();
+        }
+      };
+      document.addEventListener('keydown', this._escHandler);
+    },
+    _parseArtworkTitle(str) {
+      const s = String(str||'').trim();
+      const idx = s.indexOf('-');
+      if (idx<=0 || idx===s.length-1) return null;
+      const code = s.slice(0,idx).trim();
+      const name = s.slice(idx+1).trim();
+      return { code, name };
+    },
+    validateArtworkTitle(rule, value, callback) {
+      const s = String(value||'').trim();
+      if (!s) return callback(new Error('请输入“编号-名称”'));
+      const parsed = this._parseArtworkTitle(s);
+      if (!parsed) return callback(new Error('格式应为：编号-名称'));
+  const codeRe = /^[A-Z0-9]{3,5}$/;
+  if (!codeRe.test(parsed.code)) return callback(new Error('编号须为3-5位字母或数字'));
+      const nameRe = /^[A-Za-z0-9\u4e00-\u9fa5 ]+$/;
+      if (!nameRe.test(parsed.name)) return callback(new Error('名称仅允许中英文/数字/空格'));
+      if (parsed.name.includes('-')) return callback(new Error('名称不能包含 -'));
+      const norm = (x)=>String(x||'').replace(/\s+/g,'').toLowerCase();
+      const pCode = norm(parsed.code);
+      const pName = norm(parsed.name);
+      const dup = (this.artworks||[]).some(a => {
+        const aCode = norm(a.code || a.no || '');
+        const aName = norm(a.name || a.title || '');
+        return aCode===pCode && aName===pName;
+      });
+      if (dup) return callback(new Error('该作品已存在'));
+      callback();
+    },
+    _unbindEsc() {
+      if (this._escHandler) {
+        document.removeEventListener('keydown', this._escHandler);
+        this._escHandler = null;
+      }
     },
 
     onThumbChange(file) {
@@ -654,5 +811,9 @@ const ArtworksComponent = {
     }
     // 首次 emit 供父级按钮文本响应式
     this.$emit('view-mode-changed', this.viewMode);
+    // 替换新作品校验器（此时 this 已可用）
+    if (this.artworkRules && this.artworkRules.title && this.artworkRules.title.length > 1) {
+      this.artworkRules.title[1].validator = (r,v,cb)=>this.validateArtworkTitle(r,v,cb);
+    }
   }
 };

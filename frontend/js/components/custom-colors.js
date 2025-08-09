@@ -62,13 +62,15 @@ const CustomColorsComponent = {
                         <!-- 添加/编辑对话框 -->
             <el-dialog 
                 v-model="showAddDialog" 
-                                class="scheme-dialog"
-                                :title="editingColor ? '修改自配色' : '添加自配色'"
+                class="scheme-dialog"
+                :title="editingColor ? '修改自配色' : '添加自配色'"
                 width="600px"
+                :close-on-click-modal="false"
+                :close-on-press-escape="false"
+                @open="onOpenColorDialog"
                 @close="resetForm"
-                @open="initForm"
             >
-                <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
+                <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" @keydown.enter.stop.prevent="saveColor">
                     <el-form-item label="颜色分类" prop="category_id">
                         <el-select v-model="form.category_id" placeholder="请选择" @change="onCategoryChange">
                             <el-option 
@@ -109,7 +111,7 @@ const CustomColorsComponent = {
                     </el-form-item>
                 </el-form>
                 <template #footer>
-                    <el-button @click="showAddDialog = false">取消</el-button>
+                    <el-button @click="attemptCloseAddDialog">取消</el-button>
                     <el-button type="primary" @click="saveColor">保存</el-button>
                 </template>
             </el-dialog>
@@ -139,7 +141,9 @@ const CustomColorsComponent = {
                     { validator: this.validateColorCode, trigger: 'blur' }
                 ]
                 // 删除 formula 的必填验证，因为现在允许空配方
-            }
+            },
+            _originalColorFormSnapshot: null,
+            _escHandler: null
         };
     },
     
@@ -259,7 +263,7 @@ const CustomColorsComponent = {
             if (pending) segs.push(pending);
             return segs;
         },
-        // 打开添加对话框
+    // 打开添加对话框
         openAddDialog() {
             // 重置编辑状态
             this.editingColor = null;
@@ -289,6 +293,53 @@ const CustomColorsComponent = {
             
             // 打开对话框
             this.showAddDialog = true;
+        },
+        onOpenColorDialog() {
+            // 复用原逻辑
+            this.initForm();
+            // 建立初始快照
+            this._originalColorFormSnapshot = JSON.stringify(this._normalizedColorForm());
+            // 绑定 ESC
+            this._bindEscForDialog();
+        },
+        _normalizedColorForm() {
+            return {
+                category_id: this.form.category_id || '',
+                color_code: this.form.color_code || '',
+                formula: this.form.formula || '',
+                imagePreview: this.form.imagePreview ? '1' : '' // 只关心是否有图
+            };
+        },
+        _isColorFormDirty() {
+            if (!this._originalColorFormSnapshot) return false;
+            return JSON.stringify(this._normalizedColorForm()) !== this._originalColorFormSnapshot;
+        },
+        async attemptCloseAddDialog() {
+            if (this._isColorFormDirty()) {
+                try {
+                    await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存的修改', {
+                        confirmButtonText: '丢弃修改',
+                        cancelButtonText: '继续编辑',
+                        type: 'warning'
+                    });
+                } catch(e) { return; }
+            }
+            this.showAddDialog = false;
+        },
+        _bindEscForDialog() {
+            if (this._escHandler) return;
+            this._escHandler = (e) => {
+                if (e.key === 'Escape' && this.showAddDialog) {
+                    this.attemptCloseAddDialog();
+                }
+            };
+            document.addEventListener('keydown', this._escHandler);
+        },
+        _unbindEsc() {
+            if (this._escHandler) {
+                document.removeEventListener('keydown', this._escHandler);
+                this._escHandler = null;
+            }
         },
         
         // 颜色编号输入时智能识别分类
@@ -496,6 +547,8 @@ const CustomColorsComponent = {
             if (this.$refs.formRef) {
                 this.$refs.formRef.resetFields();
             }
+            this._originalColorFormSnapshot = null;
+            this._unbindEsc();
         },
         
         // 解析配方字符串为标签数组

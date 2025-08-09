@@ -50,6 +50,7 @@ const MontMarteComponent = {
                 :close-on-click-modal="false"
                 :close-on-press-escape="false"
                 @open="onOpenDialog"
+                @close="onCloseDialog"
             >
                 <el-form
                     ref="formRef"
@@ -157,7 +158,7 @@ const MontMarteComponent = {
                 </el-form>
 
                 <template #footer>
-                    <el-button @click="closeDialog">
+                    <el-button @click="attemptCloseDialog">
                         <el-icon><Close /></el-icon> 取消
                     </el-button>
                     <el-button type="primary" @click="saveColor" :loading="saving">
@@ -191,7 +192,9 @@ const MontMarteComponent = {
 
             supplierBusy: false,
             purchaseBusy: false,
-            saving: false
+            saving: false,
+            _originalFormSnapshot: null,
+            _escHandler: null
         };
     },
     computed: {
@@ -241,6 +244,45 @@ const MontMarteComponent = {
         onOpenDialog() {
             // 打开时确保字典已加载
             this.refreshDictionaries();
+            this._originalFormSnapshot = JSON.stringify(this._normalizedForm());
+            this._bindEsc();
+        },
+        onCloseDialog() {
+            this._originalFormSnapshot = null;
+            this._unbindEsc();
+        },
+        _normalizedForm() {
+            return {
+                id: this.form.id || null,
+                name: this.form.name || '',
+                supplier_id: this.form.supplier_id || '',
+                purchase_link_id: this.form.purchase_link_id || '',
+                image: this.form.imagePreview ? '1' : ''
+            };
+        },
+        _isDirty() {
+            if (!this._originalFormSnapshot) return false;
+            return JSON.stringify(this._normalizedForm()) !== this._originalFormSnapshot;
+        },
+        async attemptCloseDialog() {
+            if (this._isDirty()) {
+                try {
+                    await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存的修改', {
+                        confirmButtonText: '丢弃修改',
+                        cancelButtonText: '继续编辑',
+                        type: 'warning'
+                    });
+                } catch(e) { return; }
+            }
+            this.closeDialog();
+        },
+        _bindEsc() {
+            if (this._escHandler) return;
+            this._escHandler = (e)=>{ if (e.key === 'Escape' && this.showDialog) this.attemptCloseDialog(); };
+            document.addEventListener('keydown', this._escHandler);
+        },
+        _unbindEsc() {
+            if (this._escHandler) { document.removeEventListener('keydown', this._escHandler); this._escHandler = null; }
         },
         resetForm() {
             this.form = {
@@ -434,6 +476,8 @@ const MontMarteComponent = {
             if (this.$refs.formRef) {
                 this.$refs.formRef.resetFields();
             }
+            this._originalFormSnapshot = null;
+            this._unbindEsc();
         }
     }
 };

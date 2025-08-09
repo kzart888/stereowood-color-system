@@ -111,6 +111,13 @@ body {
 }
 .scheme-thumbnail.no-image { background:#fafafa; border-style:dashed; cursor: default; }
 
+/* 表单辅助提示与成功提示 */
+.form-hint { font-size:12px; color:#777; margin-top:4px; line-height:1.4; }
+.form-hint.success-hint { color:#2f9e44; }
+/* 让对话框中的提示换行并独占一行（防止与输入框并排） */
+.scheme-dialog .el-form-item__content .form-hint { flex-basis:100%; width:100%; }
+.scheme-dialog .el-form-item__content { align-items:flex-start; }
+
 /* 预览浮层 */
 .thumb-preview-overlay { position:fixed; width:calc(var(--sw-thumb-size) * 4); height:calc(var(--sw-thumb-size) * 4); background:#fff center/cover no-repeat; box-shadow:0 6px 22px rgba(0,0,0,0.35); border:2px solid #fff; border-radius:6px; z-index:2000; opacity:0; pointer-events:none; transition:opacity .16s ease; }
 .thumb-preview-overlay.show { opacity:1; pointer-events:auto; }
