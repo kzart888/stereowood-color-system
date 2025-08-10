@@ -156,11 +156,13 @@ app.post('/api/categories', (req, res) => {
 
 // 2. 蒙马特颜色相关API
 // 获取所有蒙马特颜色
+// （遗留内联路由尚未拆分：增加 category 字段支持）
 app.get('/api/mont-marte-colors', (req, res) => {
   const sql = `
     SELECT m.id, m.name, m.image_path, m.updated_at,
            m.supplier_id, s.name AS supplier_name,
-           m.purchase_link_id, p.url AS purchase_link_url
+           m.purchase_link_id, p.url AS purchase_link_url,
+           m.category
       FROM mont_marte_colors m
       LEFT JOIN suppliers s ON s.id = m.supplier_id
       LEFT JOIN purchase_links p ON p.id = m.purchase_link_id
@@ -174,24 +176,26 @@ app.get('/api/mont-marte-colors', (req, res) => {
 
 // 新增颜色原料（支持 supplier_id / purchase_link_id）
 app.post('/api/mont-marte-colors', upload.single('image'), (req, res) => {
-  const { name } = req.body;
+  const { name, category } = req.body;
   const supplier_id = req.body.supplier_id ? Number(req.body.supplier_id) : null;
   const purchase_link_id = req.body.purchase_link_id ? Number(req.body.purchase_link_id) : null;
   const image_path = req.file ? req.file.filename : null;
 
   if (!name || !name.trim()) return res.status(400).json({ error: '颜色名称不能为空' });
+  if (!category || !category.trim()) return res.status(400).json({ error: '原料类别不能为空' });
 
   db.run(
-    `INSERT INTO mont_marte_colors(name, image_path, supplier_id, purchase_link_id)
-     VALUES (?, ?, ?, ?)`,
-    [name.trim(), image_path, supplier_id, purchase_link_id],
+    `INSERT INTO mont_marte_colors(name, image_path, supplier_id, purchase_link_id, category)
+     VALUES (?, ?, ?, ?, ?)`,
+    [name.trim(), image_path, supplier_id, purchase_link_id, category.trim()],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       const id = this.lastID;
       db.get(
         `SELECT m.id, m.name, m.image_path, m.updated_at,
                 m.supplier_id, s.name AS supplier_name,
-                m.purchase_link_id, p.url AS purchase_link_url
+                m.purchase_link_id, p.url AS purchase_link_url,
+                m.category
            FROM mont_marte_colors m
            LEFT JOIN suppliers s ON s.id = m.supplier_id
            LEFT JOIN purchase_links p ON p.id = m.purchase_link_id
@@ -252,7 +256,7 @@ app.post('/api/custom-colors', upload.single('image'), (req, res) => {
 // 更新颜色原料时同步级联更新自配色配方中的原料名
 app.put('/api/mont-marte-colors/:id', upload.single('image'), (req, res) => {
   const colorId = req.params.id;
-  const { name, existingImagePath } = req.body;
+  const { name, existingImagePath, category } = req.body;
   const supplier_id = req.body.supplier_id ? Number(req.body.supplier_id) : null;
   const purchase_link_id = req.body.purchase_link_id ? Number(req.body.purchase_link_id) : null;
 
@@ -267,9 +271,9 @@ app.put('/api/mont-marte-colors/:id', upload.single('image'), (req, res) => {
 
     db.run(
       `UPDATE mont_marte_colors
-         SET name = ?, image_path = ?, supplier_id = ?, purchase_link_id = ?, updated_at = CURRENT_TIMESTAMP
+         SET name = ?, image_path = ?, supplier_id = ?, purchase_link_id = ?, category = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [name, newImagePath, supplier_id, purchase_link_id, colorId],
+      [name, newImagePath, supplier_id, purchase_link_id, (category||'').trim() || null, colorId],
       function (updateErr) {
         if (updateErr) return res.status(400).json({ error: updateErr.message });
 
@@ -283,7 +287,8 @@ app.put('/api/mont-marte-colors/:id', upload.single('image'), (req, res) => {
           db.get(
             `SELECT m.id, m.name, m.image_path, m.updated_at,
                     m.supplier_id, s.name AS supplier_name,
-                    m.purchase_link_id, p.url AS purchase_link_url
+                    m.purchase_link_id, p.url AS purchase_link_url,
+                    m.category
                FROM mont_marte_colors m
                LEFT JOIN suppliers s ON s.id = m.supplier_id
                LEFT JOIN purchase_links p ON p.id = m.purchase_link_id

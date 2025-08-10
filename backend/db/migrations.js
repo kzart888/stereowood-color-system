@@ -139,6 +139,9 @@ async function runMigrations() {
     if (!(await columnExists('mont_marte_colors', 'purchase_link_id'))) {
       await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN purchase_link_id INTEGER NULL`);
     }
+    if (!(await columnExists('mont_marte_colors', 'category'))) {
+      await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN category TEXT NULL`);
+    }
 
     // 迁移：custom_colors_history 去除对 custom_colors 的外键约束，避免删除父记录时受阻
     // 检测是否存在外键引用

@@ -7,11 +7,17 @@ const { createApp } = Vue;
 const app = createApp({
     // ===== 响应式数据 =====
     data() {
+        // 初始读取本地存储中的活动 tab
+        let initTab = 'custom-colors';
+        try {
+            const savedTab = localStorage.getItem('sw-active-tab');
+            if (savedTab && ['custom-colors','artworks','mont-marte'].includes(savedTab)) initTab = savedTab;
+        } catch(e) {}
         return {
             // 基础配置
             baseURL: 'http://localhost:3000',
             loading: false,
-            activeTab: 'custom-colors',
+            activeTab: initTab,
             // 作品配色视图模式 + 各页面排序模式（重建）
             artworksViewMode: 'byLayer',
             customColorsSortMode: 'time',
@@ -38,23 +44,16 @@ const app = createApp({
         return {
             globalData: {
                 baseURL: this.baseURL,
-
                 categories: Vue.computed(() => this.categories),
                 customColors: Vue.computed(() => this.customColors),
                 artworks: Vue.computed(() => this.artworks),
                 montMarteColors: Vue.computed(() => this.montMarteColors),
-
-                // 新增：字典数据
                 suppliers: Vue.computed(() => this.suppliers),
                 purchaseLinks: Vue.computed(() => this.purchaseLinks),
-
-                // 数据加载方法
                 loadCategories: () => this.loadCategories(),
                 loadCustomColors: () => this.loadCustomColors(),
                 loadArtworks: () => this.loadArtworks(),
                 loadMontMarteColors: () => this.loadMontMarteColors(),
-
-                // 新增：字典加载方法
                 loadSuppliers: () => this.loadSuppliers(),
                 loadPurchaseLinks: () => this.loadPurchaseLinks()
             }
@@ -65,8 +64,49 @@ const app = createApp({
     mounted() {
         console.log('应用已挂载，开始初始化数据...');
         this.initApp();
+        // 恢复滚动位置（按 tab 单独存储）
+        const restoreScroll = () => {
+            try {
+                const raw = localStorage.getItem('sw-scroll-map');
+                if (!raw) return;
+                const map = JSON.parse(raw);
+                const key = this.activeTab;
+                const pos = map && typeof map[key]==='number' ? map[key] : 0;
+                if (pos>0) window.scrollTo(0,pos);
+            } catch(e) {}
+        };
+        setTimeout(restoreScroll, 80);
+        // 监听滚动，防抖写入当前 tab 的位置
+        let _stTimer=null;
+        window.addEventListener('scroll', ()=>{
+            if (_stTimer) return;
+            _stTimer = setTimeout(()=>{
+                _stTimer=null;
+                try {
+                    const raw = localStorage.getItem('sw-scroll-map');
+                    const map = raw ? JSON.parse(raw) : {};
+                    map[this.activeTab] = window.scrollY||0;
+                    localStorage.setItem('sw-scroll-map', JSON.stringify(map));
+                } catch(e) {}
+            }, 200);
+        }, { passive:true });
+        // 当 tab 初始化之后切换时也尝试恢复
+        this.$watch('activeTab', ()=>{
+            // 切换前保存旧 tab 位置
+            try {
+                const raw = localStorage.getItem('sw-scroll-map');
+                const map = raw ? JSON.parse(raw) : {};
+                map[this._lastTabForScroll || this.activeTab] = window.scrollY||0;
+                localStorage.setItem('sw-scroll-map', JSON.stringify(map));
+            } catch(e) {}
+            this._lastTabForScroll = this.activeTab;
+            // 下一个 tick 恢复新 tab 位置
+            this.$nextTick(()=> setTimeout(restoreScroll, 40));
+        });
     },
-    
+    watch: {
+        activeTab(val) { try { localStorage.setItem('sw-active-tab', val); } catch(e) {} }
+    },
     // ===== 方法 =====
     methods: {
         // 初始化应用

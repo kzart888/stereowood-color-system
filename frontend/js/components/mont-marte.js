@@ -8,12 +8,16 @@ const MontMarteComponent = {
         },
         template: `
                 <div>
+                        <div class="category-switch-group" role="tablist" aria-label="原料类别筛选">
+                            <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
+                            <button v-for="cat in materialCategories" :key="cat.value" type="button" class="category-switch" :class="{active: activeCategory===cat.value}" @click="activeCategory=cat.value" role="tab" :aria-selected="activeCategory===cat.value">{{ cat.label }}</button>
+                        </div>
                         <div v-if="loading" class="loading">
                                 <el-icon class="is-loading"><Loading /></el-icon> 加载中...
                         </div>
                         <div v-else>
                                 <div v-if="montMarteColors.length === 0" class="empty-message">暂无原料，点击右上角“新原料”添加</div>
-                                <div v-for="color in montMarteColors" :key="color.id" class="artwork-bar">
+                                <div v-for="color in filteredColors" :key="color.id" class="artwork-bar">
                                     <div class="artwork-header">
                                         <div class="artwork-title">{{ color.name }}</div>
                                         <div class="color-actions">
@@ -41,6 +45,7 @@ const MontMarteComponent = {
                                                             </div>
                                         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
                                             <div class="meta-text" v-if="color.updated_at">更新：{{ formatDate(color.updated_at) }}</div>
+                                            <div class="meta-text">分类：<template v-if="color.category">{{ mapCategoryLabel(color.category) }}</template><template v-else>（未填）</template></div>
                                             <div class="meta-text">供应商：<template v-if="color.supplier_name">{{ color.supplier_name }}</template><template v-else>（未填）</template></div>
                                             <div class="meta-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="color.purchase_link_url || ''">采购：<template v-if="color.purchase_link_url">{{ color.purchase_link_url }}</template><template v-else>（未填）</template></div>
                                             <div class="meta-text">适用色：
@@ -80,6 +85,11 @@ const MontMarteComponent = {
                             <el-input v-model.trim="form.name" placeholder="例如：粉红" class="short-inline-input" />
                             <span v-if="nameDuplicate" class="dup-msg">名称重复</span>
                         </div>
+                    </el-form-item>
+                    <el-form-item label="原料类别" prop="category">
+                        <el-select v-model="form.category" placeholder="请选择类别">
+                            <el-option v-for="cat in materialCategories" :key="cat.value" :label="cat.label" :value="cat.value" />
+                        </el-select>
                     </el-form-item>
 
                     <!-- 新增：供应商（可输入+创建+下拉） -->
@@ -193,6 +203,8 @@ const MontMarteComponent = {
     inject: ['globalData'],
     data() {
         return {
+            // 当前原料类别筛选；'all' 表示不过滤
+            activeCategory: 'all',
             loading: false,
             showDialog: false,
             editing: null, // 当前编辑的记录
@@ -200,6 +212,7 @@ const MontMarteComponent = {
             form: {
                 id: null,
                 name: '',
+                category: '',
                 supplier_id: null,
                 purchase_link_id: null,
                 imageFile: null,
@@ -207,7 +220,8 @@ const MontMarteComponent = {
             },
 
             rules: {
-                name: [{ required: true, message: '请输入颜色名称', trigger: 'blur' }]
+                name: [{ required: true, message: '请输入颜色名称', trigger: 'blur' }],
+                category: [{ required: true, message: '请选择原料类别', trigger: 'change' }]
             },
 
             supplierBusy: false,
@@ -228,6 +242,19 @@ const MontMarteComponent = {
             }
             return list;
         },
+        materialCategories() {
+            return [
+                { value: 'acrylic', label: '丙烯色' },
+                { value: 'essence', label: '色精' },
+                { value: 'water', label: '水性漆' },
+                { value: 'oil', label: '油性漆' },
+                { value: 'other', label: '其他' }
+            ];
+        },
+        filteredColors() {
+            if (this.activeCategory==='all') return this.montMarteColors;
+            return this.montMarteColors.filter(c => (c.category||'') === this.activeCategory);
+        },
         supplierOptions() { return this.globalData.suppliers.value || []; },
         purchaseLinkOptions() { return this.globalData.purchaseLinks.value || []; },
         nameDuplicate() {
@@ -237,6 +264,37 @@ const MontMarteComponent = {
         }
     },
     methods: {
+        mapCategoryLabel(val) {
+            const f = this.materialCategories.find(c=>c.value===val);
+            return f?f.label:val;
+        },
+        async saveColor() {
+            const valid = await this.$refs.formRef.validate().catch(()=>false);
+            if (!valid) return;
+            this.saving = true;
+            try {
+                const fd = new FormData();
+                fd.append('name', this.form.name.trim());
+                fd.append('category', this.form.category || '');
+                if (this.form.supplier_id) fd.append('supplier_id', this.form.supplier_id);
+                if (this.form.purchase_link_id) fd.append('purchase_link_id', this.form.purchase_link_id);
+                if (this.form.imageFile) fd.append('image', this.form.imageFile);
+                if (this.editing) {
+                    fd.append('existingImagePath', this.editing.image_path || '');
+                    await axios.put(`${this.baseURL}/api/mont-marte-colors/${this.form.id}`, fd, { headers:{ 'Content-Type':'multipart/form-data' } });
+                } else {
+                    await axios.post(`${this.baseURL}/api/mont-marte-colors`, fd, { headers:{ 'Content-Type':'multipart/form-data' } });
+                }
+                await this.globalData.loadMontMarteColors();
+                this.showDialog = false;
+                ElementPlus.ElMessage.success('已保存');
+            } catch(e) {
+                console.error('保存原料失败', e);
+                ElementPlus.ElMessage.error('保存失败');
+            } finally {
+                this.saving = false;
+            }
+        },
         // 返回引用该原料的自配色编号列表（去重、按字母/数字排序）
         rawUsageCodes(color) {
             if (!color || !color.name) return [];
@@ -299,6 +357,7 @@ const MontMarteComponent = {
             this.editing = row;
             this.form.id = row.id;
             this.form.name = row.name || '';
+            this.form.category = row.category || '';
             this.form.supplier_id = row.supplier_id || null;
             this.form.purchase_link_id = row.purchase_link_id || null;
             this.form.imageFile = null;
@@ -322,6 +381,7 @@ const MontMarteComponent = {
             return {
                 id: this.form.id || null,
                 name: this.form.name || '',
+                category: this.form.category || '',
                 supplier_id: this.form.supplier_id || '',
                 purchase_link_id: this.form.purchase_link_id || '',
                 image: this.form.imagePreview ? '1' : ''
@@ -355,6 +415,7 @@ const MontMarteComponent = {
             this.form = {
                 id: null,
                 name: '',
+                category: '',
                 supplier_id: null,
                 purchase_link_id: null,
                 imageFile: null,
@@ -475,6 +536,7 @@ const MontMarteComponent = {
 
                 const fd = new FormData();
                 fd.append('name', this.form.name);
+                fd.append('category', this.form.category || '');
                 if (this.form.supplier_id) fd.append('supplier_id', this.form.supplier_id);
                 if (this.form.purchase_link_id) fd.append('purchase_link_id', this.form.purchase_link_id);
                 if (this.form.imageFile) fd.append('image', this.form.imageFile);

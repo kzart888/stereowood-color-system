@@ -58,6 +58,16 @@
             </div>
         </div>
 
+    <!-- 返回顶部按钮 -->
+        <button id="backToTopBtn" aria-label="返回顶部" title="返回顶部">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                <!-- 横线 -->
+                <rect x="4" y="5" width="16" height="2" rx="1" fill="currentColor" />
+                <!-- 向上箭头 -->
+                <path d="M12 19c-.55 0-1-.45-1-1V9.83l-3.29 3.3a1 1 0 0 1-1.42-1.42l5-5a1 1 0 0 1 1.42 0l5 5a1 1 0 0 1-1.42 1.42L13 9.83V18c0 .55-.45 1-1 1Z" fill="currentColor" />
+            </svg>
+        </button>
+
     <!-- JavaScript模块加载顺序很重要！ -->
     
     <!-- 工具函数库 -->
@@ -91,5 +101,13 @@
     <!-- 主应用入口 - 必须最后加载 -->
     <!-- 创建Vue应用实例，注册组件，挂载到#app -->
     <script src="js/app.js"></script>
+    <script>
+        // 永久显示返回顶部按钮，仅处理点击滚动
+        (function(){
+            const btn = document.getElementById('backToTopBtn');
+            if (!btn) return;
+            btn.addEventListener('click', ()=> window.scrollTo({ top:0, behavior:'smooth'}));
+        })();
+    </script>
 </body>
 </html>
