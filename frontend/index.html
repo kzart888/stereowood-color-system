@@ -31,7 +31,7 @@
                 :custom-colors-sort-mode="customColorsSortMode"
                 :artworks-sort-mode="artworksSortMode"
                 :mont-marte-sort-mode="montMarteSortMode"
-                @update:activetab="val=>activeTab=val"
+                @update:activetab="val=>setActiveTabPersist(val)"
                 @change-artworks-view-mode="setArtworksViewMode"
                 @change-sort="setSortMode"
                 @add-artwork="$refs.artworksRef && $refs.artworksRef.addArtwork && $refs.artworksRef.addArtwork()"
@@ -106,7 +106,7 @@
         (function(){
             const btn = document.getElementById('backToTopBtn');
             if (!btn) return;
-            btn.addEventListener('click', ()=> window.scrollTo({ top:0, behavior:'smooth'}));
+            btn.addEventListener('click', ()=> window.scrollTo(0,0));
         })();
     </script>
 </body>

@@ -593,7 +593,7 @@ const ArtworksComponent = {
             const current = window.pageYOffset || document.documentElement.scrollTop;
             const targetScroll = current + rect.top - (vh/2 - rect.height/2);
             window.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-          } catch(e) { el.scrollIntoView({ behavior:'smooth', block:'center' }); }
+          } catch(e) { el.scrollIntoView({ block:'center' }); }
         }
       });
     },

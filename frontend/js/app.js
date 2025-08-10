@@ -12,6 +12,7 @@ const app = createApp({
         try {
             const savedTab = localStorage.getItem('sw-active-tab');
             if (savedTab && ['custom-colors','artworks','mont-marte'].includes(savedTab)) initTab = savedTab;
+            console.log('[restore] saved activeTab =', savedTab, ' -> initTab =', initTab);
         } catch(e) {}
         return {
             // 基础配置
@@ -64,6 +65,8 @@ const app = createApp({
     mounted() {
         console.log('应用已挂载，开始初始化数据...');
         this.initApp();
+    // 若首次没有存储过 activeTab，则立即写入当前初始值
+    try { if (!localStorage.getItem('sw-active-tab')) localStorage.setItem('sw-active-tab', this.activeTab); } catch(e) {}
         // 恢复滚动位置（按 tab 单独存储）
         const restoreScroll = () => {
             try {
@@ -100,12 +103,15 @@ const app = createApp({
                 localStorage.setItem('sw-scroll-map', JSON.stringify(map));
             } catch(e) {}
             this._lastTabForScroll = this.activeTab;
-            // 下一个 tick 恢复新 tab 位置
-            this.$nextTick(()=> setTimeout(restoreScroll, 40));
+            if (!this._suppressNextRestore) {
+                this.$nextTick(()=> setTimeout(restoreScroll, 40));
+            } else {
+                this._suppressNextRestore = false;
+            }
         });
     },
     watch: {
-        activeTab(val) { try { localStorage.setItem('sw-active-tab', val); } catch(e) {} }
+    activeTab(val) { try { localStorage.setItem('sw-active-tab', val); console.log('[persist] activeTab ->', val); } catch(e) {} }
     },
     // ===== 方法 =====
     methods: {
@@ -192,7 +198,9 @@ const app = createApp({
         },
         focusCustomColor(colorCode) {
             if (!colorCode) return;
-            this.activeTab = 'custom-colors';
+                this.setActiveTabPersist('custom-colors');
+            // 标记：这次切换后不要恢复旧滚动
+            this._suppressNextRestore = true;
             this.$nextTick(()=>{
                 const comp = this.$refs.customColorsRef;
                 if (comp && typeof comp.focusCustomColor==='function') comp.focusCustomColor(String(colorCode));
@@ -200,7 +208,8 @@ const app = createApp({
         },
         focusArtworkScheme(payload) {
             if (!payload || !payload.artworkId || !payload.schemeId) return;
-            this.activeTab = 'artworks';
+                this.setActiveTabPersist('artworks');
+            this._suppressNextRestore = true;
             const TRY_MAX = 20; let tries=0;
             const attempt = () => {
                 const comp = this.$refs.artworksRef;
@@ -217,6 +226,13 @@ const app = createApp({
                 } else if (tries++ < TRY_MAX) setTimeout(attempt,120);
             };
             this.$nextTick(attempt);
+        },
+        setActiveTabPersist(tab) {
+            if (!['custom-colors','artworks','mont-marte'].includes(tab)) return;
+            this.activeTab = tab;
+            try { localStorage.setItem('sw-active-tab', tab); } catch(e) {}
+            // 切换后先回到顶部，避免旧滚动增量影响后续定点滚动
+            window.scrollTo(0,0);
         },
 
         // 新增：加载供应商

@@ -67,10 +67,16 @@ body {
 .tab-panels-wrapper { padding:10px 4px 60px; }
 
 .main-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 8px 12px;
+    /* 全宽模式：去除固定最大宽度与水平居中，使下方三个 Tab 内容与顶部头部背景同宽 */
+    width:100%;
+    max-width:none;
+    margin:0; /* 取消 auto 居中 */
+    padding:8px 10px 12px; /* 保留极薄左右内边距，防止内容贴边 */
+    box-sizing:border-box;
 }
+
+/* 全宽下 Tab 内容去除左右圆角，保证表格平铺对齐边界（顶部圆角已在激活标签衔接处移除） */
+.main-container .tab-content { border-radius:0; padding-left:12px; padding-right:12px; }
 
 .system-header {
     text-align: center;
