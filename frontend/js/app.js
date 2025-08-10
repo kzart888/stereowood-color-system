@@ -223,6 +223,7 @@ if (window.ElementPlusIconsVue) {
 app.component('custom-colors-component', CustomColorsComponent);
 app.component('artworks-component', ArtworksComponent);  
 app.component('mont-marte-component', MontMarteComponent);
+if (typeof AppHeaderBar !== 'undefined') app.component('app-header-bar', AppHeaderBar);
 
 // 将 helpers 与 thumbPreview 暴露到全局 (供组件模板中通过 this.$helpers / this.$thumbPreview 使用)
 if (window.helpers) app.config.globalProperties.$helpers = window.helpers;

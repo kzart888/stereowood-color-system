@@ -8,8 +8,7 @@
 */
 const ArtworksComponent = {
   props: {
-    sortMode: { type: String, default: 'time' }, // time | name
-    searchQuery: { type: String, default: '' }
+    sortMode: { type: String, default: 'time' } // time | name
   },
   emits: ['view-mode-changed'],
   template: `
@@ -551,14 +550,6 @@ const ArtworksComponent = {
     },
     setSchemeRef(scheme) {
       return (el) => {
-        if (el) this._schemeRefs.set(scheme.id, el); else this._schemeRefs.delete(scheme.id);
-      };
-    },
-    focusSchemeUsage({ artworkId, schemeId, layers, colorCode }) {
-      if (!schemeId) return;
-      // 设置高亮状态
-      this.highlightSchemeId = schemeId;
-      this.highlightColorCode = colorCode || '';
         if (el) this._schemeRefs.set(scheme.id, el); else this._schemeRefs.delete(scheme.id);
       };
     },
