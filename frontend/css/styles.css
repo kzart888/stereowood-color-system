@@ -34,7 +34,11 @@ body {
 /* (已移除 sticky 顶部特性样式) */
 
 /* [HEADER] Sticky 顶部栏与布局（搜索功能加入前的基础结构） */
-.app-header-sticky { position:sticky; top:0; z-index:1000; background:transparent; backdrop-filter: none; border-bottom:none; box-shadow:none; }
+.app-header-sticky { position:sticky; top:0; z-index:1000; background:transparent; backdrop-filter:none; border-bottom:none; box-shadow:none; }
+/* 头部背景：采用伪元素实现全宽白底紧贴浏览器左右与顶部，不包裹成“孤岛” */
+.app-header-sticky::before { content:""; position:absolute; inset:0; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.08); pointer-events:none; }
+/* 内部条保持原有 padding，不改布局 */
+.app-header-bar { position:relative; }
 .app-header-bar { display:grid; grid-template-columns:auto 1fr auto; align-items:end; gap:16px; padding:6px 14px 4px; }
 .app-header-left { display:flex; align-items:center; min-width:0; }
 .app-title-badge { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:6px 14px 6px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.12); }
