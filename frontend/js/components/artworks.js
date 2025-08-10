@@ -359,7 +359,7 @@ const ArtworksComponent = {
       if (!q || this.$root.activeTab !== 'artworks') return raw;
       // 过滤逻辑：作品名或其方案名命中
       return raw.map(a => {
-        const nameMatch = (a.name||'').toLowerCase().includes(q);
+  const nameMatch = (a.name||'').toLowerCase().includes(q) || (a.code||'').toLowerCase().includes(q) || ((a.code && a.name)? (a.code+'-'+a.name).toLowerCase().includes(q): false);
         const schemes = Array.isArray(a.schemes) ? a.schemes.slice() : [];
         const matchedSchemes = schemes.filter(s => (s.name||'').toLowerCase().includes(q));
         if (!nameMatch && matchedSchemes.length===0) return null; // 整个作品不保留

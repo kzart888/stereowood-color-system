@@ -38,6 +38,8 @@
                 @change-artworks-view-mode="setArtworksViewMode"
                 @change-sort="setSortMode"
                 @global-search-input="handleGlobalSearchInput"
+                @open-search-dropdown="openSearchDropdown"
+                @close-search-dropdown="closeSearchDropdown"
                 @search-select="handleGlobalSearchSelect"
                 @add-artwork="$refs.artworksRef && $refs.artworksRef.addArtwork && $refs.artworksRef.addArtwork()"
                 @add-custom-color="$refs.customColorsRef && $refs.customColorsRef.openAddDialog && $refs.customColorsRef.openAddDialog()"

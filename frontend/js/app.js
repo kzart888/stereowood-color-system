@@ -273,7 +273,16 @@ const app = createApp({
             this._searchDebounceTimer = setTimeout(()=>{
                 this.buildSearchResults();
             }, 200);
+            // 若输入不为空，显示下拉（等待结果生成）
+            if (val && !this.showSearchDropdown) this.showSearchDropdown = true;
+            if (!val) {
+                // 清空时不立即隐藏，交由组件外部逻辑通过 close-search-dropdown 控制；此处只清空结果
+                this.globalSearchResults = [];
+            }
         },
+        // 打开/关闭下拉供头部组件调用
+        openSearchDropdown() { this.showSearchDropdown = true; },
+        closeSearchDropdown() { this.showSearchDropdown = false; },
         // ===== 阶段3：构建搜索结果（仅生成候选，不改变页面过滤） =====
         buildSearchResults() {
             const qRaw = (this.globalSearchQuery||'').trim();
