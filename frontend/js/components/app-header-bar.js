@@ -9,7 +9,10 @@ const AppHeaderBar = {
 		artworksViewMode: { type: String, default: 'byLayer' },
 		customColorsSortMode: { type: String, default: 'time' },
 		artworksSortMode: { type: String, default: 'time' },
-		montMarteSortMode: { type: String, default: 'time' }
+		montMarteSortMode: { type: String, default: 'time' },
+		globalSearchQuery: { type: String, default: '' },
+		globalSearchResults: { type: Array, default: () => [] },
+		showSearchDropdown: { type: Boolean, default: false }
 	},
 	emits: [
 		'update:activetab', // DOM 模板大小写不敏感，统一小写
@@ -17,7 +20,9 @@ const AppHeaderBar = {
 		'change-sort',
 		'add-artwork',
 		'add-custom-color',
-		'add-raw-material'
+		'add-raw-material',
+		'global-search-input',
+		'search-select'
 	],
 	methods: {
 		setSort(section, mode) { this.$emit('change-sort', section, mode); },
@@ -25,7 +30,7 @@ const AppHeaderBar = {
 	},
 	template: `
 		<div class="app-header-sticky">
-			<div class="app-header-bar">
+			<div class="app-header-bar app-header-with-search">
 				<div class="app-header-left">
 					<div class="app-title-badge">
 						<h1 class="app-title">STEREOWOOD-梯木叠雕-颜色管理系统</h1>
@@ -36,6 +41,30 @@ const AppHeaderBar = {
 						<button type="button" class="tab-switch" :class="{active: activeTab==='custom-colors'}" @click="$emit('update:activetab','custom-colors')" role="tab" :aria-selected="activeTab==='custom-colors'">自配色管理</button>
 						<button type="button" class="tab-switch" :class="{active: activeTab==='artworks'}" @click="$emit('update:activetab','artworks')" role="tab" :aria-selected="activeTab==='artworks'">作品配色管理</button>
 						<button type="button" class="tab-switch" :class="{active: activeTab==='mont-marte'}" @click="$emit('update:activetab','mont-marte')" role="tab" :aria-selected="activeTab==='mont-marte'">颜色原料管理</button>
+					</div>
+				</div>
+				<!-- 全局搜索输入：在宽度不足时自动换行，占据整行并居中 -->
+				<div class="app-header-search">
+					<el-input
+						size="small"
+						clearable
+						placeholder="全局搜索：自配色 / 作品 / 方案 / 原料"
+						:model-value="globalSearchQuery"
+						@input="$emit('global-search-input', $event)"
+						prefix-icon="Search"
+					></el-input>
+					<!-- 下拉结果：悬浮，不撑开头部高度 -->
+					<div v-if="showSearchDropdown && globalSearchResults.length" class="global-search-dropdown floating">
+						<template v-for="grp in ['自配色','作品','配色方案','原料']" :key="grp">
+							<div v-if="globalSearchResults.some(r=>r.group===grp)" class="gs-group">
+								<div class="gs-group-title">{{ grp }}</div>
+								<div class="gs-items">
+									<div class="gs-item" v-for="item in globalSearchResults.filter(r=>r.group===grp)" :key="grp + '-' + item.type + '-' + item.id" @click="$emit('search-select', item)">
+										<span class="gs-text">{{ item.pathLabel }}</span>
+									</div>
+								</div>
+							</div>
+						</template>
 					</div>
 				</div>
 				<div class="app-header-tools">

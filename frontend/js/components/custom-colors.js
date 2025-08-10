@@ -224,6 +224,11 @@ const CustomColorsComponent = {
             } else {
                 list = this.customColors.filter(c => c.category_id === parseInt(this.activeCategory));
             }
+            // 本页搜索过滤（阶段4）：仅自配色名称匹配
+            const q = (this.$root && this.$root.globalSearchQuery || '').trim().toLowerCase();
+            if (q && this.$root.activeTab === 'custom-colors') {
+                list = list.filter(c => ((c.name||'').toLowerCase().includes(q)) || ((c.color_code||'').toLowerCase().includes(q)) );
+            }
             // 排序
             if (this.sortMode === 'name') {
                 list.sort((a,b) => (a.color_code||'').localeCompare(b.color_code||''));

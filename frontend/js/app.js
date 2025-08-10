@@ -24,8 +24,13 @@ const app = createApp({
             customColorsSortMode: 'time',
             artworksSortMode: 'time',
             montMarteSortMode: 'time',
-            // 全局搜索（当前仅作用于作品配色管理）
-            searchQuery: '',
+            // ===== 全局搜索（阶段1+2：仅布局与索引构建） =====
+            globalSearchQuery: '', // 输入框绑定
+            globalSearchResults: [], // 下拉候选（后续阶段构建）
+            showSearchDropdown: false,
+            _searchIndex: { customColors: [], artworks: [], schemes: [], rawMaterials: [] }, // 内存索引
+            _indexReady: { customColors:false, artworks:false, rawMaterials:false },
+            _searchDebounceTimer: null,
 
             // 核心数据
             categories: [],
@@ -154,6 +159,8 @@ const app = createApp({
                 const response = await api.customColors.getAll();
                 this.customColors = response.data;
                 console.log(`加载了 ${this.customColors.length} 个自配颜色`);
+                // 注册自配色索引（阶段2）: 使用 color_code 作为 code；部分数据可能没有 name 字段
+                this.registerDataset('customColors', this.customColors.map(c => ({ id: c.id, code: c.color_code || c.code || '', name: c.name || '' })));
             } catch (error) {
                 console.error('加载自配颜色失败:', error);
                 ElementPlus.ElMessage.error('加载自配颜色失败');
@@ -166,6 +173,20 @@ const app = createApp({
                 const response = await api.artworks.getAll();
                 this.artworks = response.data;
                 console.log(`加载了 ${this.artworks.length} 个作品`);
+                // 拆分作品与方案索引
+                const artworksIdx = []; const schemesIdx = [];
+                this.artworks.forEach(a => {
+                    const name = a.name || a.title || '';
+                    const code = a.code || a.no || '';
+                    artworksIdx.push({ id: a.id, name, code });
+                    if (Array.isArray(a.schemes)) {
+                        a.schemes.forEach(s => {
+                            schemesIdx.push({ id: s.id, artworkId: a.id, artworkName: name, artworkCode: code, name: s.name || '' });
+                        });
+                    }
+                });
+                this.registerDataset('artworks', artworksIdx);
+                this.registerDataset('schemes', schemesIdx);
             } catch (error) {
                 console.error('加载作品列表失败:', error);
                 ElementPlus.ElMessage.error('加载作品列表失败');
@@ -178,6 +199,7 @@ const app = createApp({
                 const response = await api.montMarteColors.getAll();
                 this.montMarteColors = response.data;
                 console.log(`加载了 ${this.montMarteColors.length} 个颜色原料`);
+                this.registerDataset('rawMaterials', this.montMarteColors.map(m => ({ id: m.id, name: m.name })));
             } catch (error) {
                 console.error('加载蒙马特颜色失败:', error);
                 ElementPlus.ElMessage.error('加载蒙马特颜色失败');
@@ -233,6 +255,125 @@ const app = createApp({
             try { localStorage.setItem('sw-active-tab', tab); } catch(e) {}
             // 切换后先回到顶部，避免旧滚动增量影响后续定点滚动
             window.scrollTo(0,0);
+        },
+        // ===== 阶段2：注册数据集到搜索索引 =====
+        registerDataset(type, items) {
+            if (!type || !Array.isArray(items)) return;
+            if (type === 'customColors') { this._searchIndex.customColors = items.slice(); this._indexReady.customColors = true; }
+            else if (type === 'artworks') { this._searchIndex.artworks = items.slice(); this._indexReady.artworks = true; }
+            else if (type === 'schemes') { this._searchIndex.schemes = items.slice(); }
+            else if (type === 'rawMaterials') { this._searchIndex.rawMaterials = items.slice(); this._indexReady.rawMaterials = true; }
+            // 预留：全部索引 ready 且已有查询时重跑搜索（阶段3实现）
+        },
+        // 阶段1：输入监听（占位，阶段3再填充逻辑）
+        handleGlobalSearchInput(val) {
+            this.globalSearchQuery = val;
+            // 防抖触发构建
+            if (this._searchDebounceTimer) clearTimeout(this._searchDebounceTimer);
+            this._searchDebounceTimer = setTimeout(()=>{
+                this.buildSearchResults();
+            }, 200);
+        },
+        // ===== 阶段3：构建搜索结果（仅生成候选，不改变页面过滤） =====
+        buildSearchResults() {
+            const qRaw = (this.globalSearchQuery||'').trim();
+            if (!qRaw) {
+                this.globalSearchResults = [];
+                this.showSearchDropdown = false;
+                return;
+            }
+            const q = qRaw.toLowerCase();
+            const results = [];
+            const push = (item) => results.push(item);
+        // 自配色：颜色编号 code 与名称 name 均可匹配（扩展以符合用户案例：RD0224 / RD 前缀 / 数字片段 / 中文名称）
+            if (this._searchIndex.customColors.length) {
+                this._searchIndex.customColors.forEach(c => {
+            const code = (c.code||'').toLowerCase();
+            const name = (c.name||'').toLowerCase();
+            if ((name && name.includes(q)) || (code && code.includes(q))) {
+                        push({
+                            type:'customColor',
+                            id: c.id,
+                            code: c.code,
+                display: c.code || c.name,
+                            group:'自配色',
+                pathLabel:`自配色管理 -> ${(c.code||'')}${c.name ? (' '+c.name) : ''}`
+                        });
+                    }
+                });
+            }
+        // 作品：匹配 name / code / 组合 (code-name)
+            if (this._searchIndex.artworks.length) {
+                this._searchIndex.artworks.forEach(a => {
+            const name = (a.name||'').toLowerCase();
+            const code = (a.code||'').toLowerCase();
+            const combo = (code && name) ? (code + '-' + name) : (code || name);
+            if ((name && name.includes(q)) || (code && code.includes(q)) || (combo && combo.includes(q))) {
+            push({ type:'artwork', id:a.id, display: (a.code? a.code+'-' : '') + (a.name||''), group:'作品', pathLabel:`作品配色管理 -> ${(a.code? a.code+'-' : '') + (a.name||'')}` });
+            }
+                });
+            }
+        // 配色方案：方案名 + (作品code/name + 方案名) 联合匹配
+            if (this._searchIndex.schemes.length) {
+                this._searchIndex.schemes.forEach(s => {
+            const sName = (s.name||'').toLowerCase();
+            const aName = (s.artworkName||'').toLowerCase();
+            const aCode = (s.artworkCode||'').toLowerCase();
+            const combo1 = aName ? (aName + ' ' + sName) : sName;
+            const combo2 = aCode ? (aCode + ' ' + sName) : sName;
+            if ((sName && sName.includes(q)) || (combo1 && combo1.includes(q)) || (combo2 && combo2.includes(q))) {
+            push({ type:'scheme', id:s.id, parentId:s.artworkId, artworkName:s.artworkName, artworkCode:s.artworkCode, display:s.name, group:'配色方案', pathLabel:`作品配色管理 -> ${(s.artworkCode? s.artworkCode+'-' : '') + s.artworkName} / ${s.name}` });
+            }
+                });
+            }
+            // 原料（名称）
+            if (this._searchIndex.rawMaterials.length) {
+                this._searchIndex.rawMaterials.forEach(r => {
+                    if (r.name && r.name.toLowerCase().includes(q)) {
+                        push({
+                            type:'rawMaterial', id:r.id, display:r.name, group:'原料', pathLabel:`颜色原料管理 -> ${r.name}`
+                        });
+                    }
+                });
+            }
+            // 排序：按 group 顺序 + 字母
+            const groupOrder = { '自配色':1, '作品':2, '配色方案':3, '原料':4 };
+            results.sort((a,b)=>{
+                const ga = groupOrder[a.group]||99; const gb = groupOrder[b.group]||99;
+                if (ga!==gb) return ga-gb;
+                return (a.display||'').localeCompare(b.display||'', 'zh-CN');
+            });
+            // 限制最大数量（可调）
+            const limited = results.slice(0, 60);
+            this.globalSearchResults = limited;
+            this.showSearchDropdown = limited.length>0;
+            // 调试输出
+            // console.log('[search] query=', qRaw, 'results=', limited);
+        },
+        // 阶段5：点击下拉结果跳转定位 + 高亮
+        handleGlobalSearchSelect(item) {
+            if (!item) return;
+            this.showSearchDropdown = false;
+            // 切换 tab & 定位
+            if (item.type === 'customColor') {
+                this.focusCustomColor(item.code || item.display);
+            } else if (item.type === 'rawMaterial') {
+                this.setActiveTabPersist('mont-marte');
+                this._suppressNextRestore = true;
+                this.$nextTick(()=>{
+                    const comp = this.$refs.montMarteRef;
+                    if (comp && typeof comp.focusRawMaterial==='function') comp.focusRawMaterial(item.id);
+                });
+            } else if (item.type === 'artwork') {
+                this.setActiveTabPersist('artworks');
+                this._suppressNextRestore = true;
+                this.$nextTick(()=>{
+                    const comp = this.$refs.artworksRef;
+                    if (comp && typeof comp.focusArtwork==='function') comp.focusArtwork(item.id);
+                });
+            } else if (item.type === 'scheme') {
+                this.focusArtworkScheme({ artworkId:item.parentId, schemeId:item.id, layers:[], colorCode:'' });
+            }
         },
 
         // 新增：加载供应商

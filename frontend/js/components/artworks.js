@@ -21,7 +21,7 @@ const ArtworksComponent = {
         <div v-if="artworks.length === 0" class="empty-message">暂无作品，点击右上角“新作品”添加</div>
 
         <!-- 母bar：作品 -->
-        <div v-for="art in artworks" :key="art.id" class="artwork-bar">
+  <div v-for="art in artworks" :key="art.id" class="artwork-bar" :data-art-id="art.id">
           <div class="artwork-header">
             <div class="artwork-title">{{ artworkTitle(art) }}</div>
             <div class="color-actions">
@@ -159,9 +159,14 @@ const ArtworksComponent = {
                 </table>
               </div>
             </div>
+            <div v-if="art._swSearchSchemesPartial" class="meta-text" style="padding:4px 6px 6px;">（仅显示命中的配色方案）</div>
+            <div v-else-if="art._swSearchArtOnly" class="meta-text" style="padding:4px 6px 6px;">（作品命中，方案均未命中）</div>
           </div>
 
-          <div v-else class="empty-message">暂无配色方案，点击“新增配色方案”添加</div>
+          <div v-else>
+            <div v-if="art._swSearchNoSchemeMatch" class="empty-message">作品命中，但未匹配到包含关键字的配色方案</div>
+            <div v-else class="empty-message">暂无配色方案，点击“新增配色方案”添加</div>
+          </div>
         </div>
       </div>
 
@@ -343,13 +348,33 @@ const ArtworksComponent = {
     baseURL() { return this.globalData.baseURL; },
     // 回退：直接使用注入的 artworks 原始数组并按 sortMode 排序（暂不做搜索过滤）
     artworks() {
-      const arr = (this.globalData.artworks?.value || []).slice();
+      const raw = (this.globalData.artworks?.value || []).slice();
+      // 排序
       if (this.sortMode === 'name') {
-        arr.sort((a,b)=>this.artworkTitle(a).localeCompare(this.artworkTitle(b)));
+        raw.sort((a,b)=>this.artworkTitle(a).localeCompare(this.artworkTitle(b)));
       } else {
-        arr.sort((a,b)=> new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
+        raw.sort((a,b)=> new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
       }
-      return arr;
+      const q = (this.$root && this.$root.globalSearchQuery || '').trim().toLowerCase();
+      if (!q || this.$root.activeTab !== 'artworks') return raw;
+      // 过滤逻辑：作品名或其方案名命中
+      return raw.map(a => {
+        const nameMatch = (a.name||'').toLowerCase().includes(q);
+        const schemes = Array.isArray(a.schemes) ? a.schemes.slice() : [];
+        const matchedSchemes = schemes.filter(s => (s.name||'').toLowerCase().includes(q));
+        if (!nameMatch && matchedSchemes.length===0) return null; // 整个作品不保留
+        const clone = Object.assign({}, a);
+        if (nameMatch) {
+          // 作品名命中：显示所有方案；若有方案命中可标记突出（后续阶段可高亮）
+          clone.schemes = schemes;
+          if (matchedSchemes.length===0) clone._swSearchArtOnly = true; else clone._swSearchArtWithSchemeHits = true;
+        } else {
+          // 作品名未命中，仅显示命中方案子集
+            clone.schemes = matchedSchemes;
+            clone._swSearchSchemesPartial = true;
+        }
+        return clone;
+      }).filter(Boolean);
     },
     editingArtwork() {
       if (!this.editingArtId) return null;
@@ -552,6 +577,21 @@ const ArtworksComponent = {
       return (el) => {
         if (el) this._schemeRefs.set(scheme.id, el); else this._schemeRefs.delete(scheme.id);
       };
+    },
+    focusArtwork(id) {
+      if (!id) return;
+      this.$nextTick(()=>{
+        const el = document.querySelector(`.artwork-bar[data-art-id="${id}"]`);
+        if (!el) return;
+        try {
+          const rect = el.getBoundingClientRect();
+          const current = window.pageYOffset || document.documentElement.scrollTop;
+          const offset = current + rect.top - 20; // 顶部缓冲
+          window.scrollTo(0, Math.max(0, offset));
+        } catch(e) { el.scrollIntoView(); }
+        el.classList.add('highlight-pulse');
+        setTimeout(()=> el.classList.remove('highlight-pulse'), 2100);
+      });
     },
     focusSchemeUsage({ artworkId, schemeId, layers, colorCode }) {
       if (!schemeId) return;

@@ -17,7 +17,7 @@ const MontMarteComponent = {
                         </div>
                         <div v-else>
                                 <div v-if="montMarteColors.length === 0" class="empty-message">暂无原料，点击右上角“新原料”添加</div>
-                                <div v-for="color in filteredColors" :key="color.id" class="artwork-bar">
+                                <div v-for="color in filteredColors" :key="color.id" class="artwork-bar" :data-raw-id="color.id">
                                     <div class="artwork-header">
                                         <div class="artwork-title">{{ color.name }}</div>
                                         <div class="color-actions">
@@ -252,8 +252,12 @@ const MontMarteComponent = {
             ];
         },
         filteredColors() {
-            if (this.activeCategory==='all') return this.montMarteColors;
-            return this.montMarteColors.filter(c => (c.category||'') === this.activeCategory);
+            let list = (this.activeCategory==='all') ? this.montMarteColors : this.montMarteColors.filter(c => (c.category||'') === this.activeCategory);
+            const q = (this.$root && this.$root.globalSearchQuery || '').trim().toLowerCase();
+            if (q && this.$root.activeTab === 'mont-marte') {
+                list = list.filter(c => (c.name||'').toLowerCase().includes(q));
+            }
+            return list;
         },
         supplierOptions() { return this.globalData.suppliers.value || []; },
         purchaseLinkOptions() { return this.globalData.purchaseLinks.value || []; },
@@ -267,6 +271,21 @@ const MontMarteComponent = {
         mapCategoryLabel(val) {
             const f = this.materialCategories.find(c=>c.value===val);
             return f?f.label:val;
+        },
+        focusRawMaterial(id) {
+            if (!id) return;
+            this.$nextTick(()=>{
+                const el = document.querySelector(`.artwork-bar[data-raw-id="${id}"]`);
+                if (!el) return;
+                try {
+                    const rect = el.getBoundingClientRect();
+                    const current = window.pageYOffset || document.documentElement.scrollTop;
+                    const offset = current + rect.top - 20;
+                    window.scrollTo(0, Math.max(0, offset));
+                } catch(e) { el.scrollIntoView(); }
+                el.classList.add('highlight-pulse');
+                setTimeout(()=> el.classList.remove('highlight-pulse'), 2100);
+            });
         },
         async saveColor() {
             const valid = await this.$refs.formRef.validate().catch(()=>false);
