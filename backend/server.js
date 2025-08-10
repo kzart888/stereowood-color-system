@@ -430,41 +430,8 @@ app.delete('/api/custom-colors/:id', (req, res) => {
 
 // 4. 画作品相关API
 // 获取所有画作品及其配色方案
-app.get('/api/artworks', (req, res) => {
-    // 先获取所有作品
-    db.all('SELECT * FROM artworks ORDER BY code', [], (err, artworks) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        
-        // 获取所有配色方案
-        db.all(`
-            SELECT cs.*, a.code as artwork_code 
-            FROM color_schemes cs 
-            LEFT JOIN artworks a ON cs.artwork_id = a.id
-        `, [], (err, schemes) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            
-            // 将配色方案分组到对应的作品
-            const result = artworks.map(artwork => {
-                const artworkSchemes = schemes.filter(s => s.artwork_id === artwork.id);
-                return {
-                    ...artwork,
-                    schemes: artworkSchemes.map(s => ({
-                        id: s.id,
-                        scheme_name: s.scheme_name,
-                        thumbnail_path: s.thumbnail_path,
-                        updated_at: s.updated_at
-                    }))
-                };
-            });
-            
-            res.json(result);
-        });
-    });
-});
+// 统一：旧的 /api/artworks（无 layers）版本已弃用，保留注释防回归
+// app.get('/api/artworks', ...)  // replaced below with enhanced version including layers
 
 // 添加新画作品
 app.post('/api/artworks', (req, res) => {
@@ -794,29 +761,58 @@ app.put('/api/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail')
   });
 });
 
-// 调整作品列表，给方案返回一个 name 字段（兼容前端）
+// 新版本：/api/artworks 返回每个方案的 layers 数组（{layer, colorCode}），并提供 name 别名
 app.get('/api/artworks', (req, res) => {
   db.all('SELECT * FROM artworks ORDER BY code', [], (err, artworks) => {
     if (err) return res.status(500).json({ error: err.message });
 
-    db.all(`SELECT cs.*, a.code as artwork_code FROM color_schemes cs LEFT JOIN artworks a ON cs.artwork_id = a.id`, [], (err2, schemes) => {
-      if (err2) return res.status(500).json({ error: err2.message });
+    db.all(
+      `SELECT cs.*, a.code as artwork_code 
+         FROM color_schemes cs 
+         LEFT JOIN artworks a ON cs.artwork_id = a.id`,
+      [],
+      (err2, schemes) => {
+        if (err2) return res.status(500).json({ error: err2.message });
 
-      const result = artworks.map(artwork => {
-        const artworkSchemes = schemes.filter(s => s.artwork_id === artwork.id);
-        return {
-          ...artwork,
-          schemes: artworkSchemes.map(s => ({
-            id: s.id,
-            scheme_name: s.scheme_name,
-            name: s.scheme_name,              // 新增别名用于前端显示
-            thumbnail_path: s.thumbnail_path,
-            updated_at: s.updated_at
-          }))
-        };
-      });
-      res.json(result);
-    });
+        const schemeIds = schemes.map(s => s.id);
+        if (schemeIds.length === 0) {
+          const emptyResult = artworks.map(art => ({ ...art, schemes: [] }));
+          return res.json(emptyResult);
+        }
+        const placeholders = schemeIds.map(()=>'?').join(',');
+        db.all(
+          `SELECT sl.scheme_id, sl.layer_number AS layer, COALESCE(cc.color_code,'') AS colorCode
+             FROM scheme_layers sl
+             LEFT JOIN custom_colors cc ON cc.id = sl.custom_color_id
+            WHERE sl.scheme_id IN (${placeholders})
+            ORDER BY sl.scheme_id ASC, sl.layer_number ASC`,
+          schemeIds,
+          (err3, layerRows) => {
+            if (err3) return res.status(500).json({ error: err3.message });
+            const layersByScheme = new Map();
+            layerRows.forEach(r => {
+              if (!layersByScheme.has(r.scheme_id)) layersByScheme.set(r.scheme_id, []);
+              layersByScheme.get(r.scheme_id).push({ layer: Number(r.layer), colorCode: r.colorCode || '' });
+            });
+            const result = artworks.map(art => {
+              const relatedSchemes = schemes.filter(s => s.artwork_id === art.id);
+              return {
+                ...art,
+                schemes: relatedSchemes.map(s => ({
+                  id: s.id,
+                  scheme_name: s.scheme_name,
+                  name: s.scheme_name,
+                  thumbnail_path: s.thumbnail_path,
+                  updated_at: s.updated_at,
+                  layers: layersByScheme.get(s.id) || []
+                }))
+              };
+            });
+            res.json(result);
+          }
+        );
+      }
+    );
   });
 });
 

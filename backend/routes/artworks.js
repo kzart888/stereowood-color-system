@@ -77,6 +77,17 @@ router.get('/artworks', (req, res) => {
                 }))
               };
             });
+            // === DEBUG START ===
+            try {
+              const sample = result.slice(0,1);
+              console.log('[DEBUG /api/artworks] totalArtworks=', result.length, 'firstSample=', JSON.stringify(sample, null, 2));
+              if (sample[0] && sample[0].schemes) {
+                sample[0].schemes.forEach(sc => {
+                  console.log('[DEBUG scheme]', sc.id, sc.name, 'layersCount=', (sc.layers||[]).length, 'firstLayers=', (sc.layers||[]).slice(0,5));
+                });
+              }
+            } catch(e) { console.warn('DEBUG /api/artworks logging failed', e); }
+            // === DEBUG END ===
             res.json(result);
           }
         );

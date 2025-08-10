@@ -35,8 +35,8 @@
                 @change-artworks-view-mode="setArtworksViewMode"
                 @change-sort="setSortMode"
                 @add-artwork="$refs.artworksRef && $refs.artworksRef.addArtwork && $refs.artworksRef.addArtwork()"
-                @add-custom-color="$refs.customColorsRef && $refs.customColorsRef.addCustomColor && $refs.customColorsRef.addCustomColor()"
-                @add-raw-material="$refs.montMarteRef && $refs.montMarteRef.addRawMaterial && $refs.montMarteRef.addRawMaterial()"
+                @add-custom-color="$refs.customColorsRef && $refs.customColorsRef.openAddDialog && $refs.customColorsRef.openAddDialog()"
+                @add-raw-material="$refs.montMarteRef && $refs.montMarteRef.openDialog && $refs.montMarteRef.openDialog()"
             ></app-header-bar>
 
             <!-- 全局搜索栏（仅作用于作品/方案） -->
