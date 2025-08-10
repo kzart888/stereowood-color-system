@@ -46,7 +46,7 @@ const MontMarteComponent = {
                                             <div class="meta-text">适用色：
                                                 <template v-if="rawUsageCodes(color).length">
                                                     <span class="usage-chips">
-                                                        <span v-for="c in rawUsageCodes(color)" :key="c" class="mf-chip usage-chip" :title="c" @click="$root && $root.focusCustomColor && $root.focusCustomColor(c)" style="cursor:pointer;">{{ c }}</span>
+                                                        <span v-for="c in rawUsageCodes(color)" :key="c" class="mf-chip usage-chip" @click="$root && $root.focusCustomColor && $root.focusCustomColor(c)" style="cursor:pointer;">{{ c }}</span>
                                                     </span>
                                                 </template>
                                                 <template v-else>（未使用）</template>

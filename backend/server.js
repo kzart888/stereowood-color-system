@@ -816,6 +816,11 @@ app.get('/api/artworks', (req, res) => {
   });
 });
 
+// 确保新增色系“色精”存在（代码 SJ）—— 幂等插入
+db.run('INSERT OR IGNORE INTO color_categories (code, name) VALUES (?, ?)', ['SJ', '色精'], (err)=>{
+  if (err) console.warn('确保色精色系存在时出错:', err.message);
+});
+
 // 更新自配颜色
 app.put('/api/custom-colors/:id', upload.single('image'), (req, res) => {
     const colorId = req.params.id;

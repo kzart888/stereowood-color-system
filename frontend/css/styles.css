@@ -300,6 +300,14 @@ body {
     margin-bottom: 20px;
 }
 
+/* 新：自配色分类按钮组（蓝色系，与头部 tabs 统一风格） */
+.category-switch-group { display:inline-flex; flex-wrap:wrap; gap:0; margin:0 0 2px 0; background:rgba(30,90,200,0.12); border-radius:6px; box-shadow:0 0 0 1px rgba(30,90,200,0.25) inset; overflow:hidden; }
+.category-switch-group .category-switch { font:inherit; cursor:pointer; border:none; background:transparent; padding:6px 14px; font-size:13px; color:#15406e; line-height:1; position:relative; transition:background .18s ease, color .18s ease; }
+.category-switch-group .category-switch + .category-switch { border-left:1px solid rgba(30,90,200,0.35); }
+.category-switch-group .category-switch.active { background:linear-gradient(135deg,#2f74ff,#1d56c7); color:#fff; box-shadow:0 0 0 1px rgba(0,0,0,0.05) inset; }
+.category-switch-group .category-switch:not(.active):hover { background:rgba(30,90,200,0.20); }
+.category-switch-group .category-switch:focus-visible { outline:2px solid rgba(47,116,255,0.55); outline-offset:-2px; }
+
 .view-toggle {
     float: right;
     margin-bottom: 20px;
@@ -482,6 +490,9 @@ table.mapping-table .mapping-formula-chips { display:flex; flex-wrap:wrap; gap:4
 /* 通用 chip 容器（对话框 & 视图公用） */
 .mapping-formula-chips { display:flex; flex-wrap:wrap; gap:var(--sw-chip-gap); margin-top:var(--sw-gap-sm); align-items:center; }
 .mf-chip { background:#f0f4f8; border:1px solid #d6dee6; border-radius:3px; padding:1px 4px; font-size:12px; line-height:14px; white-space:nowrap; }
+.mf-chip,[data-no-tip] { /* 统一禁用 Element Plus tooltip pointer 触发，使 hover 不再出现黑色气泡 */ -webkit-touch-callout:none; }
+/* 若有残留 tooltip，通过覆盖 popper 可见性隐藏（作用范围限定为 chip） */
+.el-popper.is-dark[data-chip-tip], .el-popper.is-dark[data-chip-tip] * { display:none !important; }
 .usage-chip { background:#f5f7f2; border:1px solid #d9e2cc; color:#56624a; }
 .usage-chips { display:inline-flex; flex-wrap:wrap; gap:var(--sw-chip-gap); }
 

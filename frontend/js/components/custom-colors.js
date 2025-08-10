@@ -8,15 +8,19 @@ const CustomColorsComponent = {
         },
         template: `
                 <div>
-                        <el-tabs v-model="activeCategory" class="category-tabs">
-                                <el-tab-pane label="全部" name="all"></el-tab-pane>
-                                <el-tab-pane 
-                                        v-for="cat in categoriesWithOther" 
-                                        :key="cat.id || 'other'"
-                                        :label="cat.name" 
-                                        :name="String(cat.id || 'other')"
-                                ></el-tab-pane>
-                        </el-tabs>
+                                                <div class="category-switch-group" role="tablist" aria-label="颜色分类筛选">
+                                                        <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
+                                                        <button 
+                                                            v-for="cat in orderedCategoriesWithOther" 
+                                                            :key="cat.id || 'other'"
+                                                            type="button"
+                                                            class="category-switch"
+                                                            :class="{active: activeCategory===String(cat.id || 'other')}"
+                                                            @click="activeCategory=String(cat.id || 'other')"
+                                                            role="tab"
+                                                            :aria-selected="activeCategory===String(cat.id || 'other')"
+                                                        >{{ cat.name }}</button>
+                                                </div>
                         <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
                         <div v-else>
                             <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角“新自配色”添加</div>
@@ -55,7 +59,7 @@ const CustomColorsComponent = {
                                         <div class="meta-text">适用层：
                                             <template v-if="usageGroups(color).length">
                                                 <span class="usage-chips">
-                                                    <span v-for="g in usageGroups(color)" :key="'ug'+color.id+g.display" class="mf-chip usage-chip" :title="g.display" style="cursor:pointer;" @click="$root && $root.focusArtworkScheme && $root.focusArtworkScheme(g)">{{ g.display }}</span>
+                                                    <span v-for="g in usageGroups(color)" :key="'ug'+color.id+g.display" class="mf-chip usage-chip" style="cursor:pointer;" @click="$root && $root.focusArtworkScheme && $root.focusArtworkScheme(g)">{{ g.display }}</span>
                                                 </span>
                                             </template>
                                             <span v-else>（未使用）</span>
@@ -165,12 +169,42 @@ const CustomColorsComponent = {
         categories() {
             return this.globalData.categories.value || [];
         },
-        // 添加"其他"分类的完整分类列表
+        sjCategoryId() { // 色精分类 id（可能不存在）
+            const sj = this.categories.find(c=>c.code==='SJ');
+            return sj ? sj.id : null;
+        },
+        // 排序 + 插入“色精”(SJ) 位置在 黄色系(YE) 之后，“其他” 之前
+        orderedCategoriesWithOther() {
+            const raw = [...(this.categories||[])];
+            // 找到 SJ 是否已存在
+            // categories 表里应有 code = 'SJ' name = '色精'
+            // 先按 code 原顺序（假设 code 的首两位区分）
+            raw.sort((a,b)=> (a.code||'').localeCompare(b.code||''));
+            const result = [];
+            raw.forEach(cat => {
+                result.push(cat);
+                if (cat.code === 'YE') {
+                    // 确保 SJ 在 YE 后面且不重复
+                    if (!raw.some(c=>c.code==='SJ')) {
+                        // 若未出现在原始数据中，跳过插入（后端保证存在）
+                    }
+                }
+            });
+            // 如果 SJ 存在但顺序不正确，重排：先移除再重新插入
+            const sjIndex = result.findIndex(c=>c.code==='SJ');
+            if (sjIndex !== -1) {
+                const sjCat = result.splice(sjIndex,1)[0];
+                const yeIndex = result.findIndex(c=>c.code==='YE');
+                if (yeIndex !== -1) result.splice(yeIndex+1,0,sjCat); else result.push(sjCat);
+            }
+            // 添加“其他”
+            result.push({ id: 'other', name: '其他', code: 'OTHER' });
+            return result;
+        },
+        // 供对话框选择使用（不包含自动追加的“其他”逻辑重复 — 这里仍附带 other 选项以便选择）
         categoriesWithOther() {
-            const cats = [...this.categories];
-            // 添加"其他"分类（id为'other'特殊标识）
-            cats.push({ id: 'other', name: '其他', code: 'OTHER' });
-            return cats;
+            // 复用排序逻辑，但保持数据引用独立
+            return this.orderedCategoriesWithOther.map(c=>c);
         },
         // 从注入的全局数据获取自配颜色列表
         customColors() {
@@ -389,27 +423,38 @@ const CustomColorsComponent = {
         
         // 颜色编号输入时智能识别分类
         onColorCodeInput(value) {
-            // 只在非编辑模式下自动识别分类
+            // 规则：
+            // 1. 编辑模式不自动分类
+            // 2. 当前分类若为 "色精"(SJ) 或 "其他" 则不再自动切换
+            // 3. 若首字符为 酒/沙/红/黑/蓝 => 设置分类为 色精(SJ)
+            // 4. 否则按前两位字母 BU GN RD VT YE 识别；无匹配 => 其他
             if (this.editingColor) return;
-            
-            // 提取前两个字符作为分类代码
-            if (value && value.length >= 2) {
-                const prefix = value.substring(0, 2).toUpperCase();
-                
-                // 查找匹配的分类
+            const sjId = this.sjCategoryId;
+            if (this.form.category_id === 'other' || (sjId && this.form.category_id === sjId)) return;
+            if (!value) return;
+
+            const firstChar = value.charAt(0);
+            const sjTriggers = ['酒','沙','红','黑','蓝'];
+            if (sjId && sjTriggers.includes(firstChar)) {
+                if (this.form.category_id !== sjId) {
+                    this.form.category_id = sjId;
+                    ElementPlus.ElMessage.info('已自动识别为 色精');
+                }
+                return; // 不再继续字母前缀匹配
+            }
+
+            if (value.length >= 2) {
+                const prefix = value.substring(0,2).toUpperCase();
                 const matchedCategory = this.categories.find(cat => cat.code === prefix);
-                
                 if (matchedCategory) {
-                    // 找到匹配的分类，自动切换
                     if (this.form.category_id !== matchedCategory.id) {
                         this.form.category_id = matchedCategory.id;
                         ElementPlus.ElMessage.info(`已自动切换到 ${matchedCategory.name}`);
                     }
                 } else {
-                    // 没有找到匹配的分类，切换到"其他"
                     if (this.form.category_id !== 'other') {
                         this.form.category_id = 'other';
-                        ElementPlus.ElMessage.warning('无法识别的颜色编号前缀，已切换到"其他"分类');
+                        ElementPlus.ElMessage.warning('无法识别的前缀，已切换到"其他"');
                     }
                 }
             }
@@ -434,16 +479,16 @@ const CustomColorsComponent = {
         // 初始化表单（对话框打开时）
         initForm() {
             // 只在编辑模式下或已有分类时生成编号
-            if (!this.editingColor && this.form.category_id && this.form.category_id !== 'other') {
+            if (!this.editingColor && this.form.category_id && this.form.category_id !== 'other' && this.form.category_id !== this.sjCategoryId) {
                 this.generateColorCode(this.form.category_id);
             }
         },
         
         // 分类改变时自动生成编号
         onCategoryChange(categoryId) {
-            if (!this.editingColor && categoryId && categoryId !== 'other') {
+            if (!this.editingColor && categoryId && categoryId !== 'other' && categoryId !== this.sjCategoryId) {
                 this.generateColorCode(categoryId);
-            } else if (categoryId === 'other') {
+            } else if (categoryId === 'other' || categoryId === this.sjCategoryId) {
                 // 选择"其他"分类时清空编号，让用户自行输入
                 this.form.color_code = '';
             }
@@ -451,6 +496,7 @@ const CustomColorsComponent = {
         
         // 生成颜色编号
         generateColorCode(categoryId) {
+            if (!categoryId || categoryId === 'other' || categoryId === this.sjCategoryId) return; // 色精与其他不自动编号
             const code = helpers.generateColorCode(this.categories, this.customColors, categoryId);
             this.form.color_code = code;
         },
