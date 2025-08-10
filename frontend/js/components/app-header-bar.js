@@ -71,10 +71,23 @@ const AppHeaderBar = {
 			}
 		};
 		window.addEventListener('keydown', this._ctrlFHandler, { passive:false });
+		// 全局 ESC（输入框未聚焦时）退出过滤：清空查询 + 关闭下拉
+		this._escGlobalHandler = (e)=>{
+			if (e.key === 'Escape') {
+				const inp = this.$el.querySelector('.app-header-search input');
+				if (!inp || document.activeElement !== inp) {
+					if (this.globalSearchQuery) this.$emit('global-search-input','');
+					this.$emit('close-search-dropdown');
+					this.activeIdx = -1;
+				}
+			}
+		};
+		window.addEventListener('keydown', this._escGlobalHandler, { passive:true });
 	},
 	beforeUnmount() {
 		if (this._outsideHandler) document.removeEventListener('mousedown', this._outsideHandler, true);
 		if (this._ctrlFHandler) window.removeEventListener('keydown', this._ctrlFHandler, { passive:false });
+		if (this._escGlobalHandler) window.removeEventListener('keydown', this._escGlobalHandler, { passive:true });
 	},
 	methods: {
 		setSort(section, mode) { this.$emit('change-sort', section, mode); },

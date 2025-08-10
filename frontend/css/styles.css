@@ -571,3 +571,22 @@ table.mapping-table td:nth-child(3) { width:110px; text-align:right; }
 /* Global search bar styling */
 .global-search-bar { position: sticky; top: 64px; z-index: 120; background: rgba(255,255,255,0.85); backdrop-filter: blur(6px); padding: 8px 16px 4px; box-shadow: 0 2px 4px -2px rgba(0,0,0,0.08); }
 .global-search-bar .el-input { max-width: 520px; }
+
+/* ============================================
+   统一表单必填校验错误（对话框内）右侧内联样式
+   适用：自配色 / 配色方案 / 原料 对话框 (均使用 .scheme-dialog 类)
+   ============================================ */
+.scheme-dialog .el-form-item { align-items: flex-start; }
+.scheme-dialog .el-form-item__content { display:flex; align-items:center; flex-wrap:wrap; }
+.scheme-dialog .el-form-item__error {
+    position: static !important; /* 取消默认绝对定位 */
+    display: inline-block;
+    margin: 0 0 0 8px; /* 与输入框间距 */
+    padding: 0; /* 去除底部额外空间 */
+    line-height: 1.2;
+    font-size: 12px;
+    color: #d93025; /* 统一错误红色，与重复提示一致 */
+    white-space: nowrap; /* 单行显示 */
+}
+/* 当内容本身为多行（如内联方案名组合），保持整体换行但错误跟随其后 */
+.scheme-dialog .inline-scheme-name + .el-form-item__error { align-self:center; }

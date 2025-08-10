@@ -288,31 +288,7 @@ const MontMarteComponent = {
             });
         },
         async saveColor() {
-            const valid = await this.$refs.formRef.validate().catch(()=>false);
-            if (!valid) return;
-            this.saving = true;
-            try {
-                const fd = new FormData();
-                fd.append('name', this.form.name.trim());
-                fd.append('category', this.form.category || '');
-                if (this.form.supplier_id) fd.append('supplier_id', this.form.supplier_id);
-                if (this.form.purchase_link_id) fd.append('purchase_link_id', this.form.purchase_link_id);
-                if (this.form.imageFile) fd.append('image', this.form.imageFile);
-                if (this.editing) {
-                    fd.append('existingImagePath', this.editing.image_path || '');
-                    await axios.put(`${this.baseURL}/api/mont-marte-colors/${this.form.id}`, fd, { headers:{ 'Content-Type':'multipart/form-data' } });
-                } else {
-                    await axios.post(`${this.baseURL}/api/mont-marte-colors`, fd, { headers:{ 'Content-Type':'multipart/form-data' } });
-                }
-                await this.globalData.loadMontMarteColors();
-                this.showDialog = false;
-                ElementPlus.ElMessage.success('已保存');
-            } catch(e) {
-                console.error('保存原料失败', e);
-                ElementPlus.ElMessage.error('保存失败');
-            } finally {
-                this.saving = false;
-            }
+            // (legacy implementation removed; using unified logic later in file)
         },
         // 返回引用该原料的自配色编号列表（去重、按字母/数字排序）
         rawUsageCodes(color) {
@@ -537,24 +513,25 @@ const MontMarteComponent = {
         },
 
         async saveColor() {
+            // 统一保存逻辑：先校验，失败不进入后端调用，也不显示“保存失败”误导信息
+            const valid = await this.$refs.formRef.validate().catch(()=>false);
+            if (!valid) return; // 表单已在各字段下方显示错误
+            if (this.nameDuplicate) {
+                // 统一查重提示：仅使用右侧内联 .dup-msg，不再弹出全局消息
+                return;
+            }
+            // 处理可能的“新建”供应商 / 采购地址
             try {
-                this.saving = true;
-                await this.$refs.formRef.validate();
-
-                if (this.nameDuplicate) {
-                    ElementPlus.ElMessage.warning('名称重复，请更换');
-                    return;
-                }
-
-                if (typeof this.form.supplier_id === 'string') {
-                    await this.onSupplierChange(this.form.supplier_id);
-                }
-                if (typeof this.form.purchase_link_id === 'string') {
-                    await this.onPurchaseChange(this.form.purchase_link_id);
-                }
-
+                if (typeof this.form.supplier_id === 'string') await this.onSupplierChange(this.form.supplier_id);
+                if (typeof this.form.purchase_link_id === 'string') await this.onPurchaseChange(this.form.purchase_link_id);
+            } catch(e) {
+                // 若创建关联记录失败，直接终止保存
+                return;
+            }
+            this.saving = true;
+            try {
                 const fd = new FormData();
-                fd.append('name', this.form.name);
+                fd.append('name', this.form.name.trim());
                 fd.append('category', this.form.category || '');
                 if (this.form.supplier_id) fd.append('supplier_id', this.form.supplier_id);
                 if (this.form.purchase_link_id) fd.append('purchase_link_id', this.form.purchase_link_id);
@@ -562,33 +539,23 @@ const MontMarteComponent = {
                 if (!this.form.imageFile && this.form.imagePreview && this.editing && this.editing.image_path) {
                     fd.append('existingImagePath', this.editing.image_path);
                 }
-
                 if (this.editing) {
                     const res = await axios.put(`${this.baseURL}/api/mont-marte-colors/${this.form.id}`, fd);
                     const n = res?.data?.updatedReferences || 0;
-                    if (n > 0) {
-                        ElementPlus.ElMessage.success(`已保存并同步更新 ${n} 处配方引用`);
-                    } else {
-                        ElementPlus.ElMessage.success('已保存修改');
-                    }
+                    ElementPlus.ElMessage.success(n>0 ? `已保存并同步更新 ${n} 处配方引用` : '已保存修改');
                 } else {
                     await axios.post(`${this.baseURL}/api/mont-marte-colors`, fd);
                     ElementPlus.ElMessage.success('已新增颜色原料');
                 }
-
-                // 关键：同时刷新原料库与自配色，确保两个页面立刻看到新名称
                 await Promise.all([
                     this.globalData.loadMontMarteColors(),
                     this.globalData.loadCustomColors()
                 ]);
-
                 this.showDialog = false;
-            } catch (e) {
-                console.error('保存失败', e);
-                ElementPlus.ElMessage.error('保存失败，请检查表单');
-            } finally {
-                this.saving = false;
-            }
+            } catch(e) {
+                console.error('保存失败(网络/服务器)', e);
+                ElementPlus.ElMessage.error('保存失败');
+            } finally { this.saving = false; }
         },
         
         onFormEnter() {

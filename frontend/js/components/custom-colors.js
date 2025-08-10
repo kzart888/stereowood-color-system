@@ -517,7 +517,7 @@ const CustomColorsComponent = {
             const valid = await this.$refs.formRef.validate().catch(() => false);
             if (!valid) return;
             if (this.colorCodeDuplicate) {
-                ElementPlus.ElMessage.warning('颜色编号重复，请更换');
+                // 统一查重提示：仅右侧内联 .dup-msg，不再弹出全局提示
                 return;
             }
             

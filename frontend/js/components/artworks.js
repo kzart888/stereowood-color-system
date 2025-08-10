@@ -21,7 +21,7 @@ const ArtworksComponent = {
         <div v-if="artworks.length === 0" class="empty-message">暂无作品，点击右上角“新作品”添加</div>
 
         <!-- 母bar：作品 -->
-  <div v-for="art in artworks" :key="art.id" class="artwork-bar" :data-art-id="art.id">
+  <div v-for="art in artworks" :key="art.id" class="artwork-bar" :data-art-id="art.id" :data-focus-single="art._swFocusSingle ? 'true' : null">
           <div class="artwork-header">
             <div class="artwork-title">{{ artworkTitle(art) }}</div>
             <div class="color-actions">
@@ -39,7 +39,7 @@ const ArtworksComponent = {
 
           <!-- 子bar：方案 -->
           <div v-if="(art.schemes && art.schemes.length) > 0">
-            <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id" :ref="setSchemeRef(scheme)">
+            <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id" :ref="setSchemeRef(scheme)" :class="{ 'highlight-pulse': art._swFocusSingle }">
               <div class="scheme-header">
                 <div class="scheme-thumbnail" :class="{ 'no-image': !scheme.thumbnail_path }" @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, scheme.thumbnail_path))">
                   <template v-if="!scheme.thumbnail_path">未上传图片</template>
@@ -205,14 +205,14 @@ const ArtworksComponent = {
   @open="onOpenDialog"
   @close="onCloseDialog"
       >
-        <el-form ref="schemeFormRef" :model="schemeForm" label-width="80px" @submit.prevent @keydown.enter.stop.prevent="saveScheme">
-          <el-form-item label="方案名称" required>
+        <el-form ref="schemeFormRef" :model="schemeForm" :rules="schemeRules" label-width="80px" @submit.prevent @keydown.enter.stop.prevent="saveScheme">
+          <el-form-item label="方案名称" prop="name" required>
             <div class="inline-scheme-name dup-inline-row">
               <span class="inline-art-title">{{ editingArtTitle }}</span>
               <span class="scheme-sep"> - [</span>
               <el-input v-model.trim="schemeForm.name" placeholder="例如：金黄" class="scheme-name-input" :maxlength="10" />
               <span class="scheme-bracket-end">]</span>
-              <span v-if="schemeNameDuplicate" class="dup-msg">名称重复</span>
+              <span v-if="schemeNameDuplicate" class="dup-msg">名称重复</span> <!-- 统一查重：仅内联显示，不再弹出 Toast -->
             </div>
           </el-form-item>
 
@@ -324,6 +324,7 @@ const ArtworksComponent = {
         thumbnailPreview: null,
         mappings: [] // [{ layer: Number, colorCode: String }]
       },
+  schemeRules: { name: [ { required:true, message:'请输入方案名称', trigger:'blur' } ] },
       saving: false
   , _formulaCache: null
   , _schemeOriginalSnapshot: null
@@ -357,24 +358,40 @@ const ArtworksComponent = {
       }
       const q = (this.$root && this.$root.globalSearchQuery || '').trim().toLowerCase();
       if (!q || this.$root.activeTab !== 'artworks') return raw;
-      // 过滤逻辑：作品名或其方案名命中
-      return raw.map(a => {
-  const nameMatch = (a.name||'').toLowerCase().includes(q) || (a.code||'').toLowerCase().includes(q) || ((a.code && a.name)? (a.code+'-'+a.name).toLowerCase().includes(q): false);
-        const schemes = Array.isArray(a.schemes) ? a.schemes.slice() : [];
-        const matchedSchemes = schemes.filter(s => (s.name||'').toLowerCase().includes(q));
-        if (!nameMatch && matchedSchemes.length===0) return null; // 整个作品不保留
+      const tokens = q.split(/\s+/).filter(t=>t);
+      const multi = tokens.length > 1;
+      // 先尝试：若多 token 能唯一锁定到 某作品 + 某方案（全部 tokens 在 作品代码/名称/方案名 合集中都命中），则只保留该作品的所有命中方案（且若其中仅命中一个方案，则只显示那个方案）。
+      const processed = raw.map(a => {
+        const code = (a.code||'').toLowerCase();
+        const name = (a.name||a.title||'').toLowerCase();
+        const artCombo = code && name ? code+'-'+name : (code||name);
+        const schemes = Array.isArray(a.schemes)? a.schemes.slice():[];
+        // 每个方案的匹配：tokens 分布在 作品(code/name/combo) 或 方案名
+        const matchedSchemes = schemes.filter(s => {
+          const sName = (s.name||'').toLowerCase();
+          if (multi) return tokens.every(t => sName.includes(t) || code.includes(t) || name.includes(t) || artCombo.includes(t));
+          return sName.includes(q);
+        });
+        const artNameHit = multi ? tokens.every(t=> code.includes(t)|| name.includes(t)|| artCombo.includes(t)) : (code.includes(q)|| name.includes(q)|| artCombo.includes(q));
+        if (!artNameHit && matchedSchemes.length===0) return null;
         const clone = Object.assign({}, a);
-        if (nameMatch) {
-          // 作品名命中：显示所有方案；若有方案命中可标记突出（后续阶段可高亮）
+        if (artNameHit && matchedSchemes.length===0) {
+          // 仅作品命中：显示所有方案
           clone.schemes = schemes;
-          if (matchedSchemes.length===0) clone._swSearchArtOnly = true; else clone._swSearchArtWithSchemeHits = true;
+          clone._swSearchArtOnly = true;
+        } else if (!artNameHit) {
+          // 仅方案命中：只显示命中方案
+          clone.schemes = matchedSchemes;
+          clone._swSearchSchemesPartial = true;
         } else {
-          // 作品名未命中，仅显示命中方案子集
-            clone.schemes = matchedSchemes;
-            clone._swSearchSchemesPartial = true;
+          // 作品与方案均命中：只显示命中方案集合（更符合“聚焦”需求）
+          clone.schemes = matchedSchemes.length ? matchedSchemes : schemes;
+          clone._swSearchSchemesPartial = matchedSchemes.length>0;
         }
         return clone;
       }).filter(Boolean);
+      // 若多 token 且整体只剩一个作品，并且该作品下只剩一个方案，则这是“单方案视图”情形：无需额外样式，只返回即可
+      return processed;
     },
     editingArtwork() {
       if (!this.editingArtId) return null;
@@ -883,12 +900,9 @@ const ArtworksComponent = {
     },
 
     async saveScheme() {
-      if (!String(this.schemeForm.name || '').trim()) {
-        return ElementPlus.ElMessage.warning('请填写方案名称');
-      }
-      if (this.schemeNameDuplicate) {
-        return ElementPlus.ElMessage.warning('方案名称重复，请更换');
-      }
+      const valid = await this.$refs.schemeFormRef.validate().catch(()=>false);
+      if (!valid) return; // 内联错误已显示
+      if (this.schemeNameDuplicate) return; // 重复提示已内联
       const artId = this.editingArtId;
       if (!artId) return;
 
