@@ -140,6 +140,49 @@ async function runMigrations() {
       await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN purchase_link_id INTEGER NULL`);
     }
 
+    // 迁移：custom_colors_history 去除对 custom_colors 的外键约束，避免删除父记录时受阻
+    // 检测是否存在外键引用
+    const hasHistoryFK = await new Promise((resolve) => {
+      db.all(`PRAGMA foreign_key_list(custom_colors_history)`, (err, rows) => {
+        if (err) { console.error('检测 custom_colors_history 外键失败', err); return resolve(false); }
+        resolve(Array.isArray(rows) && rows.some(r => r && r.table === 'custom_colors'));
+      });
+    });
+    if (hasHistoryFK) {
+      console.log('[迁移] 重建 custom_colors_history 去除外键约束');
+      await new Promise((resolve, reject) => {
+        db.serialize(() => {
+          db.run('BEGIN');
+          db.run(`CREATE TABLE IF NOT EXISTS custom_colors_history_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              custom_color_id INTEGER,
+              color_code TEXT,
+              image_path TEXT,
+              formula TEXT,
+              applicable_layers TEXT,
+              archived_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, function (e1) {
+              if (e1) { db.run('ROLLBACK'); return reject(e1); }
+              db.run(`INSERT INTO custom_colors_history_new (id, custom_color_id, color_code, image_path, formula, applicable_layers, archived_at)
+                      SELECT id, custom_color_id, color_code, image_path, formula, applicable_layers, archived_at FROM custom_colors_history`, function (e2) {
+                if (e2) { db.run('ROLLBACK'); return reject(e2); }
+                db.run('DROP TABLE custom_colors_history', function (e3) {
+                  if (e3) { db.run('ROLLBACK'); return reject(e3); }
+                  db.run('ALTER TABLE custom_colors_history_new RENAME TO custom_colors_history', function (e4) {
+                    if (e4) { db.run('ROLLBACK'); return reject(e4); }
+                    db.run('COMMIT', (e5) => {
+                      if (e5) return reject(e5);
+                      console.log('[迁移] custom_colors_history 外键移除完成');
+                      resolve();
+                    });
+                  });
+                });
+              });
+            });
+        });
+      });
+    }
+
     console.log('数据库迁移完成 (db/migrations.js)');
   } catch (e) {
     console.error('数据库迁移失败:', e);

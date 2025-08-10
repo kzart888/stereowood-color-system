@@ -26,7 +26,14 @@ const CustomColorsComponent = {
                                     <div class="color-actions">
                                         <el-button size="small" type="primary" @click="editColor(color)"><el-icon><Edit /></el-icon> 修改</el-button>
                                         <el-button size="small" @click="viewHistory(color)" disabled><el-icon><Clock /></el-icon> 历史</el-button>
-                                        <el-button size="small" type="danger" @click="deleteColor(color)"><el-icon><Delete /></el-icon> 删除</el-button>
+                                        <template v-if="isColorReferenced(color)">
+                                            <el-tooltip content="该自配色已被引用，无法删除" placement="top">
+                                                <span>
+                                                    <el-button size="small" type="danger" disabled><el-icon><Delete /></el-icon> 删除</el-button>
+                                                </span>
+                                            </el-tooltip>
+                                        </template>
+                                        <el-button v-else size="small" type="danger" @click="deleteColor(color)"><el-icon><Delete /></el-icon> 删除</el-button>
                                     </div>
                                 </div>
                                                 <div style="display:flex; gap:12px; padding:6px 4px 4px;">
@@ -35,20 +42,20 @@ const CustomColorsComponent = {
                                                         <img v-else :src="$helpers.buildUploadURL(baseURL, color.image_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                                                     </div>
                                     <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
-                                                            <div class="meta-text" v-if="color.formula">
-                                                                <div class="mapping-formula-chips">
-                                                                    <el-tooltip v-for="(seg,i) in formulaSegments(color.formula)" :key="'ccf'+color.id+'-'+i" :content="seg" placement="top">
-                                                                        <span class="mf-chip">{{ seg }}</span>
-                                                                    </el-tooltip>
-                                                                </div>
-                                                            </div>
-                                           <div class="meta-text">分类：{{ categoryName(color) }}</div>
-                                           <div class="meta-text" v-if="color.updated_at">更新：{{ formatDate(color.updated_at) }}</div>
-                                        <div class="meta-text" v-else>（暂无配方）</div>
-                    <div class="meta-text">适用层：
+                                        <div class="meta-text" v-if="!color.formula">（未指定配方）</div>
+                                        <div class="meta-text" v-else>
+                                            <div class="mapping-formula-chips">
+                                                <el-tooltip v-for="(seg,i) in formulaSegments(color.formula)" :key="'ccf'+color.id+'-'+i" :content="seg" placement="top">
+                                                    <span class="mf-chip">{{ seg }}</span>
+                                                </el-tooltip>
+                                            </div>
+                                        </div>
+                                        <div class="meta-text">分类：{{ categoryName(color) }}</div>
+                                        <div class="meta-text" v-if="color.updated_at">更新：{{ formatDate(color.updated_at) }}</div>
+                                        <div class="meta-text">适用层：
                                             <template v-if="usageGroups(color).length">
-                        <span class="usage-chips">
-                                                    <span v-for="g in usageGroups(color)" :key="'ug'+color.id+g" class="mf-chip usage-chip" :title="g">{{ g }}</span>
+                                                <span class="usage-chips">
+                                                    <span v-for="g in usageGroups(color)" :key="'ug'+color.id+g.display" class="mf-chip usage-chip" :title="g.display" style="cursor:pointer;" @click="$root && $root.focusArtworkScheme && $root.focusArtworkScheme(g)">{{ g.display }}</span>
                                                 </span>
                                             </template>
                                             <span v-else>（未使用）</span>
@@ -80,11 +87,15 @@ const CustomColorsComponent = {
                         </el-select>
                     </el-form-item>
                     <el-form-item label="颜色编号" prop="color_code">
-                        <el-input 
-                            v-model="form.color_code" 
-                            placeholder="例如: BU001"
-                            @input="onColorCodeInput"
-                        ></el-input>
+                        <div class="dup-inline-row">
+                            <el-input 
+                                v-model="form.color_code" 
+                                placeholder="例如: BU001"
+                                @input="onColorCodeInput"
+                                class="short-inline-input"
+                            ></el-input>
+                            <span v-if="colorCodeDuplicate" class="dup-msg">编号重复</span>
+                        </div>
                     </el-form-item>
                     <el-form-item label="配方">
                         <formula-editor 
@@ -110,7 +121,7 @@ const CustomColorsComponent = {
                 </el-form>
                 <template #footer>
                     <el-button @click="attemptCloseAddDialog">取消</el-button>
-                    <el-button type="primary" @click="saveColor">保存</el-button>
+                    <el-button type="primary" @click="saveColor" :disabled="colorCodeDuplicate">保存</el-button>
                 </template>
             </el-dialog>
         </div>
@@ -137,10 +148,8 @@ const CustomColorsComponent = {
             rules: {
                 category_id: [{ required: true, message: '请选择分类', trigger: 'change' }],
                 color_code: [
-                    { required: true, message: '请输入颜色编号', trigger: 'blur' },
-                    { validator: this.validateColorCode, trigger: 'blur' }
+                    { required: true, message: '请输入颜色编号', trigger: 'blur' }
                 ]
-                // 删除 formula 的必填验证，因为现在允许空配方
             },
             _originalColorFormSnapshot: null,
             _escHandler: null
@@ -192,6 +201,11 @@ const CustomColorsComponent = {
         // 从注入的全局数据获取颜色原料库
         montMarteColors() {
             return this.globalData.montMarteColors.value || [];
+        },
+        colorCodeDuplicate() {
+            const val = (this.form.color_code || '').trim();
+            if (!val) return false;
+            return this.customColors.some(c => c.color_code === val && c.id !== (this.editingColor?.id || null));
         }
     },
     
@@ -253,7 +267,14 @@ const CustomColorsComponent = {
                         const schemeName = s.name || s.scheme_name || '-';
                         const header = `${this.artworkTitle(a)}-[${schemeName}]`;
                         const suffix = layers.map(n=>`(${n})`).join('');
-                        groups.push(header + suffix);
+                        groups.push({
+                            display: header + suffix,
+                            artworkId: a.id,
+                            schemeId: s.id,
+                            layers: layers.slice(),
+                            colorCode: code,
+                            schemeName
+                        });
                     }
                 });
             });
@@ -444,6 +465,10 @@ const CustomColorsComponent = {
         async saveColor() {
             const valid = await this.$refs.formRef.validate().catch(() => false);
             if (!valid) return;
+            if (this.colorCodeDuplicate) {
+                ElementPlus.ElMessage.warning('颜色编号重复，请更换');
+                return;
+            }
             
             try {
                 const formData = new FormData();
@@ -507,50 +532,47 @@ const CustomColorsComponent = {
         
         // 删除颜色
         async deleteColor(color) {
+            const ok = await this.$helpers.doubleDangerConfirm({
+                firstMessage: `确定删除 ${color.color_code} 吗？`,
+                secondMessage: '删除后将无法恢复，确认最终删除？',
+                secondConfirmText: '永久删除'
+            });
+            if (!ok) return;
             try {
-                await ElementPlus.ElMessageBox.confirm(
-                    `确定删除 ${color.color_code} 吗？`,
-                    '提示',
-                    {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        type: 'warning'
-                    }
-                );
-                
-                const response = await api.customColors.delete(color.id);
-                
+                await api.customColors.delete(color.id);
                 ElementPlus.ElMessage.success('删除成功');
                 await this.globalData.loadCustomColors();
-                // 删除后也刷新作品（虽然后端阻止引用中删除，这里保持一致）
                 await this.globalData.loadArtworks();
             } catch (error) {
-                // 检查是否是用户取消操作
-                if (error === 'cancel' || error.message === 'cancel') {
-                    return; // 用户取消，不显示错误信息
-                }
-                
-                // 显示友好的错误提示
-                if (error.response && error.response.data && error.response.data.error) {
-                    // 从后端获取具体的错误信息
-                    const errorMsg = error.response.data.error;
-                    
-                    // 根据不同的错误信息显示不同的提示
-                    if (errorMsg.includes('配色方案使用')) {
-                        ElementPlus.ElMessage.warning('该颜色正在被配色方案使用，无法删除');
-                    } else if (errorMsg.includes('不存在')) {
-                        ElementPlus.ElMessage.error('该颜色不存在');
-                    } else {
-                        ElementPlus.ElMessage.error(errorMsg);
-                    }
-                } else if (error.response && error.response.status === 404) {
-                    ElementPlus.ElMessage.error('删除功能暂时不可用');
-                } else if (error.request) {
-                    ElementPlus.ElMessage.error('无法连接到服务器，请检查网络连接');
+                const raw = error?.response?.data?.error || '';
+                if (raw.includes('配色方案使用')) {
+                    ElementPlus.ElMessage.warning('该自配色已被引用，无法删除');
+                } else if (raw.includes('不存在')) {
+                    ElementPlus.ElMessage.error('该自配色不存在');
+                } else if (raw) {
+                    ElementPlus.ElMessage.error(raw);
+                } else if (error?.response?.status === 404) {
+                    ElementPlus.ElMessage.error('删除功能暂不可用');
+                } else if (error?.request) {
+                    ElementPlus.ElMessage.error('网络异常，删除失败');
                 } else {
-                    ElementPlus.ElMessage.error('删除失败，请稍后重试');
+                    ElementPlus.ElMessage.error('删除失败');
                 }
             }
+        },
+        isColorReferenced(color) {
+            if (!color) return false;
+            const code = color.color_code;
+            if (!code) return false;
+            const artworks = (this.globalData.artworks?.value) || [];
+            for (const a of artworks) {
+                for (const s of (a.schemes||[])) {
+                    for (const l of (s.layers||[])) {
+                        if (l.colorCode === code) return true;
+                    }
+                }
+            }
+            return false;
         },
         
         // 查看历史（待实现）

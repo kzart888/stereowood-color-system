@@ -23,78 +23,45 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div id="app">
-        <div class="main-container">
-            <!-- 系统标题 -->
-            <div class="system-header compact">
-                <h1>STEREOWOOD-梯木叠雕-颜色管理系统</h1>
+        <div id="app">
+            <!-- 自定义粘性头部 -->
+            <app-header-bar
+                :active-tab="activeTab"
+                :artworks-view-mode="artworksViewMode"
+                :custom-colors-sort-mode="customColorsSortMode"
+                :artworks-sort-mode="artworksSortMode"
+                :mont-marte-sort-mode="montMarteSortMode"
+                @update:activetab="val=>activeTab=val"
+                @change-artworks-view-mode="setArtworksViewMode"
+                @change-sort="setSortMode"
+                @add-artwork="$refs.artworksRef && $refs.artworksRef.addArtwork && $refs.artworksRef.addArtwork()"
+                @add-custom-color="$refs.customColorsRef && $refs.customColorsRef.addCustomColor && $refs.customColorsRef.addCustomColor()"
+                @add-raw-material="$refs.montMarteRef && $refs.montMarteRef.addRawMaterial && $refs.montMarteRef.addRawMaterial()"
+            ></app-header-bar>
+
+            <!-- 全局搜索栏（仅作用于作品/方案） -->
+            <div class="global-search-bar">
+                <el-input v-model.trim="searchQuery" placeholder="搜索作品编号/名称 或 方案名称" clearable size="large" prefix-icon="Search"></el-input>
             </div>
-            <!-- 主要导航标签页 -->
-            <div class="tabs-wrapper">
-                <el-tabs v-model="activeTab" type="card">
-                    <el-tab-pane label="自配色管理" name="custom-colors">
-                        <custom-colors-component ref="customColorsRef" :sort-mode="customColorsSortMode"></custom-colors-component>
-                    </el-tab-pane>
-                    <el-tab-pane label="作品配色管理" name="artworks">
-                        <artworks-component ref="artworksRef" @view-mode-changed="onArtworksViewMode" :sort-mode="artworksSortMode"></artworks-component>
-                    </el-tab-pane>
-                    <el-tab-pane label="颜色原料管理" name="mont-marte">
-                        <mont-marte-component ref="montMarteRef" :sort-mode="montMarteSortMode"></mont-marte-component>
-                    </el-tab-pane>
-                </el-tabs>
-                <div class="floating-tab-tools">
-                    <template v-if="activeTab==='artworks'">
-                        <el-button size="small" type="primary" @click="$refs.artworksRef && $refs.artworksRef.addArtwork()">
-                            <el-icon><Plus /></el-icon> 新作品
-                        </el-button>
-                        <!-- 视图模式双按钮 -->
-                        <span class="dual-toggle-group">
-                            <el-button size="small" :type="artworksViewMode==='byLayer' ? 'primary' : 'default'" @click="setArtworksViewMode('byLayer')">层号优先</el-button>
-                            <el-button size="small" :type="artworksViewMode==='byColor' ? 'primary' : 'default'" @click="setArtworksViewMode('byColor')">自配色优先</el-button>
-                        </span>
-                        <!-- 排序双按钮 -->
-                        <span class="dual-toggle-group">
-                            <el-button size="small" :type="artworksSortMode==='time' ? 'primary' : 'default'" @click="setSortMode('artworks','time')">按时间</el-button>
-                            <el-button size="small" :type="artworksSortMode==='name' ? 'primary' : 'default'" @click="setSortMode('artworks','name')">按名称</el-button>
-                        </span>
-                    </template>
-                    <template v-else-if="activeTab==='custom-colors'">
-                        <el-button size="small" type="primary" @click="$refs.customColorsRef && $refs.customColorsRef.openAddDialog()">
-                            <el-icon><Plus /></el-icon> 新自配色
-                        </el-button>
-                        <span class="dual-toggle-group">
-                            <el-button size="small" :type="customColorsSortMode==='time' ? 'primary' : 'default'" @click="setSortMode('customColors','time')">按时间</el-button>
-                            <el-button size="small" :type="customColorsSortMode==='name' ? 'primary' : 'default'" @click="setSortMode('customColors','name')">按名称</el-button>
-                        </span>
-                    </template>
-                    <template v-else-if="activeTab==='mont-marte'">
-                        <el-button size="small" type="primary" @click="$refs.montMarteRef && $refs.montMarteRef.openDialog()">
-                            <el-icon><Plus /></el-icon> 新原料
-                        </el-button>
-                        <span class="dual-toggle-group">
-                            <el-button size="small" :type="montMarteSortMode==='time' ? 'primary' : 'default'" @click="setSortMode('montMarte','time')">按时间</el-button>
-                            <el-button size="small" :type="montMarteSortMode==='name' ? 'primary' : 'default'" @click="setSortMode('montMarte','name')">按名称</el-button>
-                        </span>
-                    </template>
+
+            <div class="main-container">
+                <div v-show="activeTab==='custom-colors'">
+                    <custom-colors-component ref="customColorsRef" :sort-mode="customColorsSortMode"></custom-colors-component>
+                </div>
+                <div v-show="activeTab==='artworks'">
+                    <artworks-component ref="artworksRef" :sort-mode="artworksSortMode" :search-query="searchQuery"></artworks-component>
+                </div>
+                <div v-show="activeTab==='mont-marte'">
+                    <mont-marte-component ref="montMarteRef" :sort-mode="montMarteSortMode"></mont-marte-component>
                 </div>
             </div>
         </div>
-        <!-- 返回顶部按钮 -->
-    <button class="back-to-top" @click="scrollTop" title="返回顶部">
-            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 19V5" />
-                <path d="M5 12l7-7 7 7" />
-            </svg>
-        </button>
-    </div>
 
     <!-- JavaScript模块加载顺序很重要！ -->
     
     <!-- 工具函数库 -->
     <!-- 提供: helpers.formatDate(), helpers.generateColorCode(), helpers.compareNames() -->
     <script src="js/utils/helpers.js"></script>
-    <!-- 缩略图预览工具 -->
-    <script src="js/utils/thumb-preview.js"></script>
     
     <!-- 验证函数库 -->
     <!-- 提供: validators.validateColorCode(), validators.validateColorName() -->
@@ -105,6 +72,8 @@
     <script src="js/api/api.js"></script>
     
     <!-- Vue组件定义 - 必须在app.js之前加载 -->
+    <!-- 头部组件 -->
+    <script src="js/components/app-header-bar.js"></script>
     <!-- 配方编辑器组件 -->
     <script src="js/components/formula-editor.js"></script>
     <!-- 定义全局变量: CustomColorsComponent -->
@@ -115,6 +84,8 @@
     
     <!-- 定义全局变量: MontMarteComponent -->
     <script src="js/components/mont-marte.js"></script>
+    <!-- 缩略图预览工具 -->
+    <script src="js/utils/thumb-preview.js"></script>
     
     <!-- 主应用入口 - 必须最后加载 -->
     <!-- 创建Vue应用实例，注册组件，挂载到#app -->

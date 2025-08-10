@@ -141,8 +141,44 @@ const helpers = {
             // 其他按字典序
             return nameA.localeCompare(nameB);
         }
+    },
+    /**
+     * 通用双级危险操作确认（例如删除）
+     * @param {Object} opts { firstMessage, secondMessage, firstTitle, secondTitle, firstType, secondType, firstConfirmText, secondConfirmText }
+     * 未提供的字段使用默认中文文案
+     * @returns {Promise<Boolean>} true=双重确认完成
+     */
+    async doubleDangerConfirm(opts = {}) {
+        const {
+            firstMessage = '确定执行该操作吗？',
+            secondMessage = '该操作不可撤销，确认继续？',
+            firstTitle = '危险操作',
+            secondTitle = '再次确认',
+            firstType = 'warning',
+            secondType = 'error',
+            firstConfirmText = '继续',
+            secondConfirmText = '确认执行'
+        } = opts;
+        try {
+            await ElementPlus.ElMessageBox.confirm(firstMessage, firstTitle, {
+                confirmButtonText: firstConfirmText,
+                cancelButtonText: '取消',
+                type: firstType
+            });
+        } catch(e) { return false; }
+        try {
+            await ElementPlus.ElMessageBox.confirm(secondMessage, secondTitle, {
+                confirmButtonText: secondConfirmText,
+                cancelButtonText: '取消',
+                type: secondType
+            });
+        } catch(e) { return false; }
+        return true;
     }
 };
 
 // 导出给其他文件使用
 // 在浏览器环境中，这会创建一个全局变量 helpers
+if (typeof window !== 'undefined') {
+    window.helpers = helpers;
+}

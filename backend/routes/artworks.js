@@ -280,4 +280,49 @@ router.put('/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail'),
   );
 });
 
+// DELETE /api/artworks/:artworkId/schemes/:schemeId  删除配色方案（含层与缩略图文件）
+router.delete('/artworks/:artworkId/schemes/:schemeId', (req, res) => {
+  const artworkId = Number(req.params.artworkId);
+  const schemeId = Number(req.params.schemeId);
+  if (!artworkId || !schemeId) return res.status(400).json({ error: '参数不完整' });
+
+  db.get('SELECT * FROM color_schemes WHERE id = ? AND artwork_id = ?', [schemeId, artworkId], (err, scheme) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!scheme) return res.status(404).json({ error: '配色方案不存在' });
+    const thumb = scheme.thumbnail_path;
+
+    db.serialize(() => {
+      db.run('BEGIN');
+      db.run('DELETE FROM scheme_layers WHERE scheme_id = ?', [schemeId], (e1) => {
+        if (e1) { db.run('ROLLBACK'); return res.status(500).json({ error: e1.message }); }
+        db.run('DELETE FROM color_schemes WHERE id = ?', [schemeId], (e2) => {
+          if (e2) { db.run('ROLLBACK'); return res.status(500).json({ error: e2.message }); }
+          db.run('COMMIT', () => {
+            if (thumb) {
+              const filePath = path.join('uploads', thumb);
+              fs.unlink(filePath, () => {}); // 忽略删除错误
+            }
+            res.json({ success: true });
+          });
+        });
+      });
+    });
+  });
+});
+
+// DELETE /api/artworks/:id  仅当无配色方案时允许删除
+router.delete('/artworks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ error: '参数不完整' });
+  db.get('SELECT COUNT(*) AS cnt FROM color_schemes WHERE artwork_id = ?', [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row && row.cnt > 0) return res.status(400).json({ error: '该作品下仍有配色方案，无法删除' });
+    db.run('DELETE FROM artworks WHERE id = ?', [id], function (dErr) {
+      if (dErr) return res.status(500).json({ error: dErr.message });
+      if (this.changes === 0) return res.status(404).json({ error: '作品不存在' });
+      res.json({ success: true });
+    });
+  });
+});
+
 module.exports = router;

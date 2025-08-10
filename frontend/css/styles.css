@@ -19,15 +19,43 @@ body {
     --sw-gap-sm: 4px;
     --sw-gap-md: 6px;
     --sw-gap-lg: 8px;
+    --sw-actions-gap: 8px; /* 统一母级工具按钮间距 */
     --sw-radius-sm: 4px;
     --sw-radius-md: 6px;
     --sw-card-padding: 4px 6px 8px;
     --sw-header-padding: 6px 6px 4px;
     --sw-chip-gap: 4px;
     --sw-thumb-size: 80px;
+    --sw-add-btn-bg: #6f42c1; /* 优雅紫色基色 */
+    --sw-add-btn-bg-hover: #5a34a0; /* hover 深一些 */
+    --sw-add-btn-bg-active: #4b2c85; /* active 更深 */
 }
 
 /* (已移除 sticky 顶部特性样式) */
+
+/* [HEADER] Sticky 顶部栏与布局（搜索功能加入前的基础结构） */
+.app-header-sticky { position:sticky; top:0; z-index:1000; background:transparent; backdrop-filter: none; border-bottom:none; box-shadow:none; }
+.app-header-bar { display:grid; grid-template-columns:auto 1fr auto; align-items:end; gap:16px; padding:6px 14px 4px; }
+.app-header-left { display:flex; align-items:center; min-width:0; }
+.app-title-badge { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:6px 14px 6px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.12); }
+.app-title { font-size:18px; margin:0; font-weight:600; white-space:nowrap; max-width:420px; overflow:hidden; text-overflow:ellipsis; color:#fff; }
+.app-header-center { min-width:0; display:flex; }
+/* 自定义 Tab 按钮组 */
+.tab-switch-group { display:inline-flex; border-radius:6px; overflow:hidden; background:rgba(118,75,162,0.12); box-shadow:0 0 0 1px rgba(118,75,162,0.25) inset; }
+.tab-switch-group .tab-switch { font:inherit; cursor:pointer; border:none; background:transparent; padding:6px 14px; font-size:13px; color:#4a3466; line-height:1; position:relative; transition:background .18s ease, color .18s ease; }
+.tab-switch-group .tab-switch + .tab-switch { border-left:1px solid rgba(118,75,162,0.3); }
+.tab-switch-group .tab-switch.active { background:linear-gradient(135deg,#6f42c1,#5a34a0); color:#fff; box-shadow:0 0 0 1px rgba(0,0,0,0.05) inset; }
+.tab-switch-group .tab-switch:not(.active):hover { background:rgba(118,75,162,0.18); }
+.tab-switch-group .tab-switch:focus-visible { outline:2px solid rgba(111,66,193,0.55); outline-offset:-2px; }
+.app-header-tools { display:flex; align-items:center; gap:10px; flex-wrap:nowrap; }
+.app-header-tools .dual-toggle-group { display:inline-flex; }
+.app-header-tools .el-button + .el-button { margin-left:0 !important; }
+@media (max-width: 980px) {
+    .app-header-bar { grid-template-columns:1fr; grid-auto-rows:auto; }
+    .app-header-center { order:2; justify-content:flex-start; }
+    .app-header-tools { flex-wrap:wrap; order:3; }
+}
+.tab-panels-wrapper { padding:10px 4px 60px; }
 
 .main-container {
     max-width: 1200px;
@@ -72,18 +100,17 @@ body {
 }
 .artwork-title { font-size:16px; font-weight:600; color:#222; margin:0; }
 
-.color-actions {
-    display: flex;
-    gap: 10px;
-    flex-shrink: 0;
-}
+.color-actions { display:flex; align-items:center; gap: var(--sw-actions-gap); flex-shrink:0; }
+.color-actions .el-button + .el-button { margin-left:0 !important; }
+.inline-actions { display:flex; align-items:center; gap: var(--sw-actions-gap); }
+.inline-actions .el-button + .el-button { margin-left:0 !important; }
 
 
 /* 旧的 artwork 区域重复样式已移除，使用上方紧凑化版本 */
 
 /* 方案块内边距 & 头部间距恢复为紧凑但不拥挤 */
 .scheme-bar { padding:6px 6px 8px; border-bottom:1px solid #f0f0f0; }
-.scheme-header { margin-bottom:6px; gap:12px; }
+.scheme-header { margin-bottom:6px; gap: var(--sw-actions-gap); }
 /* 统一缩略图尺寸为 80x80 方形 */
 .scheme-thumbnail { width: var(--sw-thumb-size); height: var(--sw-thumb-size); position:relative; display:flex; align-items:center; justify-content:center; font-size:12px; color:#777; }
 
@@ -94,12 +121,7 @@ body {
     border-bottom: none;
 }
 
-.scheme-header {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    margin-bottom: 8px;
-}
+.scheme-header { display:flex; align-items:center; gap: var(--sw-actions-gap); margin-bottom:8px; }
 
 .scheme-thumbnail {
     border-radius: var(--sw-radius-sm);
@@ -114,6 +136,7 @@ body {
 /* 表单辅助提示与成功提示 */
 .form-hint { font-size:12px; color:#777; margin-top:4px; line-height:1.4; }
 .form-hint.success-hint { color:#2f9e44; }
+.form-hint.error-hint { color:#d93025; }
 /* 让对话框中的提示换行并独占一行（防止与输入框并排） */
 .scheme-dialog .el-form-item__content .form-hint { flex-basis:100%; width:100%; }
 .scheme-dialog .el-form-item__content { align-items:flex-start; }
@@ -336,6 +359,25 @@ body {
 .floating-tab-tools .el-button { padding:4px 10px; }
 .floating-tab-tools .el-button + .el-button { margin-left:0; }
 
+/* 顶部新增类按钮专用紫色（与其他工具区分） */
+/* 新头部使用通用 add-button 样式（取代旧 floating-tab-tools 作用域限制） */
+.add-button.el-button {
+    background: var(--sw-add-btn-bg);
+    border-color: var(--sw-add-btn-bg);
+    color: #fff;
+}
+.add-button.el-button:hover {
+    background: var(--sw-add-btn-bg-hover);
+    border-color: var(--sw-add-btn-bg-hover);
+    color:#fff;
+}
+.add-button.el-button:active, .add-button.el-button.is-active {
+    background: var(--sw-add-btn-bg-active);
+    border-color: var(--sw-add-btn-bg-active);
+    color:#fff;
+}
+.add-button.el-button:focus-visible { box-shadow: 0 0 0 2px rgba(111,66,193,0.35); }
+
 /* 双按钮切换组（视图 / 排序） */
 .dual-toggle-group { display:inline-flex; border:1px solid var(--el-border-color, #dcdfe6); border-radius: var(--radius-sm); overflow:hidden; }
 .dual-toggle-group .el-button { border:none; box-shadow:none; }
@@ -351,6 +393,11 @@ body {
     font-weight: 600;
 }
 .scheme-name-input { width:200px; display:inline-block; }
+/* 统一：含重复提示的紧凑行 */
+.dup-inline-row { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+.dup-inline-row .short-inline-input, .short-inline-input { width:180px; }
+.scheme-name-input { width:160px; }
+.dup-msg { font-size:12px; color:#d93025; white-space:nowrap; }
 .scheme-sep { margin:0 4px 0 4px; }
 .scheme-bracket-end { margin-left:4px; }
 
@@ -434,20 +481,23 @@ table.mapping-table .mapping-formula-chips { display:flex; flex-wrap:wrap; gap:4
 .usage-chip { background:#f5f7f2; border:1px solid #d9e2cc; color:#56624a; }
 .usage-chips { display:inline-flex; flex-wrap:wrap; gap:var(--sw-chip-gap); }
 
-/* 寻迹高亮动画 */
-.highlight-pulse { position:relative; animation:highlightPulseSym 2s ease-in-out 0s 1; border-radius:4px; }
-@keyframes highlightPulseSym {
-    0% { box-shadow:0 0 0 0 rgba(255,213,79,0); }
-    50% { box-shadow:0 0 0 3px rgba(255,213,79,0.95), 0 0 22px 6px rgba(255,213,79,0.85); }
-    100% { box-shadow:0 0 0 0 rgba(255,213,79,0); }
+/* 寻迹高亮动画（无突兀底色：1s 线性渐亮 + 1s 线性渐隐，始终只有动画，没有静态浅黄底） */
+.highlight-pulse { position:relative; border-radius:4px; overflow:visible; animation:traceHighlight 2s linear 0s 1 forwards; }
+/* 使用单一动画控制背景填充与外发光；不设置静态背景，避免突然出现/消失 */
+@keyframes traceHighlight {
+    0% { background-color:rgba(255,213,79,0); box-shadow:0 0 0 0 rgba(255,213,79,0); }
+    /* 50%（1s）达到峰值 */
+    50% { background-color:rgba(255,213,79,0.40); box-shadow:0 0 0 3px rgba(255,213,79,0.55), 0 0 14px 4px rgba(255,213,79,0.45); }
+    /* 100%（2s）完全回落为无效果 */
+    100% { background-color:rgba(255,213,79,0); box-shadow:0 0 0 0 rgba(255,213,79,0); }
 }
 
 /* 自配色优先视图专用紧凑表格 */
 .bycolor-table { table-layout:auto; }
 .bycolor-table th, .bycolor-table td { white-space:nowrap; vertical-align:top; }
 .bycolor-table .formula-chip-row { padding:4px 6px; }
-.bycolor-table .mapping-formula-chips { flex-wrap:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.bycolor-table .mapping-formula-chips .mf-chip { margin-right:var(--sw-gap-sm); }
+.bycolor-table .mapping-formula-chips { flex-wrap:nowrap; flex-direction:column; align-items:flex-start; gap:2px; overflow:visible; }
+.bycolor-table .mapping-formula-chips .mf-chip { margin-right:0; }
 .bycolor-table .layers-row .layers-cell { padding:2px 6px 6px; }
 .bycolor-table .layers-line { display:flex; align-items:center; flex-wrap:nowrap; white-space:nowrap; }
 .bycolor-table .layers-line .layer-cell { display:inline-flex; align-items:center; }
@@ -460,3 +510,7 @@ table.mapping-table td:nth-child(3) { width:110px; text-align:right; }
     .scheme-dialog { width:95% !important; }
     table.mapping-table td:nth-child(2) { width:auto; }
 }
+
+/* Global search bar styling */
+.global-search-bar { position: sticky; top: 64px; z-index: 120; background: rgba(255,255,255,0.85); backdrop-filter: blur(6px); padding: 8px 16px 4px; box-shadow: 0 2px 4px -2px rgba(0,0,0,0.08); }
+.global-search-bar .el-input { max-width: 520px; }

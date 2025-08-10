@@ -20,7 +20,16 @@ const MontMarteComponent = {
                                                 <el-button size="small" type="primary" @click="editColor(color)">
                                                     <el-icon><Edit /></el-icon> 修改
                                                 </el-button>
-                                                <el-button size="small" type="danger" @click="deleteColor(color)">
+                                                <template v-if="rawUsageCodes(color).length">
+                                                    <el-tooltip content="该颜色原料已被引用，无法删除" placement="top">
+                                                        <span>
+                                                            <el-button size="small" type="danger" disabled>
+                                                                <el-icon><Delete /></el-icon> 删除
+                                                            </el-button>
+                                                        </span>
+                                                    </el-tooltip>
+                                                </template>
+                                                <el-button v-else size="small" type="danger" @click="deleteColor(color)">
                                                     <el-icon><Delete /></el-icon> 删除
                                                 </el-button>
                                         </div>
@@ -67,7 +76,10 @@ const MontMarteComponent = {
                     @keydown.enter.stop.prevent="onFormEnter"
                 >
                     <el-form-item label="颜色名称" prop="name">
-                        <el-input v-model.trim="form.name" placeholder="例如：粉红"></el-input>
+                        <div class="dup-inline-row">
+                            <el-input v-model.trim="form.name" placeholder="例如：粉红" class="short-inline-input" />
+                            <span v-if="nameDuplicate" class="dup-msg">名称重复</span>
+                        </div>
                     </el-form-item>
 
                     <!-- 新增：供应商（可输入+创建+下拉） -->
@@ -169,7 +181,7 @@ const MontMarteComponent = {
                     <el-button @click="attemptCloseDialog">
                         <el-icon><Close /></el-icon> 取消
                     </el-button>
-                    <el-button type="primary" @click="saveColor" :loading="saving">
+                    <el-button type="primary" @click="saveColor" :loading="saving" :disabled="nameDuplicate">
                         <el-icon><Check /></el-icon> 保存
                     </el-button>
                 </template>
@@ -217,7 +229,12 @@ const MontMarteComponent = {
             return list;
         },
         supplierOptions() { return this.globalData.suppliers.value || []; },
-        purchaseLinkOptions() { return this.globalData.purchaseLinks.value || []; }
+        purchaseLinkOptions() { return this.globalData.purchaseLinks.value || []; },
+        nameDuplicate() {
+            const n = (this.form.name || '').trim();
+            if (!n) return false;
+            return (this.montMarteColors || []).some(c => c.name === n && c.id !== this.form.id);
+        }
     },
     methods: {
         // 返回引用该原料的自配色编号列表（去重、按字母/数字排序）
@@ -444,6 +461,11 @@ const MontMarteComponent = {
                 this.saving = true;
                 await this.$refs.formRef.validate();
 
+                if (this.nameDuplicate) {
+                    ElementPlus.ElMessage.warning('名称重复，请更换');
+                    return;
+                }
+
                 if (typeof this.form.supplier_id === 'string') {
                     await this.onSupplierChange(this.form.supplier_id);
                 }
@@ -495,24 +517,21 @@ const MontMarteComponent = {
 
         
         async deleteColor(color) {
+            const ok = await this.$helpers.doubleDangerConfirm({
+                firstMessage: `确定删除 "${color.name}" 吗？`,
+                secondMessage: '删除后将无法恢复，确认最终删除？',
+                secondConfirmText: '永久删除'
+            });
+            if (!ok) return;
             try {
-                await ElementPlus.ElMessageBox.confirm(
-                    `确定删除 "${color.name}" 吗？`,
-                    '提示',
-                    {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        type: 'warning'
-                    }
-                );
-                
                 await api.montMarteColors.delete(color.id);
                 ElementPlus.ElMessage.success('删除成功');
                 await this.globalData.loadMontMarteColors();
+                // 同步刷新自配色，避免引用残留提示（若后端允许删除未引用的）
+                await this.globalData.loadCustomColors();
             } catch (error) {
-                if (error !== 'cancel') {
-                    ElementPlus.ElMessage.error('删除失败');
-                }
+                const msg = error?.response?.data?.error || '删除失败';
+                ElementPlus.ElMessage.error(msg);
             }
         },
         

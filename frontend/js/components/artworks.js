@@ -8,7 +8,8 @@
 */
 const ArtworksComponent = {
   props: {
-    sortMode: { type: String, default: 'time' } // time | name
+    sortMode: { type: String, default: 'time' }, // time | name
+    searchQuery: { type: String, default: '' }
   },
   emits: ['view-mode-changed'],
   template: `
@@ -24,16 +25,22 @@ const ArtworksComponent = {
         <div v-for="art in artworks" :key="art.id" class="artwork-bar">
           <div class="artwork-header">
             <div class="artwork-title">{{ artworkTitle(art) }}</div>
-            <div>
-              <el-button size="small" @click="addScheme(art)">
-                <el-icon><Plus /></el-icon> 新增配色方案
-              </el-button>
+            <div class="color-actions">
+              <el-button size="small" @click="addScheme(art)"><el-icon><Plus /></el-icon> 新增配色方案</el-button>
+              <template v-if="(art.schemes||[]).length>0">
+                <el-tooltip content="该作品下仍有配色方案，无法删除作品" placement="top">
+                  <span>
+                    <el-button size="small" type="danger" disabled><el-icon><Delete /></el-icon> 删除</el-button>
+                  </span>
+                </el-tooltip>
+              </template>
+              <el-button v-else size="small" type="danger" @click="deleteArtwork(art)"><el-icon><Delete /></el-icon> 删除</el-button>
             </div>
           </div>
 
           <!-- 子bar：方案 -->
           <div v-if="(art.schemes && art.schemes.length) > 0">
-            <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id">
+            <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id" :ref="setSchemeRef(scheme)">
               <div class="scheme-header">
                 <div class="scheme-thumbnail" :class="{ 'no-image': !scheme.thumbnail_path }" @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, scheme.thumbnail_path))">
                   <template v-if="!scheme.thumbnail_path">未上传图片</template>
@@ -51,6 +58,9 @@ const ArtworksComponent = {
                   <el-button size="small" @click="showHistory(art, scheme)" disabled>
                     <el-icon><Clock /></el-icon> 历史
                   </el-button>
+                  <el-button size="small" type="danger" @click="deleteScheme(art, scheme)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </el-button>
                 </div>
               </div>
 
@@ -59,7 +69,7 @@ const ArtworksComponent = {
                 <table class="layer-table">
                   <thead>
                     <tr>
-                      <th v-for="m in normalizedMappings(scheme)" :key="'h'+m.layer">
+                      <th v-for="m in normalizedMappings(scheme)" :key="'h'+m.layer" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightLayers.includes(m.layer) && (!highlightColorCode || m.colorCode===highlightColorCode)}">
                         <span class="layer-cell">
                           <template v-if="dupCountFor(scheme, m.layer) > 1">
                             <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + dupCountFor(scheme, m.layer) + '次颜色'" placement="top">
@@ -73,13 +83,16 @@ const ArtworksComponent = {
                   </thead>
                   <tbody>
                     <tr>
-                      <td v-for="m in normalizedMappings(scheme)" :key="'c'+m.layer">
-                        <strong>{{ m.colorCode || '-' }}</strong>
+                      <td v-for="m in normalizedMappings(scheme)" :key="'c'+m.layer" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightLayers.includes(m.layer) && (!highlightColorCode || m.colorCode===highlightColorCode)}">
+                        <strong>{{ m.colorCode ? m.colorCode : '（未指定）' }}</strong>
                       </td>
                     </tr>
                     <tr>
-                      <td v-for="m in normalizedMappings(scheme)" :key="'f'+m.layer" class="meta-text" style="text-align:left;">
-                        <template v-if="colorByCode(m.colorCode)">
+                      <td v-for="m in normalizedMappings(scheme)" :key="'f'+m.layer" class="meta-text" style="text-align:left;" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightLayers.includes(m.layer) && (!highlightColorCode || m.colorCode===highlightColorCode)}">
+                        <template v-if="!m.colorCode">
+                          -
+                        </template>
+                        <template v-else-if="colorByCode(m.colorCode)">
                           <template v-if="structuredFormula(colorByCode(m.colorCode).formula).lines.length">
                             <div class="formula-lines" :style="{ '--max-name-ch': structuredFormula(colorByCode(m.colorCode).formula).maxNameChars }">
                               <div class="fl" v-for="(p,i) in structuredFormula(colorByCode(m.colorCode).formula).lines" :key="'pfl'+i">
@@ -90,7 +103,7 @@ const ArtworksComponent = {
                           </template>
                           <span v-else>（无配方）</span>
                         </template>
-                        <span v-else>（未匹配到自配色：{{ m.colorCode || '-' }}）</span>
+                        <span v-else>（未匹配到自配色：{{ m.colorCode }}）</span>
                       </td>
                     </tr>
                   </tbody>
@@ -101,13 +114,16 @@ const ArtworksComponent = {
     <table class="layer-table bycolor-table">
                   <thead>
                     <tr>
-          <th v-for="g in groupedByColorWithFlags(scheme)" :key="'hc'+g.code">{{ g.code || '-' }}</th>
+          <th v-for="g in groupedByColorWithFlags(scheme)" :key="'hc'+g.code" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}">{{ g.code ? g.code : (g.isEmptyGroup ? '(未指定)' : '-') }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text formula-chip-row">
-                        <template v-if="colorByCode(g.code)">
+                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text formula-chip-row" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}">
+                        <template v-if="g.isEmptyGroup">
+                          -
+                        </template>
+                        <template v-else-if="colorByCode(g.code)">
                           <div
                             v-if="parseFormulaLines(colorByCode(g.code).formula).length"
                             class="mapping-formula-chips"
@@ -118,11 +134,11 @@ const ArtworksComponent = {
                           </div>
                           <span v-else>（无配方）</span>
                         </template>
-                        <span v-else>（未匹配到自配色：{{ g.code || '-' }}）</span>
+                        <span v-else>（未匹配到自配色：{{ g.code }}）</span>
                       </td>
                     </tr>
                     <tr class="layers-row">
-                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'lc'+g.code" class="layers-cell">
+                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'lc'+g.code" class="layers-cell" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}">
                         <div class="layers-line">
                           <span>第 </span>
                           <template v-for="(l, i) in g.layers" :key="'l'+g.code+'-'+l+'-'+i">
@@ -187,11 +203,12 @@ const ArtworksComponent = {
       >
         <el-form ref="schemeFormRef" :model="schemeForm" label-width="80px" @submit.prevent @keydown.enter.stop.prevent="saveScheme">
           <el-form-item label="方案名称" required>
-            <div class="inline-scheme-name">
+            <div class="inline-scheme-name dup-inline-row">
               <span class="inline-art-title">{{ editingArtTitle }}</span>
               <span class="scheme-sep"> - [</span>
               <el-input v-model.trim="schemeForm.name" placeholder="例如：金黄" class="scheme-name-input" :maxlength="10" />
               <span class="scheme-bracket-end">]</span>
+              <span v-if="schemeNameDuplicate" class="dup-msg">名称重复</span>
             </div>
           </el-form-item>
 
@@ -282,7 +299,7 @@ const ArtworksComponent = {
 
         <template #footer>
           <el-button @click="attemptCloseSchemeDialog"><el-icon><Close /></el-icon> 取消</el-button>
-          <el-button type="primary" :loading="saving" @click="saveScheme"><el-icon><Check /></el-icon> 保存</el-button>
+          <el-button type="primary" :loading="saving" :disabled="schemeNameDuplicate" @click="saveScheme"><el-icon><Check /></el-icon> 保存</el-button>
         </template>
       </el-dialog>
     </div>
@@ -316,18 +333,34 @@ const ArtworksComponent = {
   }
   , _artworkSnapshot: null
   , artworkTitleStatus: '' // '' | 'ok'
+  , highlightSchemeId: null
+  , highlightLayers: []
+  , highlightColorCode: ''
+  , _highlightTimer: null
+  , _schemeRefs: new Map()
     };
   },
   computed: {
     baseURL() { return this.globalData.baseURL; },
+    // 回退：直接使用注入的 artworks 原始数组并按 sortMode 排序（暂不做搜索过滤）
     artworks() {
-      const arr = (this.globalData.artworks.value || []).slice();
+      const arr = (this.globalData.artworks?.value || []).slice();
       if (this.sortMode === 'name') {
-        arr.sort((a,b) => this.artworkTitle(a).localeCompare(this.artworkTitle(b)));
+        arr.sort((a,b)=>this.artworkTitle(a).localeCompare(this.artworkTitle(b)));
       } else {
-        arr.sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
+        arr.sort((a,b)=> new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
       }
       return arr;
+    },
+    editingArtwork() {
+      if (!this.editingArtId) return null;
+      return this.artworks.find(a => a.id === this.editingArtId) || null;
+    },
+    schemeNameDuplicate() {
+      const name = (this.schemeForm.name || '').trim();
+      if (!name || !this.editingArtwork) return false;
+      const list = (this.editingArtwork.schemes || []).filter(s => s && typeof s.name === 'string');
+      return list.some(s => s.name === name && s.id !== this.schemeForm.id);
     },
     customColors() { return this.globalData.customColors.value || []; },
     colorMap() {
@@ -467,17 +500,32 @@ const ArtworksComponent = {
     groupedByColor(scheme) {
       const m = this.normalizedMappings(scheme);
       const map = new Map();
+      const emptyLayers = [];
       m.forEach(x => {
-        const key = x.colorCode || '';
-        if (!map.has(key)) map.set(key, []);
-        map.get(key).push(x.layer);
+        const raw = x.colorCode;
+        if (!raw) {
+          emptyLayers.push(x.layer);
+        } else {
+          const key = raw;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push(x.layer);
+        }
       });
       const arr = Array.from(map.entries()).map(([code, layers]) => ({
         code,
-        layers: layers.sort((a, b) => a - b)
+        layers: layers.sort((a, b) => a - b),
+        isEmptyGroup: false
       }));
-      // 将空 code 放到最后
-      arr.sort((a, b) => (a.code ? 0 : 1) - (b.code ? 0 : 1) || a.code.localeCompare(b.code));
+      if (emptyLayers.length) {
+        arr.push({ code: '', layers: emptyLayers.sort((a,b)=>a-b), isEmptyGroup: true });
+      }
+      // 排序：正常 code 字典序，其次空组（未指定）放最后
+      arr.sort((a, b) => {
+        if (a.isEmptyGroup && b.isEmptyGroup) return 0;
+        if (a.isEmptyGroup) return 1;
+        if (b.isEmptyGroup) return -1;
+        return a.code.localeCompare(b.code);
+      });
       return arr;
     },
     duplicateLayerSet(scheme) {
@@ -494,7 +542,69 @@ const ArtworksComponent = {
     groupedByColorWithFlags(scheme) {
       const groups = this.groupedByColor(scheme);
       const dup = this.duplicateLayerSet(scheme);
-      return groups.map(g => ({ ...g, hasDup: (g.layers || []).some(l => dup.has(l)) }));
+  return groups.map(g => ({ ...g, hasDup: (g.layers || []).some(l => dup.has(l)) }));
+    },
+    hasScheme(schemeId) {
+      schemeId = Number(schemeId);
+      if (!schemeId) return false;
+      return (this.artworks || []).some(a => (a.schemes||[]).some(s => s.id === schemeId));
+    },
+    setSchemeRef(scheme) {
+      return (el) => {
+        if (el) this._schemeRefs.set(scheme.id, el); else this._schemeRefs.delete(scheme.id);
+      };
+    },
+    focusSchemeUsage({ artworkId, schemeId, layers, colorCode }) {
+      if (!schemeId) return;
+      // 设置高亮状态
+      this.highlightSchemeId = schemeId;
+      this.highlightColorCode = colorCode || '';
+        if (el) this._schemeRefs.set(scheme.id, el); else this._schemeRefs.delete(scheme.id);
+      };
+    },
+    focusSchemeUsage({ artworkId, schemeId, layers, colorCode }) {
+      if (!schemeId) return;
+      // 设置高亮状态
+      this.highlightSchemeId = schemeId;
+      this.highlightColorCode = colorCode || '';
+      // byLayer 模式仅高亮同时层号匹配 + 颜色匹配的列（模板已做颜色二次判断）
+      this.highlightLayers = Array.isArray(layers) ? layers.slice() : [];
+  try { console.debug('[focusSchemeUsage]', { schemeId, layers: this.highlightLayers, color: this.highlightColorCode, viewMode: this.viewMode }); } catch(e) {}
+      // 追加：输出该方案的 normalizedMappings 用于排查
+      try {
+        const art = (this.artworks || []).find(a => a.id === artworkId);
+        const scheme = art ? (art.schemes || []).find(s => s.id === schemeId) : null;
+        if (scheme) {
+          const rows = this.normalizedMappings(scheme);
+          console.debug('[focusSchemeUsage rows]', rows);
+          if (this.viewMode === 'byLayer') {
+            const targetSet = new Set(this.highlightLayers);
+            const matchRows = rows.filter(r => targetSet.has(r.layer));
+            console.debug('[focusSchemeUsage layerMatches]', matchRows, 'colorFilter=', this.highlightColorCode || '(none)');
+          } else {
+            console.debug('[focusSchemeUsage byColor targetCode]', this.highlightColorCode);
+          }
+        } else {
+          console.warn('[focusSchemeUsage] 未找到方案数据 schemeId=', schemeId);
+        }
+      } catch(e) { console.warn('focusSchemeUsage debug error', e); }
+      if (this._highlightTimer) { clearTimeout(this._highlightTimer); this._highlightTimer=null; }
+      this._highlightTimer = setTimeout(()=>{
+        this.highlightSchemeId = null; this.highlightColorCode=''; this.highlightLayers=[]; this._highlightTimer=null;
+      }, 2000);
+      // 滚动定位
+      this.$nextTick(() => {
+        const el = this._schemeRefs.get(schemeId);
+        if (el && el.scrollIntoView) {
+          try {
+            const rect = el.getBoundingClientRect();
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+            const current = window.pageYOffset || document.documentElement.scrollTop;
+            const targetScroll = current + rect.top - (vh/2 - rect.height/2);
+            window.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+          } catch(e) { el.scrollIntoView({ behavior:'smooth', block:'center' }); }
+        }
+      });
     },
 
     // 顶部“新作品”
@@ -745,6 +855,9 @@ const ArtworksComponent = {
       if (!String(this.schemeForm.name || '').trim()) {
         return ElementPlus.ElMessage.warning('请填写方案名称');
       }
+      if (this.schemeNameDuplicate) {
+        return ElementPlus.ElMessage.warning('方案名称重复，请更换');
+      }
       const artId = this.editingArtId;
       if (!artId) return;
 
@@ -788,6 +901,39 @@ const ArtworksComponent = {
         this.saving = false;
       }
     }
+    , async deleteScheme(art, scheme) {
+      const ok = await this.$helpers.doubleDangerConfirm({
+        firstMessage: `确定要删除配色方案 “${this.displaySchemeName(art, scheme)}” 吗？`,
+        secondMessage: '删除后将无法恢复，确认最终删除？',
+        secondConfirmText: '永久删除'
+      });
+      if (!ok) return;
+      try {
+        await axios.delete(`${this.baseURL}/api/artworks/${art.id}/schemes/${scheme.id}`);
+        ElementPlus.ElMessage.success('已删除配色方案');
+        await this.refreshAll();
+      } catch(e) {
+        console.error(e);
+        ElementPlus.ElMessage.error('删除失败');
+      }
+    }
+    , async deleteArtwork(art) {
+      if ((art.schemes||[]).length > 0) return; // 保险拦截
+      const ok = await this.$helpers.doubleDangerConfirm({
+        firstMessage: `确定要删除作品 “${this.artworkTitle(art)}” 吗？`,
+        secondMessage: '删除后将无法恢复，确认最终删除？',
+        secondConfirmText: '永久删除'
+      });
+      if (!ok) return;
+      try {
+        await axios.delete(`${this.baseURL}/api/artworks/${art.id}`);
+        ElementPlus.ElMessage.success('已删除作品');
+        await this.refreshAll();
+      } catch(e) {
+        console.error(e);
+        ElementPlus.ElMessage.error('删除失败');
+      }
+  }
   },
   async mounted() {
     try {
