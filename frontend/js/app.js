@@ -109,13 +109,25 @@ const app = createApp({
                     this.loadSuppliers(),
                     this.loadPurchaseLinks()
                 ]);
+                // 初次加载后构建自配色配方同步索引
+                this._buildColorFormulaIndex();
             } catch(e) { console.error('初始化失败', e); } finally { this.loading = false; }
         },
         async loadCategories() {
             try { const res = await api.categories.getAll(); this.categories = res.data; } catch(e){ console.error('加载颜色分类失败',e); }
         },
         async loadCustomColors() {
-            try { const res = await api.customColors.getAll(); this.customColors = res.data; this.registerDataset('customColors', this.customColors.map(c=>({ id:c.id, code:c.color_code||c.code||'', name:c.name||'' }))); } catch(e){ console.error('加载自配颜色失败',e); }
+            try {
+                const res = await api.customColors.getAll();
+                this.customColors = res.data;
+                this.registerDataset('customColors', this.customColors.map(c=>({ id:c.id, code:c.color_code||c.code||'', name:c.name||'' })));
+                // 若已存在旧索引，执行 diff 同步；否则首次建立
+                if (this._colorFormulaIndex) {
+                    this.syncFormulasIfChanged();
+                } else {
+                    this._buildColorFormulaIndex();
+                }
+            } catch(e){ console.error('加载自配颜色失败',e); }
         },
         async loadArtworks() {
             try { const res = await api.artworks.getAll(); this.artworks = res.data; const artworksIdx=[]; const schemesIdx=[]; this.artworks.forEach(a=>{ const name=a.name||a.title||''; const code=a.code||a.no||''; artworksIdx.push({id:a.id,name,code}); if(Array.isArray(a.schemes)) a.schemes.forEach(s=> schemesIdx.push({id:s.id, artworkId:a.id, artworkName:name, artworkCode:code, name:s.name||''})); }); this.registerDataset('artworks', artworksIdx); this.registerDataset('schemes', schemesIdx); } catch(e){ console.error('加载作品列表失败',e); }
@@ -129,6 +141,22 @@ const app = createApp({
         focusArtworkScheme(p){ if(!p||!p.artworkId||!p.schemeId) return; this.setActiveTabPersist('artworks'); this._suppressNextRestore=true; const TRY_MAX=20; let tries=0; const attempt=()=>{ const comp=this.$refs.artworksRef; if(comp&&comp.focusSchemeUsage){ if(comp.hasScheme && !comp.hasScheme(p.schemeId)){ if(tries++<TRY_MAX) return setTimeout(attempt,120); return;} comp.focusSchemeUsage({ artworkId:p.artworkId, schemeId:p.schemeId, layers:Array.isArray(p.layers)?p.layers.slice():[], colorCode:p.colorCode }); } else if(tries++<TRY_MAX) setTimeout(attempt,120); }; this.$nextTick(attempt); },
         setActiveTabPersist(tab){ if(!['custom-colors','artworks','mont-marte'].includes(tab)) return; this.activeTab=tab; try{ localStorage.setItem('sw-active-tab', tab);}catch(e){} window.scrollTo(0,0); },
         registerDataset(type, items){ if(!type||!Array.isArray(items)) return; if(type==='customColors'){ this._searchIndex.customColors=items.slice(); this._indexReady.customColors=true;} else if(type==='artworks'){ this._searchIndex.artworks=items.slice(); this._indexReady.artworks=true;} else if(type==='schemes'){ this._searchIndex.schemes=items.slice(); } else if(type==='rawMaterials'){ this._searchIndex.rawMaterials=items.slice(); this._indexReady.rawMaterials=true;} },
+        _buildColorFormulaIndex(){
+            // 建立当前自配色 formula 哈希索引以供后续 diff
+            this._colorFormulaIndex = {};
+            (this.customColors||[]).forEach(c=>{ this._colorFormulaIndex[c.color_code] = (c.formula||''); });
+        },
+        syncFormulasIfChanged(){
+            if(!window.$formulaCalc || !this._colorFormulaIndex) return;
+            (this.customColors||[]).forEach(c=>{
+                const oldF = this._colorFormulaIndex[c.color_code];
+                const newF = c.formula||'';
+                if (oldF !== newF) {
+                    $formulaCalc.syncFormulaChange(c.color_code, newF);
+                }
+            });
+            this._buildColorFormulaIndex();
+    },
     handleGlobalSearchInput(val){ this.globalSearchQuery=val; if(this._searchDebounceTimer) clearTimeout(this._searchDebounceTimer); this._searchDebounceTimer=setTimeout(()=> this.buildSearchResults(),200); if(val && !this.showSearchDropdown) this.showSearchDropdown=true; if(!val) this.globalSearchResults=[]; },
         openSearchDropdown(){ this.showSearchDropdown=true; },
         closeSearchDropdown(){ this.showSearchDropdown=false; },
@@ -173,6 +201,10 @@ app.component('custom-colors-component', CustomColorsComponent);
 app.component('artworks-component', ArtworksComponent);  
 app.component('mont-marte-component', MontMarteComponent);
 if (typeof AppHeaderBar !== 'undefined') app.component('app-header-bar', AppHeaderBar);
+// 计算器浮层（渲染由全局服务控制）
+if (typeof FormulaCalculatorOverlay !== 'undefined') {
+    app.component('formula-calculator-overlay', FormulaCalculatorOverlay);
+}
 
 // 将 helpers 与 thumbPreview 暴露到全局 (供组件模板中通过 this.$helpers / this.$thumbPreview 使用)
 if (window.helpers) app.config.globalProperties.$helpers = window.helpers;
@@ -184,6 +216,14 @@ if (typeof FormulaEditorComponent !== 'undefined') {
     console.log('配方编辑器组件已注册');
 } else {
     console.error('FormulaEditorComponent 未定义');
+}
+
+// 全局计算器服务封装：提供 $calc.open(code, formula, triggerEl)
+if (window.$formulaCalc) {
+    app.config.globalProperties.$calc = {
+        open: (code, formula, triggerEl)=> window.$formulaCalc.open(code, formula, triggerEl, app),
+        close: ()=> window.$formulaCalc.close()
+    };
 }
 
 // ===== 挂载应用 =====

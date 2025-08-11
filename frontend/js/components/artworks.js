@@ -82,8 +82,11 @@ const ArtworksComponent = {
                   </thead>
                   <tbody>
                     <tr>
-                      <td v-for="m in normalizedMappings(scheme)" :key="'c'+m.layer" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightLayers.includes(m.layer) && (!highlightColorCode || m.colorCode===highlightColorCode)}">
+                      <td v-for="m in normalizedMappings(scheme)" :key="'c'+m.layer" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightLayers.includes(m.layer) && (!highlightColorCode || m.colorCode===highlightColorCode)}" style="position:relative;">
                         <strong>{{ m.colorCode ? m.colorCode : '（未指定）' }}</strong>
+                        <template v-if="m.colorCode && colorByCode(m.colorCode) && colorByCode(m.colorCode).formula">
+                          <button class="calc-mini-btn" @click.stop="$calc && $calc.open(m.colorCode, colorByCode(m.colorCode).formula||'', $event.currentTarget)" title="快速计算">算</button>
+                        </template>
                       </td>
                     </tr>
                     <tr>
@@ -118,7 +121,7 @@ const ArtworksComponent = {
                   </thead>
                   <tbody>
                     <tr>
-                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text formula-chip-row" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}">
+                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text formula-chip-row" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}" style="position:relative;">
                         <template v-if="g.isEmptyGroup">
                           -
                         </template>
@@ -132,6 +135,9 @@ const ArtworksComponent = {
                             </el-tooltip>
                           </div>
                           <span v-else>（无配方）</span>
+                          <template v-if="colorByCode(g.code).formula">
+                            <button class="calc-mini-btn" @click.stop="$calc && $calc.open(g.code, colorByCode(g.code).formula||'', $event.currentTarget)" title="快速计算">算</button>
+                          </template>
                         </template>
                         <span v-else>（未匹配到自配色：{{ g.code }}）</span>
                       </td>
@@ -954,12 +960,25 @@ const ArtworksComponent = {
       });
       if (!ok) return;
       try {
-        await axios.delete(`${this.baseURL}/api/artworks/${art.id}/schemes/${scheme.id}`);
+        const url = `${this.baseURL}/api/artworks/${art.id}/schemes/${scheme.id}`;
+        await axios.delete(url);
         ElementPlus.ElMessage.success('已删除配色方案');
         await this.refreshAll();
       } catch(e) {
-        console.error(e);
-        ElementPlus.ElMessage.error('删除失败');
+        console.error('删除配色方案失败', e);
+        const status = e?.response?.status;
+        const msg = e?.response?.data?.error || '';
+        if (status === 404) {
+          ElementPlus.ElMessage.warning(msg || '配色方案不存在或已被删除');
+          // 前端刷新一次，清掉缓存中的 phantom 方案
+          await this.refreshAll();
+        } else if (status === 400) {
+          ElementPlus.ElMessage.warning(msg || '无法删除该配色方案');
+        } else if (status === 409) {
+          ElementPlus.ElMessage.warning(msg || '该配色方案存在引用，无法删除');
+        } else {
+          ElementPlus.ElMessage.error(msg || '删除失败');
+        }
       }
     }
     , async deleteArtwork(art) {
@@ -971,12 +990,24 @@ const ArtworksComponent = {
       });
       if (!ok) return;
       try {
-        await axios.delete(`${this.baseURL}/api/artworks/${art.id}`);
+        const url = `${this.baseURL}/api/artworks/${art.id}`;
+        await axios.delete(url);
         ElementPlus.ElMessage.success('已删除作品');
         await this.refreshAll();
       } catch(e) {
-        console.error(e);
-        ElementPlus.ElMessage.error('删除失败');
+        console.error('删除作品失败', e);
+        const status = e?.response?.status;
+        const msg = e?.response?.data?.error || '';
+        if (status === 404) {
+          ElementPlus.ElMessage.warning(msg || '作品不存在或已被删除');
+          await this.refreshAll();
+        } else if (status === 400) {
+          ElementPlus.ElMessage.warning(msg || '无法删除该作品');
+        } else if (status === 409) {
+          ElementPlus.ElMessage.warning(msg || '该作品存在引用，无法删除');
+        } else {
+          ElementPlus.ElMessage.error(msg || '删除失败');
+        }
       }
   }
   },

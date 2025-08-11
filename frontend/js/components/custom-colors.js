@@ -28,6 +28,7 @@ const CustomColorsComponent = {
                                 <div class="artwork-header">
                                     <div class="artwork-title">{{ color.color_code }}</div>
                                     <div class="color-actions">
+                                        <el-button size="small" @click="$calc && $calc.open(color.color_code, color.formula||'', $event.currentTarget)"><el-icon><ScaleToOriginal /></el-icon> 计算</el-button>
                                         <el-button size="small" type="primary" @click="editColor(color)"><el-icon><Edit /></el-icon> 修改</el-button>
                                         <el-button size="small" @click="viewHistory(color)" disabled><el-icon><Clock /></el-icon> 历史</el-button>
                                         <template v-if="isColorReferenced(color)">

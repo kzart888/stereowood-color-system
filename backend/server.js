@@ -440,14 +440,31 @@ app.delete('/api/custom-colors/:id', (req, res) => {
 
 // 添加新画作品
 app.post('/api/artworks', (req, res) => {
-    const { code, name } = req.body;
-    db.run('INSERT INTO artworks (code, name) VALUES (?, ?)', [code, name], function(err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-        } else {
-            res.json({ id: this.lastID, code, name });
-        }
-    });
+  const { code, name } = req.body || {};
+  const c = String(code||'').trim();
+  const n = String(name||'').trim();
+  if (!c || !n) return res.status(400).json({ error: '作品编号或名称不能为空' });
+  // 与前端规则保持：编号 3-5 位 A-Z0-9；名称 中英文数字空格、不含横杠
+  if (!/^[A-Z0-9]{3,5}$/.test(c)) return res.status(400).json({ error: '作品编号格式不合法' });
+  if (!/^[A-Za-z0-9\u4e00-\u9fa5 ]+$/.test(n) || n.includes('-')) return res.status(400).json({ error: '作品名称格式不合法' });
+  db.run('INSERT INTO artworks (code, name) VALUES (?, ?)', [c, n], function(err) {
+    if (err) {
+      // 唯一约束冲突
+      if (err.message && /UNIQUE/i.test(err.message)) {
+        return res.status(409).json({ error: '该作品编号已存在' });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+    res.json({ id: this.lastID, code: c, name: n });
+  });
+});
+
+// 调试辅助：获取所有作品 code 列表（便于前端定位某前缀冲突）
+app.get('/api/_debug/artwork-codes', (req, res) => {
+  db.all('SELECT id, code, name FROM artworks ORDER BY code', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
 
 // 获取作品详情（包含所有配色方案）
@@ -504,6 +521,48 @@ app.get('/api/artworks/:id', (req, res) => {
             });
         });
     });
+});
+
+// 新增缺失：删除配色方案（含层与缩略图）与删除作品（需无方案） —— 防止前端调用 404
+app.delete('/api/artworks/:artworkId/schemes/:schemeId', (req, res) => {
+  const artworkId = Number(req.params.artworkId);
+  const schemeId = Number(req.params.schemeId);
+  if (!artworkId || !schemeId) return res.status(400).json({ error: '参数不完整' });
+  db.get('SELECT * FROM color_schemes WHERE id = ? AND artwork_id = ?', [schemeId, artworkId], (err, scheme) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!scheme) return res.status(404).json({ error: '配色方案不存在' });
+    const thumb = scheme.thumbnail_path;
+    db.serialize(() => {
+      db.run('BEGIN');
+      db.run('DELETE FROM scheme_layers WHERE scheme_id = ?', [schemeId], (e1) => {
+        if (e1) { db.run('ROLLBACK'); return res.status(500).json({ error: e1.message }); }
+        db.run('DELETE FROM color_schemes WHERE id = ?', [schemeId], (e2) => {
+          if (e2) { db.run('ROLLBACK'); return res.status(500).json({ error: e2.message }); }
+          db.run('COMMIT', () => {
+            if (thumb) {
+              const filePath = path.join('uploads', thumb);
+              fs.unlink(filePath, () => {});
+            }
+            res.json({ success: true });
+          });
+        });
+      });
+    });
+  });
+});
+
+app.delete('/api/artworks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ error: '参数不完整' });
+  db.get('SELECT COUNT(*) AS cnt FROM color_schemes WHERE artwork_id = ?', [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row && row.cnt > 0) return res.status(400).json({ error: '该作品下仍有配色方案，无法删除' });
+    db.run('DELETE FROM artworks WHERE id = ?', [id], function (dErr) {
+      if (dErr) return res.status(500).json({ error: dErr.message });
+      if (this.changes === 0) return res.status(404).json({ error: '作品不存在' });
+      res.json({ success: true });
+    });
+  });
 });
 
 // 删除蒙马特颜色
