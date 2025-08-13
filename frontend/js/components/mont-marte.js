@@ -324,7 +324,7 @@ const MontMarteComponent = {
             });
             return Array.from(set).sort((a,b)=>a.localeCompare(b));
         },
-    buildImageURL(raw) { return this.$helpers ? this.$helpers.buildUploadURL(window.location.origin, raw) : ''; },
+    buildImageURL(raw) { return this.$helpers ? this.$helpers.buildUploadURL(this.baseURL, raw) : ''; },
         onThumbError(e) {
             // 若加载失败，移除背景以显示占位文本
             const el = e.currentTarget;

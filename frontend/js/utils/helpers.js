@@ -18,7 +18,7 @@ const helpers = {
     if (/^https?:\/\//i.test(raw)) return raw; // absolute URL
     const cleaned = String(raw).replace(/^\/+/, '');
     const withPrefix = cleaned.startsWith('uploads/') ? cleaned : `uploads/${cleaned}`;
-    return `${window.location.origin}/${withPrefix}`;
+    return `${baseURL || window.location.origin}/${withPrefix}`;
     },
     /**
      * 格式化日期为中文格式
