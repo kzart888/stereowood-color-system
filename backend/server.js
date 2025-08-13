@@ -57,7 +57,12 @@ const PORT = 3000;
 app.use(cors()); // 允许跨域请求
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('uploads')); // 静态文件服务
+app.use('/uploads', express.static(path.join(__dirname,'uploads'))); // 上传文件
+// 前端静态资源（纯静态 HTML/JS/CSS）
+const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
+if (fs.existsSync(FRONTEND_DIR)) {
+  app.use('/', express.static(FRONTEND_DIR, { extensions:['html'] }));
+}
 
 // 确保上传目录存在
 const uploadDir = 'uploads';
@@ -922,3 +927,58 @@ app.put('/api/custom-colors/:id', upload.single('image'), (req, res) => {
         );
     });
 });
+
+// 强制合并自配色：更新引用后删除重复 (Phase A)
+// POST /api/custom-colors/force-merge  Body: { keepId, removeIds:[], signature? }
+app.post('/api/custom-colors/force-merge', (req, res) => {
+  const keepId = Number(req.body.keepId);
+  let removeIds = Array.isArray(req.body.removeIds) ? req.body.removeIds.map(Number) : [];
+  const providedSig = req.body.signature ? String(req.body.signature) : null;
+  if (!keepId || !Number.isInteger(keepId)) return res.status(400).json({ error: 'keepId 无效' });
+  removeIds = [...new Set(removeIds.filter(id=> Number.isInteger(id) && id>0 && id!==keepId))];
+  if (!removeIds.length) return res.status(400).json({ error: 'removeIds 不能为空' });
+
+  function parseFormula(formula){
+    const items=[]; if(!formula) return items; const parts=String(formula).trim().split(/\s+/); let pending=null;
+    for(const tk of parts){ const m=tk.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/); if(m && pending){ const name=pending.trim().toLowerCase(); const base=parseFloat(m[1]); const unit=(m[2]||'').trim().toLowerCase(); if(name && isFinite(base) && base>0) items.push({name,unit,amt:base}); pending=null; } else { if(pending){} pending=tk; } }
+    return items;
+  }
+  function buildSig(formula){ const list=parseFormula(formula); if(!list.length) return ''; list.sort((a,b)=> a.name.localeCompare(b.name)||a.unit.localeCompare(b.unit)); const decimals=list.map(i=>{const s=String(i.amt); const m=s.split('.')[1]; return m?m.length:0;}); const scale=Math.pow(10, Math.max(...decimals,0)); let ints=list.map(i=> Math.round(i.amt*scale)); const gcd=(a,b)=> b===0?a:gcd(b,a%b); let g=ints[0]; for(let i=1;i<ints.length;i++) g=gcd(g,ints[i]); if(g>1) ints=ints.map(v=> v/g); if(ints.every(v=>v===0)){ const base=list[0].amt; return list.map(it=> `${it.name}#${it.unit}#${(Math.round((it.amt/base)*1e6)/1e6)}`).join('|'); } return list.map((it,idx)=> `${it.name}#${it.unit}#${ints[idx]}`).join('|'); }
+
+  const placeholders = removeIds.map(()=>'?').join(',');
+  db.get('SELECT id, formula, color_code, image_path, applicable_layers FROM custom_colors WHERE id=?',[keepId], (eKeep, keepRow)=>{
+    if(eKeep) return res.status(500).json({ error:eKeep.message });
+    if(!keepRow) return res.status(404).json({ error:'保留记录不存在' });
+    db.all(`SELECT id, formula, color_code, image_path, applicable_layers FROM custom_colors WHERE id IN (${placeholders})`, removeIds, (eRem, remRows)=>{
+      if(eRem) return res.status(500).json({ error:eRem.message });
+      if(!remRows || remRows.length!==removeIds.length) return res.status(400).json({ error:'部分 removeIds 不存在' });
+      if(providedSig){ try { const kSig=buildSig(keepRow.formula||''); if(!kSig) return res.status(400).json({ error:'保留记录配方为空' }); for(const r of remRows){ const s=buildSig(r.formula||''); if(s!==kSig) return res.status(400).json({ error:'签名不一致，拒绝合并' }); } if(kSig!==providedSig) return res.status(400).json({ error:'前端签名与服务端计算不一致' }); } catch(err){ return res.status(500).json({ error:'签名校验失败:'+err.message }); } }
+      db.get(`SELECT COUNT(*) AS cnt FROM scheme_layers WHERE custom_color_id IN (${placeholders})`, removeIds, (eCnt, cntRow)=>{
+        if(eCnt) return res.status(500).json({ error:eCnt.message });
+        const affected = cntRow? Number(cntRow.cnt)||0 : 0;
+        db.serialize(()=>{
+          db.run('BEGIN');
+          db.run(`UPDATE scheme_layers SET custom_color_id=? WHERE custom_color_id IN (${placeholders})`, [keepId, ...removeIds], function(eUpd){
+            if(eUpd){ db.run('ROLLBACK'); return res.status(500).json({ error:eUpd.message }); }
+            const hist = db.prepare(`INSERT INTO custom_colors_history (custom_color_id,color_code,image_path,formula,applicable_layers) VALUES (?,?,?,?,?)`);
+            remRows.forEach(r=> hist.run([r.id, r.color_code, r.image_path, r.formula, r.applicable_layers]));
+            hist.finalize(eHist=>{
+              if(eHist){ db.run('ROLLBACK'); return res.status(500).json({ error:eHist.message }); }
+              db.run(`DELETE FROM custom_colors WHERE id IN (${placeholders})`, removeIds, function(eDel){
+                if(eDel){ db.run('ROLLBACK'); return res.status(500).json({ error:eDel.message }); }
+                db.run(`UPDATE color_schemes SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT DISTINCT scheme_id FROM scheme_layers WHERE custom_color_id = ?)`, [keepId], (eSche)=>{
+                  if(eSche){ db.run('ROLLBACK'); return res.status(500).json({ error:eSche.message }); }
+                  db.run('COMMIT', eCom=>{
+                    if(eCom) return res.status(500).json({ error:eCom.message });
+                    res.json({ success:true, updatedLayers: affected, deleted: removeIds.length });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+});
+// ========== /强制合并 ==========

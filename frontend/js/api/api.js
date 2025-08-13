@@ -41,7 +41,9 @@ const api = {
         delete: (id) => axios.delete(`${API_BASE_URL}/custom-colors/${id}`),
         
         // 获取颜色历史记录
-        getHistory: (id) => axios.get(`${API_BASE_URL}/custom-colors/${id}/history`)
+    getHistory: (id) => axios.get(`${API_BASE_URL}/custom-colors/${id}/history`),
+    // 强制合并重复配方（更新引用后删除）
+    forceMerge: (payload) => axios.post(`${API_BASE_URL}/custom-colors/force-merge`, payload)
     },
     
     // 作品相关API

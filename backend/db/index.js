@@ -12,8 +12,8 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// 与原 server.js 保持一致：数据库文件在 backend 根目录
-const DB_FILE = path.join(__dirname, '..', 'color_management.db');
+// 与原 server.js 保持一致：数据库文件在 backend 根目录，可通过环境变量 DB_FILE 覆盖（便于 Docker 卷映射）
+const DB_FILE = process.env.DB_FILE || path.join(__dirname, '..', 'color_management.db');
 
 // 创建连接
 const db = new sqlite3.Database(DB_FILE, (err) => {

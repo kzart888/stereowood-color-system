@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  stereowood:
+    build: .
+    container_name: stereowood-color-system
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+      - PORT=3000
+      - DB_FILE=/data/color_management.db
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+      - ./backend/color_management.db:/data/color_management.db
+      # 可选：挂载整个 frontend 以便热替换静态文件
+      - ./frontend:/app/frontend:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

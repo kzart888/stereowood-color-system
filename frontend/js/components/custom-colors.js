@@ -169,6 +169,11 @@ const CustomColorsComponent = {
                 <template #footer>
                     <el-button @click="keepAllDuplicates" :disabled="deletionPending">全部保留</el-button>
                     <el-button type="primary" :disabled="!canDeleteAny || deletionPending" @click="performDuplicateDeletion">保留所选并删除其它</el-button>
+                    <el-tooltip content="更新引用到保留记录后删除其它（包括已被引用的记录）" placement="top">
+                        <span>
+                            <el-button type="danger" :disabled="!canForceMerge || deletionPending || mergingPending" :loading="mergingPending" @click="confirmForceMerge">强制合并（更新引用）</el-button>
+                        </span>
+                    </el-tooltip>
                 </template>
             </el-dialog>
         </div>
@@ -190,6 +195,7 @@ const CustomColorsComponent = {
             duplicateGroups: [],
             duplicateSelections: {}, // signature -> recordId
             deletionPending: false,
+            mergingPending: false,
             form: {
                 category_id: '',
                 color_code: '',
@@ -267,6 +273,10 @@ const CustomColorsComponent = {
                 if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
             }
             return false;
+        },
+        canForceMerge(){
+            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
+            return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
         },
         // 根据当前选中的分类过滤颜色
         filteredColors() {
@@ -803,6 +813,41 @@ const CustomColorsComponent = {
             ElementPlus.ElMessage.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
             // 重新检测
             this.runDuplicateCheck();
+        },
+        async confirmForceMerge(){
+            if(this.mergingPending || this.deletionPending) return;
+            const candidates = this.duplicateGroups.filter(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
+            if(!candidates.length){ ElementPlus.ElMessage.info('请选择要保留的记录'); return; }
+            const g = candidates[0];
+            const keepId = this.duplicateSelections[g.signature];
+            if(!keepId){ ElementPlus.ElMessage.info('请先选择要保留的记录'); return; }
+            const removeIds = g.records.filter(r=> r.id!==keepId).map(r=> r.id);
+            if(!removeIds.length){ ElementPlus.ElMessage.info('该组没有其它记录'); return; }
+            let referenced=0; g.records.forEach(r=>{ if(r.id!==keepId && this.isColorReferenced(r)) referenced++; });
+            const msg = `将合并该组：保留 1 条，删除 ${removeIds.length} 条；其中 ${referenced} 条被引用，其引用将更新到保留记录。确认继续？`;
+            try { await ElementPlus.ElMessageBox.confirm(msg, '强制合并确认', { type:'warning', confirmButtonText:'执行合并', cancelButtonText:'取消' }); } catch(e){ return; }
+            this.executeForceMerge({ keepId, removeIds, signature: g.signature });
+        },
+        async executeForceMerge(payload){
+            if(this.mergingPending) return;
+            this.mergingPending = true;
+            try {
+                const resp = await api.customColors.forceMerge(payload);
+                const updated = resp?.updatedLayers ?? resp?.data?.updatedLayers ?? 0;
+                const deleted = resp?.deleted ?? resp?.data?.deleted ?? payload.removeIds.length;
+                ElementPlus.ElMessage.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
+                await this.globalData.loadCustomColors();
+                await this.globalData.loadArtworks();
+                this.runDuplicateCheck();
+                if(!this.duplicateGroups.length){ this.showDuplicateDialog=false; }
+            } catch(err){
+                const raw = err?.response?.data?.error || '';
+                if(raw){ ElementPlus.ElMessage.error('合并失败: '+raw); }
+                else if(err?.request){ ElementPlus.ElMessage.error('网络错误，合并失败'); }
+                else { ElementPlus.ElMessage.error('合并失败'); }
+            } finally {
+                this.mergingPending = false;
+            }
         }
     }
 };
