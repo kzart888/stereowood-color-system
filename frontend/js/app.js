@@ -11,7 +11,7 @@ const app = createApp({
         } catch(e) {}
         return {
             baseURL: 'http://localhost:9099',
-            loading: false,
+                loading: false,
             activeTab: initTab,
             artworksViewMode: 'byLayer',
             customColorsSortMode: 'time',

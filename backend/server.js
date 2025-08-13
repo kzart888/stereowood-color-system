@@ -705,7 +705,7 @@ app.post('/api/purchase-links/upsert', (req, res) => {
 
 // 启动服务器
 app.listen(PORT, () => {
-    console.log(`服务器运行在 http://localhost:${PORT}`);
+  console.log(`服务器运行在 http://localhost:${PORT}`);
 });
 
 // 添加配色方案（含缩略图与层-自配色映射）

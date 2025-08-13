@@ -41,9 +41,9 @@ const ArtworksComponent = {
           <div v-if="(art.schemes && art.schemes.length) > 0">
             <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id" :ref="setSchemeRef(scheme)" :class="{ 'highlight-pulse': art._swFocusSingle }">
               <div class="scheme-header">
-                <div class="scheme-thumbnail" :class="{ 'no-image': !scheme.thumbnail_path }" @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, scheme.thumbnail_path))">
+                <div class="scheme-thumbnail" :class="{ 'no-image': !scheme.thumbnail_path }" @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(window.location.origin, scheme.thumbnail_path))">
                   <template v-if="!scheme.thumbnail_path">未上传图片</template>
-                  <img v-else :src="$helpers.buildUploadURL(baseURL, scheme.thumbnail_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                  <img v-else :src="$helpers.buildUploadURL(window.location.origin, scheme.thumbnail_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                 </div>
                 <div style="flex: 1;">
                   <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
@@ -352,7 +352,7 @@ const ArtworksComponent = {
     };
   },
   computed: {
-    baseURL() { return this.globalData.baseURL; },
+  baseURL() { return window.location.origin; },
     // 回退：直接使用注入的 artworks 原始数组并按 sortMode 排序（暂不做搜索过滤）
     artworks() {
       const raw = (this.globalData.artworks?.value || []).slice();
@@ -700,7 +700,7 @@ const ArtworksComponent = {
   if (!parsed) return; // 理论上不会到这
   const { code, name } = parsed;
       try {
-        await axios.post(`${this.baseURL}/api/artworks`, { code, name });
+  await axios.post(`${window.location.origin}/api/artworks`, { code, name });
         ElementPlus.ElMessage.success('已创建新作品');
         await this.refreshAll();
         this.showArtworkDialog = false;
@@ -760,7 +760,7 @@ const ArtworksComponent = {
         id: scheme.id,
         name: scheme.name || '',
         thumbnailFile: null,
-  thumbnailPreview: scheme.thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.thumbnail_path) : null,
+  thumbnailPreview: scheme.thumbnail_path ? this.$helpers.buildUploadURL(window.location.origin, scheme.thumbnail_path) : null,
         mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }]
       };
       this.showSchemeDialog = true;
@@ -931,7 +931,7 @@ const ArtworksComponent = {
           if (window.api?.artworks?.updateScheme) {
             await window.api.artworks.updateScheme(artId, this.schemeForm.id, fd);
           } else {
-            await axios.put(`${this.baseURL}/api/artworks/${artId}/schemes/${this.schemeForm.id}`, fd);
+            await axios.put(`${window.location.origin}/api/artworks/${artId}/schemes/${this.schemeForm.id}`, fd);
           }
           ElementPlus.ElMessage.success('已保存方案修改');
         } else {
@@ -939,7 +939,7 @@ const ArtworksComponent = {
           if (window.api?.artworks?.addScheme) {
             await window.api.artworks.addScheme(artId, fd);
           } else {
-            await axios.post(`${this.baseURL}/api/artworks/${artId}/schemes`, fd);
+            await axios.post(`${window.location.origin}/api/artworks/${artId}/schemes`, fd);
           }
           ElementPlus.ElMessage.success('已新增配色方案');
         }
@@ -960,7 +960,7 @@ const ArtworksComponent = {
       });
       if (!ok) return;
       try {
-        const url = `${this.baseURL}/api/artworks/${art.id}/schemes/${scheme.id}`;
+  const url = `${window.location.origin}/api/artworks/${art.id}/schemes/${scheme.id}`;
         await axios.delete(url);
         ElementPlus.ElMessage.success('已删除配色方案');
         await this.refreshAll();
@@ -990,7 +990,7 @@ const ArtworksComponent = {
       });
       if (!ok) return;
       try {
-        const url = `${this.baseURL}/api/artworks/${art.id}`;
+  const url = `${window.location.origin}/api/artworks/${art.id}`;
         await axios.delete(url);
         ElementPlus.ElMessage.success('已删除作品');
         await this.refreshAll();

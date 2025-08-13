@@ -232,7 +232,7 @@ const MontMarteComponent = {
         };
     },
     computed: {
-        baseURL() { return this.globalData.baseURL; },
+    baseURL() { return window.location.origin; },
         montMarteColors() {
             const list = (this.globalData.montMarteColors.value || []).slice();
             if (this.sortMode === 'name') {
@@ -324,7 +324,7 @@ const MontMarteComponent = {
             });
             return Array.from(set).sort((a,b)=>a.localeCompare(b));
         },
-    buildImageURL(raw) { return this.$helpers ? this.$helpers.buildUploadURL(this.baseURL, raw) : ''; },
+    buildImageURL(raw) { return this.$helpers ? this.$helpers.buildUploadURL(window.location.origin, raw) : ''; },
         onThumbError(e) {
             // 若加载失败，移除背景以显示占位文本
             const el = e.currentTarget;
@@ -426,7 +426,7 @@ const MontMarteComponent = {
             if (!name) { this.form.supplier_id = null; return; }
             try {
                 this.supplierBusy = true;
-                const { data } = await axios.post(`${this.baseURL}/api/suppliers/upsert`, { name });
+                const { data } = await axios.post(`${window.location.origin}/api/suppliers/upsert`, { name });
                 // 先刷新选项，再切换为 id，避免出现“数字选项”
                 await this.globalData.loadSuppliers();
                 await this.$nextTick();
@@ -450,7 +450,7 @@ const MontMarteComponent = {
 
         async deleteSupplierOption(opt) {
             try {
-                await axios.delete(`${this.baseURL}/api/suppliers/${opt.id}`);
+                await axios.delete(`${window.location.origin}/api/suppliers/${opt.id}`);
                 ElementPlus.ElMessage.success('已删除供应商');
                 // 如果当前选中的是被删项，清空
                 if (this.form.supplier_id === opt.id) this.form.supplier_id = null;
@@ -470,7 +470,7 @@ const MontMarteComponent = {
             if (!url) { this.form.purchase_link_id = null; return; }
             try {
                 this.purchaseBusy = true;
-                const { data } = await axios.post(`${this.baseURL}/api/purchase-links/upsert`, { url });
+                const { data } = await axios.post(`${window.location.origin}/api/purchase-links/upsert`, { url });
                 await this.globalData.loadPurchaseLinks();
                 await this.$nextTick();
                 const found = this.purchaseLinkOptions.find(o => o.id === data.id);
@@ -491,7 +491,7 @@ const MontMarteComponent = {
         },
         async deletePurchaseOption(opt) {
             try {
-                await axios.delete(`${this.baseURL}/api/purchase-links/${opt.id}`);
+                await axios.delete(`${window.location.origin}/api/purchase-links/${opt.id}`);
                 ElementPlus.ElMessage.success('已删除采购地址');
                 if (this.form.purchase_link_id === opt.id) this.form.purchase_link_id = null;
                 await this.globalData.loadPurchaseLinks();
@@ -540,11 +540,11 @@ const MontMarteComponent = {
                     fd.append('existingImagePath', this.editing.image_path);
                 }
                 if (this.editing) {
-                    const res = await axios.put(`${this.baseURL}/api/mont-marte-colors/${this.form.id}`, fd);
+                    const res = await axios.put(`${window.location.origin}/api/mont-marte-colors/${this.form.id}`, fd);
                     const n = res?.data?.updatedReferences || 0;
                     ElementPlus.ElMessage.success(n>0 ? `已保存并同步更新 ${n} 处配方引用` : '已保存修改');
                 } else {
-                    await axios.post(`${this.baseURL}/api/mont-marte-colors`, fd);
+                    await axios.post(`${window.location.origin}/api/mont-marte-colors`, fd);
                     ElementPlus.ElMessage.success('已新增颜色原料');
                 }
                 await Promise.all([
