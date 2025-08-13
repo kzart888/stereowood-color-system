@@ -3,7 +3,7 @@
 // 被 app.js 和各组件文件调用
 
 // 后端服务器地址配置
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'http://localhost:9099/api';
 
 // API接口封装对象
 const api = {

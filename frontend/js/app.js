@@ -10,7 +10,7 @@ const app = createApp({
             if (savedTab && ['custom-colors','artworks','mont-marte'].includes(savedTab)) initTab = savedTab;
         } catch(e) {}
         return {
-            baseURL: 'http://localhost:3000',
+            baseURL: 'http://localhost:9099',
             loading: false,
             activeTab: initTab,
             artworksViewMode: 'byLayer',

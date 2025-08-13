@@ -51,7 +51,7 @@ const { db } = require('./db/index');                // 从 db/index.js 获取�
 const { initDatabase, runMigrations } = require('./db/migrations'); // 表初始化与迁移
 
 const app = express();
-const PORT = 3000;
+const PORT = 9099;
 
 // 中间件设置
 app.use(cors()); // 允许跨域请求
