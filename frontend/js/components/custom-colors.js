@@ -129,6 +129,48 @@ const CustomColorsComponent = {
                     <el-button type="primary" @click="saveColor" :disabled="colorCodeDuplicate">保存</el-button>
                 </template>
             </el-dialog>
+            <!-- 查重对话框 (比例查重 阶段A) -->
+            <el-dialog
+                v-model="showDuplicateDialog"
+                class="dup-groups-dialog"
+                title="重复配方处理（比例等价）"
+                width="760px"
+                :close-on-click-modal="false"
+                :close-on-press-escape="false"
+            >
+                <div v-if="deletionPending" style="margin-bottom:8px;">
+                    <el-alert type="info" title="正在删除..." show-icon></el-alert>
+                </div>
+                <div v-if="!duplicateGroups.length" class="meta-text">暂无重复组</div>
+                <div v-else class="dup-groups-wrapper">
+                    <div class="dup-group-block" v-for="grp in duplicateGroups" :key="grp.signature">
+                        <div class="dup-group-head">
+                            <span class="dup-group-badge">{{ grp.records.length }} 条</span>
+                            <span class="dup-group-formula">
+                                <el-tag v-for="it in grp.parsed.items" :key="it.name+'-'+it.unit" size="small" disable-transitions>
+                                    {{ it.name }} {{ it.ratio }}
+                                </el-tag>
+                            </span>
+                        </div>
+                        <div class="dup-records">
+                            <div class="dup-record-row" v-for="rec in grp.records" :key="rec.id" :class="{ 'is-referenced': isColorReferenced(rec) }">
+                                <label class="keep-radio">
+                                    <input type="radio" :name="'keep-'+grp.signature" :value="rec.id" v-model="duplicateSelections[grp.signature]" />
+                                    <span>保留</span>
+                                </label>
+                                <span class="code" @click="focusCustomColor(rec.color_code)">{{ rec.color_code }}</span>
+                                <span class="meta" v-if="rec.updated_at">{{ formatDate(rec.updated_at) }}</span>
+                                <span class="ref-flag" v-if="isColorReferenced(rec)">被引用</span>
+                            </div>
+                        </div>
+                        <div class="dup-group-foot meta-text" v-if="!duplicateSelections[grp.signature]">请选择要保留的记录</div>
+                    </div>
+                </div>
+                <template #footer>
+                    <el-button @click="keepAllDuplicates" :disabled="deletionPending">全部保留</el-button>
+                    <el-button type="primary" :disabled="!canDeleteAny || deletionPending" @click="performDuplicateDeletion">保留所选并删除其它</el-button>
+                </template>
+            </el-dialog>
         </div>
     `,
     
@@ -143,6 +185,11 @@ const CustomColorsComponent = {
             editingColor: null,
             _colorItemRefs: new Map(),
             highlightCode: null,
+            // 查重
+            showDuplicateDialog: false,
+            duplicateGroups: [],
+            duplicateSelections: {}, // signature -> recordId
+            deletionPending: false,
             form: {
                 category_id: '',
                 color_code: '',
@@ -210,6 +257,16 @@ const CustomColorsComponent = {
         // 从注入的全局数据获取自配颜色列表
         customColors() {
             return this.globalData.customColors.value || [];
+        },
+        canDeleteAny(){
+            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
+            for(const g of this.duplicateGroups){
+                const keepId = this.duplicateSelections[g.signature];
+                if(!keepId) continue;
+                // 是否存在可删（未引用且不是保留项）
+                if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
+            }
+            return false;
         },
         // 根据当前选中的分类过滤颜色
         filteredColors() {
@@ -559,6 +616,18 @@ const CustomColorsComponent = {
                 // 先刷新自配色，再刷新作品（同步更新作品方案中引用的自配色编号）
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadArtworks();
+                // 保存后自动比例查重
+                if (window.duplicateDetector) {
+                    const saved = (this.globalData.customColors?.value||[]).find(c=> c.color_code === this.form.color_code);
+                    if (saved) {
+                        const grp = window.duplicateDetector.detectOnSave(saved, this.globalData.customColors.value);
+                        if (grp) {
+                            ElementPlus.ElMessage.warning('发现重复配方（比例等价）');
+                            // 直接打开对话框
+                            this.runDuplicateCheck(grp.signature, saved.id);
+                        }
+                    }
+                }
             } catch (error) {
                 ElementPlus.ElMessage.error('操作失败');
             }
@@ -683,6 +752,57 @@ const CustomColorsComponent = {
             }
             
             return tags;
+        },
+        runDuplicateCheck(focusSignature=null, preferredKeepId=null){
+            if(!window.duplicateDetector){ ElementPlus.ElMessage.info('查重模块未加载'); return; }
+            const list = this.globalData.customColors?.value || [];
+            const map = window.duplicateDetector.groupByRatioSignature(list);
+            const sigs = Object.keys(map);
+            if(!sigs.length){ ElementPlus.ElMessage.success('未发现重复配方'); this.showDuplicateDialog=false; return; }
+            // 构造组数据
+            this.duplicateGroups = sigs.map(sig=>{
+                const recs = map[sig].slice().sort((a,b)=> new Date(b.updated_at||b.created_at||0)-new Date(a.updated_at||a.created_at||0));
+                const parsed = window.duplicateDetector.parseRatio(sig);
+                return { signature:sig, records:recs, parsed };
+            });
+            this.duplicateSelections = {};
+            // 默认选中：刚保存记录所在组，否则各组选更新时间最新一条
+            this.duplicateGroups.forEach(g=>{
+                if (focusSignature && g.signature===focusSignature && preferredKeepId){
+                    this.duplicateSelections[g.signature]=preferredKeepId;
+                } else if(g.records.length){
+                    this.duplicateSelections[g.signature]=g.records[0].id; // 最新
+                }
+            });
+            this.showDuplicateDialog=true;
+            ElementPlus.ElMessage.warning(`发现 ${sigs.length} 组重复配方`);
+        },
+        keepAllDuplicates(){
+            this.showDuplicateDialog=false;
+            ElementPlus.ElMessage.info('已保留全部重复记录');
+        },
+        async performDuplicateDeletion(){
+            if(this.deletionPending) return;
+            const toDelete=[];
+            this.duplicateGroups.forEach(g=>{
+                const keepId = this.duplicateSelections[g.signature];
+                if(!keepId) return;
+                g.records.forEach(r=>{ if(r.id!==keepId && !this.isColorReferenced(r)) toDelete.push(r); });
+            });
+            if(!toDelete.length){ ElementPlus.ElMessage.info('没有可删除的记录'); return; }
+            try { await ElementPlus.ElMessageBox.confirm(`将删除 ${toDelete.length} 条记录，确认继续？`, '删除确认', { type:'warning', confirmButtonText:'确认删除', cancelButtonText:'取消' }); } catch(e){ return; }
+            this.deletionPending=true;
+            let ok=0, fail=0;
+            for(const rec of toDelete){
+                try { await api.customColors.delete(rec.id); ok++; }
+                catch(e){ fail++; break; }
+            }
+            this.deletionPending=false;
+            await this.globalData.loadCustomColors();
+            await this.globalData.loadArtworks();
+            ElementPlus.ElMessage.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
+            // 重新检测
+            this.runDuplicateCheck();
         }
     }
 };

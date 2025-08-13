@@ -44,6 +44,7 @@
                 @add-artwork="$refs.artworksRef && $refs.artworksRef.addArtwork && $refs.artworksRef.addArtwork()"
                 @add-custom-color="$refs.customColorsRef && $refs.customColorsRef.openAddDialog && $refs.customColorsRef.openAddDialog()"
                 @add-raw-material="$refs.montMarteRef && $refs.montMarteRef.openDialog && $refs.montMarteRef.openDialog()"
+                @check-duplicates="$refs.customColorsRef && $refs.customColorsRef.runDuplicateCheck && $refs.customColorsRef.runDuplicateCheck()"
             ></app-header-bar>
 
             <!-- 全局搜索栏（仅作用于作品/方案） -->
@@ -89,6 +90,8 @@
     <script src="js/utils/formula-parser.js"></script>
     <!-- 计算器状态存储模块 (步骤2) -->
     <script src="js/modules/calc-store.js"></script>
+    <!-- 配方查重模块 (顺序 + 倍数不敏感) -->
+    <script src="js/modules/duplicate-detector.js"></script>
     
     <!-- API封装库 -->
     <!-- 提供: api.categories, api.customColors, api.artworks, api.montMarteColors -->
