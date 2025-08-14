@@ -988,7 +988,15 @@ app.post('/api/custom-colors/force-merge', (req, res) => {
       unit: (i.unit || '').trim().toLowerCase(), 
       amt: Number(i.base) 
     }));
-    ings.sort((a, b) => a.name.localeCompare(b.name) || a.unit.localeCompare(b.unit));
+    
+    // 使用简单字符串排序，确保与前端一致
+    ings.sort((a, b) => {
+      if (a.name < b.name) return -1;
+      if (a.name > b.name) return 1;
+      if (a.unit < b.unit) return -1;
+      if (a.unit > b.unit) return 1;
+      return 0;
+    });
     
     // 放大为整数
     const decimals = ings.map(i => { 

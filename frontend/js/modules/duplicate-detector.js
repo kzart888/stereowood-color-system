@@ -13,7 +13,15 @@
     ings = ings.filter(i=> i && !i.invalid && i.name && isFinite(i.base) && i.base>0);
     if(!ings.length) return '';
     ings = ings.map(i=>({ name:(i.name||'').trim().toLowerCase(), unit:(i.unit||'').trim().toLowerCase(), amt:Number(i.base) }));
-    ings.sort((a,b)=> a.name.localeCompare(b.name) || a.unit.localeCompare(b.unit));
+    
+    // 使用简单字符串排序，确保与后端一致
+    ings.sort((a, b) => {
+      if (a.name < b.name) return -1;
+      if (a.name > b.name) return 1;
+      if (a.unit < b.unit) return -1;
+      if (a.unit > b.unit) return 1;
+      return 0;
+    });
     // 放大为整数
     const decimals = ings.map(i=>{ const s=String(i.amt); const m=s.split('.')[1]; return m?m.length:0; });
     const scale = Math.pow(10, Math.max(...decimals));
