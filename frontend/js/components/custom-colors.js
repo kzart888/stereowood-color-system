@@ -656,7 +656,7 @@ const CustomColorsComponent = {
                 color_code: color.color_code,
                 formula: color.formula,
                 imageFile: null,
-                imagePreview: color.image_path ? `${this.baseURL}/${color.image_path}` : null
+                imagePreview: color.image_path ? this.$helpers.buildUploadURL(this.baseURL, color.image_path) : null
             };
             this.showAddDialog = true;
         },
