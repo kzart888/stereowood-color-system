@@ -940,12 +940,90 @@ app.post('/api/custom-colors/force-merge', (req, res) => {
   removeIds = [...new Set(removeIds.filter(id=> Number.isInteger(id) && id>0 && id!==keepId))];
   if (!removeIds.length) return res.status(400).json({ error: 'removeIds 不能为空' });
 
-  function parseFormula(formula){
-    const items=[]; if(!formula) return items; const parts=String(formula).trim().split(/\s+/); let pending=null;
-    for(const tk of parts){ const m=tk.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/); if(m && pending){ const name=pending.trim().toLowerCase(); const base=parseFloat(m[1]); const unit=(m[2]||'').trim().toLowerCase(); if(name && isFinite(base) && base>0) items.push({name,unit,amt:base}); pending=null; } else { if(pending){} pending=tk; } }
-    return items;
+  // 统一的配方解析函数（与前端 FormulaParser.parse 保持一致）
+  function parseFormula(formula) {
+    const result = [];
+    if (!formula || !(formula = String(formula).trim())) return result;
+    const tokens = formula.split(/\s+/);
+    const amountRe = /^([\d]+(?:\.[\d]+)?)([a-zA-Z\u4e00-\u9fa5%]+)$/; // 形式: 15g / 3ml
+    const numberOnlyRe = /^[\d]+(?:\.[\d]+)?$/; // 形式: 15
+    const unitOnlyRe = /^[a-zA-Z\u4e00-\u9fa5%]+$/; // 形式: g / ml / 滴
+    
+    for (let i = 0; i < tokens.length; i++) {
+      const nameToken = tokens[i];
+      if (!nameToken) continue;
+      const next = tokens[i + 1];
+      let consumed = 0;
+      let base = 0; let unit = ''; let valid = false;
+      
+      // 1) 紧随一个 "数值+单位" token
+      if (next && amountRe.test(next)) {
+        const m = next.match(amountRe);
+        base = parseFloat(m[1]); unit = m[2]; valid = isFinite(base); consumed = 1;
+      } else if (next && numberOnlyRe.test(next) && tokens[i + 2] && unitOnlyRe.test(tokens[i + 2])) {
+        // 2) 形式: 名称 15 g
+        base = parseFloat(next); unit = tokens[i + 2]; valid = isFinite(base); consumed = 2;
+      }
+      
+      if (consumed > 0) {
+        result.push({ name: nameToken, base: valid ? base : 0, unit, invalid: !valid });
+        i += consumed; // 跳过消耗的 token
+      } else {
+        // 未匹配数量
+        result.push({ name: nameToken, base: 0, unit: '', invalid: true });
+      }
+    }
+    return result;
   }
-  function buildSig(formula){ const list=parseFormula(formula); if(!list.length) return ''; list.sort((a,b)=> a.name.localeCompare(b.name)||a.unit.localeCompare(b.unit)); const decimals=list.map(i=>{const s=String(i.amt); const m=s.split('.')[1]; return m?m.length:0;}); const scale=Math.pow(10, Math.max(...decimals,0)); let ints=list.map(i=> Math.round(i.amt*scale)); const gcd=(a,b)=> b===0?a:gcd(b,a%b); let g=ints[0]; for(let i=1;i<ints.length;i++) g=gcd(g,ints[i]); if(g>1) ints=ints.map(v=> v/g); if(ints.every(v=>v===0)){ const base=list[0].amt; return list.map(it=> `${it.name}#${it.unit}#${(Math.round((it.amt/base)*1e6)/1e6)}`).join('|'); } return list.map((it,idx)=> `${it.name}#${it.unit}#${ints[idx]}`).join('|'); }
+  
+  // 统一的签名生成函数（与前端 buildRatioSignature 保持一致）
+  function buildSig(formula) {
+    if (!formula) return '';
+    let ings = parseFormula(formula) || [];
+    ings = ings.filter(i => i && !i.invalid && i.name && isFinite(i.base) && i.base > 0);
+    if (!ings.length) return '';
+    
+    ings = ings.map(i => ({ 
+      name: (i.name || '').trim().toLowerCase(), 
+      unit: (i.unit || '').trim().toLowerCase(), 
+      amt: Number(i.base) 
+    }));
+    ings.sort((a, b) => a.name.localeCompare(b.name) || a.unit.localeCompare(b.unit));
+    
+    // 放大为整数
+    const decimals = ings.map(i => { 
+      const s = String(i.amt); 
+      const m = s.split('.')[1]; 
+      return m ? m.length : 0; 
+    });
+    const scale = Math.pow(10, Math.max(...decimals));
+    let ints = ings.map(i => Math.round(i.amt * scale));
+    
+    if (ints.every(v => v === 0)) { // 回退：浮点比
+      const base = ings[0].amt;
+      return ings.map(i => `${i.name}#${i.unit}#${Math.round((i.amt / base) * 1e6) / 1e6}`).join('|');
+    }
+    
+    // GCD 约简
+    function gcd(a, b) { 
+      a = Math.abs(a); 
+      b = Math.abs(b); 
+      while (b) { 
+        const t = a % b; 
+        a = b; 
+        b = t; 
+      } 
+      return a || 1; 
+    }
+    
+    function gcdArray(arr) { 
+      return arr.reduce((g, v) => gcd(g, v), arr[0] || 1); 
+    }
+    
+    const g = gcdArray(ints);
+    if (g > 1) ints = ints.map(v => v / g);
+    return ings.map((ing, idx) => `${ing.name}#${ing.unit}#${ints[idx]}`).join('|');
+  }
 
   const placeholders = removeIds.map(()=>'?').join(',');
   db.get('SELECT id, formula, color_code, image_path, applicable_layers FROM custom_colors WHERE id=?',[keepId], (eKeep, keepRow)=>{
@@ -954,7 +1032,25 @@ app.post('/api/custom-colors/force-merge', (req, res) => {
     db.all(`SELECT id, formula, color_code, image_path, applicable_layers FROM custom_colors WHERE id IN (${placeholders})`, removeIds, (eRem, remRows)=>{
       if(eRem) return res.status(500).json({ error:eRem.message });
       if(!remRows || remRows.length!==removeIds.length) return res.status(400).json({ error:'部分 removeIds 不存在' });
-      if(providedSig){ try { const kSig=buildSig(keepRow.formula||''); if(!kSig) return res.status(400).json({ error:'保留记录配方为空' }); for(const r of remRows){ const s=buildSig(r.formula||''); if(s!==kSig) return res.status(400).json({ error:'签名不一致，拒绝合并' }); } if(kSig!==providedSig) return res.status(400).json({ error:'前端签名与服务端计算不一致' }); } catch(err){ return res.status(500).json({ error:'签名校验失败:'+err.message }); } }
+      if(providedSig){ 
+        try { 
+          const kSig=buildSig(keepRow.formula||''); 
+          console.log('[DEBUG] 保留记录配方:', keepRow.formula);
+          console.log('[DEBUG] 保留记录签名:', kSig);
+          console.log('[DEBUG] 前端提供签名:', providedSig);
+          
+          if(!kSig) return res.status(400).json({ error:'保留记录配方为空' }); 
+          for(const r of remRows){ 
+            const s=buildSig(r.formula||''); 
+            console.log('[DEBUG] 删除记录配方:', r.formula, '签名:', s);
+            if(s!==kSig) return res.status(400).json({ error:'签名不一致，拒绝合并' }); 
+          } 
+          if(kSig!==providedSig) return res.status(400).json({ error:'前端签名与服务端计算不一致' }); 
+        } catch(err){ 
+          console.error('[DEBUG] 签名校验异常:', err);
+          return res.status(500).json({ error:'签名校验失败:'+err.message }); 
+        } 
+      }
       db.get(`SELECT COUNT(*) AS cnt FROM scheme_layers WHERE custom_color_id IN (${placeholders})`, removeIds, (eCnt, cntRow)=>{
         if(eCnt) return res.status(500).json({ error:eCnt.message });
         const affected = cntRow? Number(cntRow.cnt)||0 : 0;

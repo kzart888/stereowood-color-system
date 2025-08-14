@@ -441,7 +441,23 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
    sudo kill -9 $(sudo lsof -t -i:9099)
    ```
 
-3. **镜像构建失败**
+3. **数据库初始化顺序问题**
+   ```bash
+   # 如果看到 "no such table: color_categories" 错误
+   # 这是因为数据库表还未完全创建完成
+   
+   # 查看容器日志确认问题
+   docker logs stereowood-test
+   
+   # 解决方案：重新部署最新版本（已修复此问题）
+   cd ~/stereowood
+   git pull origin main  # 或使用强制更新命令
+   docker stop stereowood-test && docker rm stereowood-test
+   docker build --no-cache -t stereowood-color-system:latest .
+   # 重新启动容器...
+   ```
+
+4. **镜像构建失败**
    ```bash
    # 清理Docker缓存
    docker system prune -a -f
@@ -453,7 +469,7 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
    docker build --no-cache -t stereowood-color-system:latest .
    ```
 
-4. **数据丢失问题**
+5. **数据丢失问题**
    ```bash
    # 检查数据卷是否正确挂载
    docker inspect stereowood-test | grep -A 10 "Mounts"
@@ -505,6 +521,12 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
    - 检查uploads目录权限
    - 确认卷挂载正确
    - 查看浏览器开发者工具网络请求
+
+5. **浏览器控制台警告（aria-hidden）**
+   - 如果看到关于 `aria-hidden on <body>` 的警告
+   - 这通常是浏览器扩展（如书签管理器）引起的
+   - 不影响应用功能，可以安全忽略
+   - 或尝试在无痕模式下访问应用
 
 ### 日志查看
 
