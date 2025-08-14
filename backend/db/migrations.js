@@ -110,6 +110,12 @@ async function initDatabase() {
   )`);
 
   console.log('数据库表初始化完成 (db/migrations.js)');
+  
+  // 确保新增色系"色精"存在（代码 SJ）—— 幂等插入
+  db.run('INSERT OR IGNORE INTO color_categories (code, name) VALUES (?, ?)', ['SJ', '色精'], (err) => {
+    if (err) console.warn('确保色精色系存在时出错:', err.message);
+    else console.log('色精色系已确保存在');
+  });
 }
 
 // 后续迁移：创建字典表与原表增列（保持与原 server.js 一致）

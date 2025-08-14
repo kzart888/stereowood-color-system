@@ -13,7 +13,9 @@
        mont-marte-colors.js   -> /api/mont-marte-colors*（含 PUT 时触发级联重命名）
        artworks.js            -> /api/artworks*（含 /:id，/:artworkId/schemes 等）
        dictionaries.js        -> /api/suppliers* /api/purchase-links*
-       index.js               -> 聚合并导出一个 Router，server.js 仅 app.use('/api', router)
+       index.js               -> 聚合并导出一个 Router，server.js 仅 app.us});
+
+// 更新自配颜色, router)
    - uploads/ 静态资源目录（保持）
 
    渐进式迁移步骤：
