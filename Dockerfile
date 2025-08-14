@@ -10,7 +10,7 @@ RUN cd backend && npm install --production && npm cache clean --force
 FROM node:20-alpine
 ENV TZ=Asia/Shanghai \
     NODE_ENV=production \
-    PORT=3000 \
+    PORT=9099 \
     DB_FILE=/data/color_management.db
 WORKDIR /app
 
@@ -25,10 +25,10 @@ COPY backend ./backend
 COPY frontend ./frontend
 
 # Expose port
-EXPOSE 3000
+EXPOSE 9099
 
 # Healthcheck: simple HTTP GET on root
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1:3000/ || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1:9099/ || exit 1
 
 # Start server
 WORKDIR /app/backend
