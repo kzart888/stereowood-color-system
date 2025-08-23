@@ -230,15 +230,85 @@ export default {
       return `${props.baseUrl || window.location.origin}/${withPrefix}`
     }
 
-    const handleFileChange = (file) => {
+    /**
+     * 压缩图片函数
+     * @param {File} file - 原始图片文件
+     * @returns {Promise<File>} 压缩后的图片文件
+     */
+    const compressImage = (file) => {
+      return new Promise((resolve, reject) => {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        const img = new Image()
+
+        img.onload = () => {
+          try {
+            const MAX_SIZE = 800 // 最大尺寸
+            let { width, height } = img
+
+            // 计算压缩比例
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height = (height * MAX_SIZE) / width
+                width = MAX_SIZE
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width = (width * MAX_SIZE) / height
+                height = MAX_SIZE
+              }
+            }
+
+            // 设置canvas尺寸
+            canvas.width = width
+            canvas.height = height
+
+            // 绘制压缩后的图片
+            ctx.drawImage(img, 0, 0, width, height)
+
+            // 转换为Blob
+            canvas.toBlob((blob) => {
+              if (blob) {
+                // 创建新的File对象
+                const compressedFile = new File([blob], file.name, {
+                  type: file.type,
+                  lastModified: Date.now()
+                })
+                resolve(compressedFile)
+              } else {
+                reject(new Error('图片压缩失败'))
+              }
+            }, file.type, 0.8) // 压缩质量80%
+          } catch (error) {
+            reject(error)
+          }
+        }
+
+        img.onerror = () => {
+          reject(new Error('图片加载失败'))
+        }
+
+        img.src = URL.createObjectURL(file)
+      })
+    }
+
+    const handleFileChange = async (file) => {
       if (!beforeUpload(file.raw)) return
       
-      // 创建预览URL
-      previewUrl.value = URL.createObjectURL(file.raw)
-      
-      // 更新v-model
-      emit('update:modelValue', file.raw)
-      emit('change', file.raw)
+      try {
+        // 压缩图片
+        const compressedFile = await compressImage(file.raw)
+        
+        // 创建预览URL
+        previewUrl.value = URL.createObjectURL(compressedFile)
+        
+        // 更新v-model
+        emit('update:modelValue', compressedFile)
+        emit('change', compressedFile)
+      } catch (error) {
+        console.error('图片压缩失败:', error)
+        window.ElementPlus?.ElMessage?.error('图片处理失败，请重试')
+      }
     }
 
     const beforeUpload = (file) => {

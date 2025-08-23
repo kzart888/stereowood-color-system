@@ -11,6 +11,7 @@
 const express = require('express');
 const router = express.Router();
 const ColorService = require('../services/ColorService');
+const ImageService = require('../services/ImageService');
 const multer = require('multer');
 const path = require('path');
 
@@ -37,7 +38,25 @@ router.get('/custom-colors', async (req, res) => {
 router.post('/custom-colors', upload.single('image'), async (req, res) => {
   try {
     const { category_id, color_code, formula, applicable_layers } = req.body;
-    const imagePath = req.file ? req.file.filename : null;
+    let imagePath = null;
+
+    // 处理图片上传
+    if (req.file) {
+      try {
+        const processResult = await ImageService.processUploadedImage(
+          req.file.path,
+          path.basename(req.file.filename, path.extname(req.file.filename))
+        );
+        
+        // 使用缩略图作为存储路径
+        imagePath = processResult.files.thumbnail;
+        console.log('图片处理完成:', processResult);
+      } catch (imageError) {
+        console.error('图片处理失败:', imageError);
+        // 图片处理失败时保留原图
+        imagePath = req.file.filename;
+      }
+    }
 
     const colorData = {
       category_id,
@@ -87,7 +106,30 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
   try {
     const colorId = req.params.id;
     const { category_id, color_code, formula, applicable_layers, existingImagePath } = req.body;
-    const imagePath = req.file ? req.file.filename : existingImagePath || null;
+    let imagePath = existingImagePath || null;
+
+    // 处理新上传的图片
+    if (req.file) {
+      try {
+        const processResult = await ImageService.processUploadedImage(
+          req.file.path,
+          path.basename(req.file.filename, path.extname(req.file.filename))
+        );
+        
+        // 使用缩略图作为存储路径
+        imagePath = processResult.files.thumbnail;
+        console.log('编辑图片处理完成:', processResult);
+
+        // 删除旧图片（如果存在）
+        if (existingImagePath) {
+          await ImageService.deleteImageFiles('uploads/', existingImagePath);
+        }
+      } catch (imageError) {
+        console.error('图片处理失败:', imageError);
+        // 图片处理失败时保留原图
+        imagePath = req.file.filename;
+      }
+    }
 
     const colorData = {
       category_id,

@@ -11,6 +11,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../db/index');
+const ImageService = require('../services/ImageService');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -164,14 +165,32 @@ router.get('/artworks/:id', (req, res) => {
 
 // POST /api/artworks/:artworkId/schemes
 // Body: FormData(name, layers=[{layer, colorCode}], thumbnail?)
-router.post('/artworks/:artworkId/schemes', upload.single('thumbnail'), (req, res) => {
+router.post('/artworks/:artworkId/schemes', upload.single('thumbnail'), async (req, res) => {
   const artworkId = Number(req.params.artworkId);
   const name = String(req.body.name || '').trim();
   if (!artworkId || !name) return res.status(400).json({ error: '参数不完整' });
 
   let layers = [];
   try { layers = JSON.parse(req.body.layers || '[]'); } catch {}
-  const thumbnail_path = req.file ? req.file.filename : null;
+  
+  let thumbnail_path = null;
+  // 处理缩略图上传
+  if (req.file) {
+    try {
+      const processResult = await ImageService.processUploadedImage(
+        req.file.path,
+        path.basename(req.file.filename, path.extname(req.file.filename))
+      );
+      
+      // 使用缩略图作为存储路径
+      thumbnail_path = processResult.files.thumbnail;
+      console.log('缩略图处理完成:', processResult);
+    } catch (imageError) {
+      console.error('缩略图处理失败:', imageError);
+      // 图片处理失败时保留原图
+      thumbnail_path = req.file.filename;
+    }
+  }
 
   db.serialize(() => {
     db.run('BEGIN');
@@ -216,7 +235,7 @@ router.post('/artworks/:artworkId/schemes', upload.single('thumbnail'), (req, re
 
 // PUT /api/artworks/:artworkId/schemes/:schemeId
 // Body: FormData(name, layers=[{layer,colorCode}], thumbnail?, existingThumbnailPath?)
-router.put('/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail'), (req, res) => {
+router.put('/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail'), async (req, res) => {
   const artworkId = Number(req.params.artworkId);
   const schemeId = Number(req.params.schemeId);
   const name = String(req.body.name || '').trim();
@@ -225,7 +244,25 @@ router.put('/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail'),
   let layers = [];
   try { layers = JSON.parse(req.body.layers || '[]'); } catch {}
   const existing = req.body.existingThumbnailPath || null;
-  const newThumb = req.file ? req.file.filename : null;
+  
+  let newThumb = null;
+  // 处理新上传的缩略图
+  if (req.file) {
+    try {
+      const processResult = await ImageService.processUploadedImage(
+        req.file.path,
+        path.basename(req.file.filename, path.extname(req.file.filename))
+      );
+      
+      // 使用缩略图作为存储路径
+      newThumb = processResult.files.thumbnail;
+      console.log('缩略图更新处理完成:', processResult);
+    } catch (imageError) {
+      console.error('缩略图处理失败:', imageError);
+      // 图片处理失败时保留原图
+      newThumb = req.file.filename;
+    }
+  }
 
   // 查询旧缩略图以便删除
   db.get(
@@ -277,8 +314,10 @@ router.put('/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail'),
                 db.run('COMMIT', () => {
                   // 如有新缩略图，删除旧文件
                   if (newThumb && row.thumbnail_path && row.thumbnail_path !== finalThumb) {
-                    const oldPath = path.join(__dirname, '..', 'uploads', row.thumbnail_path);
-                    fs.unlink(oldPath, () => {});
+                    ImageService.deleteImageFiles(
+                      path.join(__dirname, '..', 'uploads'),
+                      row.thumbnail_path
+                    ).catch(() => {}); // 静默删除，不影响主流程
                   }
                   res.json({ success: true });
                 });
@@ -310,8 +349,10 @@ router.delete('/artworks/:artworkId/schemes/:schemeId', (req, res) => {
           if (e2) { db.run('ROLLBACK'); return res.status(500).json({ error: e2.message }); }
           db.run('COMMIT', () => {
             if (thumb) {
-              const filePath = path.join('uploads', thumb);
-              fs.unlink(filePath, () => {}); // 忽略删除错误
+              ImageService.deleteImageFiles(
+                path.join(__dirname, '..', 'uploads'),
+                thumb
+              ).catch(() => {}); // 忽略删除错误
             }
             res.json({ success: true });
           });

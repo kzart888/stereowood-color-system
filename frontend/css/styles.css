@@ -13,27 +13,103 @@ body {
     background-color: #f5f5f5;
 }
 
-/* 返回顶部按钮 */
-#backToTopBtn { position:fixed; right:18px; bottom:22px; z-index:1200; width:48px; height:48px; border:none; border-radius:50%; background:linear-gradient(135deg,#2f74ff,#1d56c7); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.30); transition:transform .25s ease, filter .25s ease; }
-#backToTopBtn:hover { filter:brightness(1.12); }
-#backToTopBtn:active { transform:scale(.9); }
+/* ============================================
+   统一浮动操作按钮 - STEREOWOOD Color System
+   ============================================ */
 
-/* 全局设计变量 */
+/* === 返回顶部按钮 === */
+#backToTopBtn,
+.sw-float-btn {
+    position: fixed;
+    right: 18px;
+    bottom: 22px;
+    z-index: 1200;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-active));
+    color: var(--sw-bg-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--sw-shadow-float);
+    transition: all var(--sw-transition-slow);
+}
+
+#backToTopBtn:hover,
+.sw-float-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(111,66,193,0.4);
+}
+
+#backToTopBtn:active,
+.sw-float-btn:active {
+    transform: translateY(0) scale(0.95);
+}
+
+/* ============================================
+   设计系统变量 - STEREOWOOD Color System
+   ============================================ */
 :root {
+    /* === 间距系统 === */
     --sw-gap-xs: 2px;
     --sw-gap-sm: 4px;
     --sw-gap-md: 6px;
     --sw-gap-lg: 8px;
-    --sw-actions-gap: 8px; /* 统一母级工具按钮间距 */
+    --sw-gap-xl: 12px;
+    --sw-actions-gap: 8px; /* 统一工具按钮间距 */
+    
+    /* === 圆角系统 === */
+    --sw-radius-xs: 2px;
     --sw-radius-sm: 4px;
     --sw-radius-md: 6px;
+    --sw-radius-lg: 8px;
+    
+    /* === 布局系统 === */
     --sw-card-padding: 4px 6px 8px;
     --sw-header-padding: 6px 6px 4px;
     --sw-chip-gap: 4px;
     --sw-thumb-size: 80px;
-    --sw-add-btn-bg: #6f42c1; /* 优雅紫色基色 */
-    --sw-add-btn-bg-hover: #5a34a0; /* hover 深一些 */
-    --sw-add-btn-bg-active: #4b2c85; /* active 更深 */
+    --sw-thumb-preview-size: 320px; /* 预览图尺寸 */
+    
+    /* === 颜色系统 === */
+    --sw-primary: #6f42c1;              /* 主色调-紫色 */
+    --sw-primary-hover: #5a34a0;        /* 主色-悬停 */
+    --sw-primary-active: #4b2c85;       /* 主色-激活 */
+    --sw-primary-light: rgba(111,66,193,0.12); /* 主色-浅色背景 */
+    --sw-primary-border: rgba(111,66,193,0.25); /* 主色-边框 */
+    
+    --sw-success: #2f9e44;              /* 成功色 */
+    --sw-warning: #f59e0b;              /* 警告色 */
+    --sw-danger: #d93025;               /* 危险色 */
+    --sw-info: #409EFF;                 /* 信息色 */
+    
+    --sw-text-primary: #222;            /* 主要文本 */
+    --sw-text-secondary: #666;          /* 次要文本 */
+    --sw-text-muted: #909399;           /* 辅助文本 */
+    --sw-text-disabled: #c0c4cc;        /* 禁用文本 */
+    
+    --sw-border-light: #e4e7ed;         /* 浅边框 */
+    --sw-border-base: #dcdfe6;          /* 基础边框 */
+    --sw-border-dark: #c0c4cc;          /* 深边框 */
+    
+    --sw-bg-white: #fff;                /* 白色背景 */
+    --sw-bg-light: #fafafa;             /* 浅灰背景 */
+    --sw-bg-base: #f5f5f5;              /* 基础背景 */
+    
+    /* === 阴影系统 === */
+    --sw-shadow-light: 0 1px 4px rgba(0,0,0,0.08);
+    --sw-shadow-base: 0 2px 8px rgba(0,0,0,0.1);
+    --sw-shadow-card: 0 1px 4px rgba(0,0,0,0.3);
+    --sw-shadow-dialog: 0 4px 16px rgba(0,0,0,0.14);
+    --sw-shadow-float: 0 6px 18px rgba(0,0,0,0.18);
+    
+    /* === 过渡动画 === */
+    --sw-transition-fast: 0.15s ease;
+    --sw-transition-base: 0.18s ease;
+    --sw-transition-slow: 0.25s ease;
 }
 
 /* (已移除 sticky 顶部特性样式) */
@@ -79,13 +155,56 @@ body {
 .app-title-badge { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); padding:6px 14px 6px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.12); }
 .app-title { font-size:18px; margin:0; font-weight:600; white-space:nowrap; max-width:420px; overflow:hidden; text-overflow:ellipsis; color:#fff; }
 .app-header-center { min-width:0; display:flex; }
-/* 自定义 Tab 按钮组 */
-.tab-switch-group { display:inline-flex; border-radius:6px; overflow:hidden; background:rgba(118,75,162,0.12); box-shadow:0 0 0 1px rgba(118,75,162,0.25) inset; }
-.tab-switch-group .tab-switch { font:inherit; cursor:pointer; border:none; background:transparent; padding:6px 14px; font-size:13px; color:#4a3466; line-height:1; position:relative; transition:background .18s ease, color .18s ease; }
-.tab-switch-group .tab-switch + .tab-switch { border-left:1px solid rgba(118,75,162,0.3); }
-.tab-switch-group .tab-switch.active { background:linear-gradient(135deg,#6f42c1,#5a34a0); color:#fff; box-shadow:0 0 0 1px rgba(0,0,0,0.05) inset; }
-.tab-switch-group .tab-switch:not(.active):hover { background:rgba(118,75,162,0.18); }
-.tab-switch-group .tab-switch:focus-visible { outline:2px solid rgba(111,66,193,0.55); outline-offset:-2px; }
+/* ============================================
+   统一Tab和切换系统 - STEREOWOOD Color System
+   ============================================ */
+
+/* === 自定义Tab按钮组 === */
+.tab-switch-group,
+.sw-tab-group {
+    display: inline-flex;
+    border-radius: var(--sw-radius-md);
+    overflow: hidden;
+    background: var(--sw-primary-light);
+    box-shadow: 0 0 0 1px var(--sw-primary-border) inset;
+}
+
+.tab-switch-group .tab-switch,
+.sw-tab-group .sw-tab {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--sw-primary);
+    line-height: 1;
+    position: relative;
+    transition: all var(--sw-transition-base);
+}
+
+.tab-switch-group .tab-switch + .tab-switch,
+.sw-tab-group .sw-tab + .sw-tab {
+    border-left: 1px solid var(--sw-primary-border);
+}
+
+.tab-switch-group .tab-switch.active,
+.sw-tab-group .sw-tab.active {
+    background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-hover));
+    color: var(--sw-bg-white);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.05) inset;
+}
+
+.tab-switch-group .tab-switch:not(.active):hover,
+.sw-tab-group .sw-tab:not(.active):hover {
+    background: rgba(111,66,193,0.18);
+}
+
+.tab-switch-group .tab-switch:focus-visible,
+.sw-tab-group .sw-tab:focus-visible {
+    outline: 2px solid rgba(111,66,193,0.55);
+    outline-offset: -2px;
+}
 .app-header-tools { display:flex; align-items:center; gap:10px; flex-wrap:nowrap; }
 .app-header-tools .dual-toggle-group { display:inline-flex; }
 .app-header-tools .el-button + .el-button { margin-left:0 !important; }
@@ -125,25 +244,56 @@ body {
 .system-header.compact p { display: none; }
 
 
-/* 作品配色管理卡片（紧凑化后） */
-.artwork-bar {
-    background: #fff;
+/* ============================================
+   统一卡片系统 - STEREOWOOD Color System
+   ============================================ */
+
+/* === 主卡片（作品/自配色条目） === */
+.artwork-bar,
+.sw-card {
+    background: var(--sw-bg-white);
     margin: var(--sw-gap-md) var(--sw-gap-md) var(--sw-gap-lg) var(--sw-gap-md);
     border-radius: var(--sw-radius-md);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    box-shadow: var(--sw-shadow-card);
     overflow: hidden;
     padding: var(--sw-card-padding);
+    transition: box-shadow var(--sw-transition-base);
 }
 
-.artwork-header {
+.artwork-bar:hover,
+.sw-card:hover {
+    box-shadow: var(--sw-shadow-base);
+}
+
+/* === 卡片头部 === */
+.artwork-header,
+.sw-card-header {
     padding: var(--sw-header-padding);
-    background: #f8f9fa;
-    border-bottom: 1px solid #eee;
+    background: var(--sw-bg-light);
+    border-bottom: 1px solid var(--sw-border-light);
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-.artwork-title { font-size:16px; font-weight:600; color:#222; margin:0; }
+
+.artwork-title,
+.sw-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+    margin: 0;
+}
+
+/* === 卡片内容区域 === */
+.sw-card-body {
+    padding: var(--sw-gap-lg);
+}
+
+.sw-card-footer {
+    padding: var(--sw-gap-md) var(--sw-gap-lg);
+    background: var(--sw-bg-light);
+    border-top: 1px solid var(--sw-border-light);
+}
 
 .color-actions { display:flex; align-items:center; gap: var(--sw-actions-gap); flex-shrink:0; }
 .color-actions .el-button + .el-button { margin-left:0 !important; }
@@ -178,18 +328,110 @@ body {
 }
 .scheme-thumbnail.no-image { background:#fafafa; border-style:dashed; cursor: default; }
 
-/* 表单辅助提示与成功提示 */
-.form-hint { font-size:12px; color:#777; margin-top:4px; line-height:1.4; }
-.form-hint.success-hint { color:#2f9e44; }
-.form-hint.error-hint { color:#d93025; }
-/* 让对话框中的提示换行并独占一行（防止与输入框并排） */
+/* ============================================
+   统一文本和状态系统 - STEREOWOOD Color System
+   ============================================ */
+
+/* === 文本层级 === */
+.sw-text-primary { color: var(--sw-text-primary); }
+.sw-text-secondary { color: var(--sw-text-secondary); }
+.sw-text-muted { color: var(--sw-text-muted); }
+.sw-text-disabled { color: var(--sw-text-disabled); }
+
+/* === 状态文本 === */
+.sw-text-success { color: var(--sw-success); }
+.sw-text-warning { color: var(--sw-warning); }
+.sw-text-danger { color: var(--sw-danger); }
+.sw-text-info { color: var(--sw-info); }
+
+/* === 表单提示系统 === */
+.form-hint,
+.sw-hint {
+    font-size: 12px;
+    color: var(--sw-text-muted);
+    margin-top: var(--sw-gap-sm);
+    line-height: 1.4;
+}
+.form-hint.success-hint,
+.sw-hint.success {
+    color: var(--sw-success);
+}
+.form-hint.error-hint,
+.sw-hint.error {
+    color: var(--sw-danger);
+}
+.sw-hint.warning {
+    color: var(--sw-warning);
+}
+
+/* === 对话框表单优化 === */
 .scheme-dialog .el-form-item__content .form-hint { flex-basis:100%; width:100%; }
 .scheme-dialog .el-form-item__content { align-items:flex-start; }
 
-/* 预览浮层 */
-.thumb-preview-overlay { position:fixed; width:calc(var(--sw-thumb-size) * 4); height:calc(var(--sw-thumb-size) * 4); background:#fff center/cover no-repeat; box-shadow:0 6px 22px rgba(0,0,0,0.35); border:2px solid #fff; border-radius:6px; z-index:2000; opacity:0; pointer-events:none; transition:opacity .16s ease; }
-.thumb-preview-overlay.show { opacity:1; pointer-events:auto; }
-.thumb-preview-overlay::after { content:""; position:absolute; inset:0; border-radius:6px; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.08); }
+/* ============================================
+   统一缩略图系统 - STEREOWOOD Color System
+   ============================================ */
+
+/* === 缩略图容器 === */
+.scheme-thumbnail,
+.sw-thumbnail {
+    width: var(--sw-thumb-size);
+    height: var(--sw-thumb-size);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--sw-text-muted);
+    border-radius: var(--sw-radius-sm);
+    border: 2px solid var(--sw-border-light);
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all var(--sw-transition-base);
+}
+
+.scheme-thumbnail:hover,
+.sw-thumbnail:hover {
+    border-color: var(--sw-primary);
+    box-shadow: var(--sw-shadow-light);
+}
+
+.scheme-thumbnail.no-image,
+.sw-thumbnail.no-image {
+    background: var(--sw-bg-light);
+    border-style: dashed;
+    cursor: default;
+}
+
+/* === 预览浮层 === */
+.thumb-preview-overlay {
+    position: fixed;
+    width: var(--sw-thumb-preview-size);
+    height: var(--sw-thumb-preview-size);
+    background: var(--sw-bg-white) center/cover no-repeat;
+    box-shadow: var(--sw-shadow-float);
+    border: 2px solid var(--sw-bg-white);
+    border-radius: var(--sw-radius-md);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--sw-transition-fast);
+}
+
+.thumb-preview-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.thumb-preview-overlay::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--sw-radius-md);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+}
 
 .scheme-name {
     font-size: 16px;
@@ -341,14 +583,49 @@ body {
     margin-bottom: 20px;
 }
 
-/* 新：自配色分类按钮组（蓝色系，与头部 tabs 统一风格） */
-/* 分类筛选按钮组（与顶部 tab 风格统一：紫系半透明底 + active 渐变） */
-.category-switch-group { display:inline-flex; flex-wrap:wrap; gap:0; margin:0 0 6px 0; background:rgba(118,75,162,0.12); border-radius:6px; box-shadow:0 0 0 1px rgba(118,75,162,0.25) inset; overflow:hidden; }
-.category-switch-group .category-switch { font:inherit; cursor:pointer; border:none; background:transparent; padding:6px 14px; font-size:13px; color:#4a3466; line-height:1; position:relative; transition:background .18s ease, color .18s ease; }
-.category-switch-group .category-switch + .category-switch { border-left:1px solid rgba(118,75,162,0.3); }
-.category-switch-group .category-switch.active { background:linear-gradient(135deg,#6f42c1,#5a34a0); color:#fff; box-shadow:0 0 0 1px rgba(0,0,0,0.05) inset; }
-.category-switch-group .category-switch:not(.active):hover { background:rgba(118,75,162,0.18); }
-.category-switch-group .category-switch:focus-visible { outline:2px solid rgba(111,66,193,0.55); outline-offset:-2px; }
+/* === 分类筛选按钮组 === */
+.category-switch-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 0 0 var(--sw-gap-md) 0;
+    background: var(--sw-primary-light);
+    border-radius: var(--sw-radius-md);
+    box-shadow: 0 0 0 1px var(--sw-primary-border) inset;
+    overflow: hidden;
+}
+
+.category-switch-group .category-switch {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--sw-primary);
+    line-height: 1;
+    position: relative;
+    transition: all var(--sw-transition-base);
+}
+
+.category-switch-group .category-switch + .category-switch {
+    border-left: 1px solid var(--sw-primary-border);
+}
+
+.category-switch-group .category-switch.active {
+    background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-hover));
+    color: var(--sw-bg-white);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.05) inset;
+}
+
+.category-switch-group .category-switch:not(.active):hover {
+    background: rgba(111,66,193,0.18);
+}
+
+.category-switch-group .category-switch:focus-visible {
+    outline: 2px solid rgba(111,66,193,0.55);
+    outline-offset: -2px;
+}
 
 .view-toggle {
     float: right;
@@ -434,24 +711,81 @@ body {
 .floating-tab-tools .el-button { padding:4px 10px; }
 .floating-tab-tools .el-button + .el-button { margin-left:0; }
 
-/* 顶部新增类按钮专用紫色（与其他工具区分） */
-/* 新头部使用通用 add-button 样式（取代旧 floating-tab-tools 作用域限制） */
-.add-button.el-button {
-    background: var(--sw-add-btn-bg);
-    border-color: var(--sw-add-btn-bg);
-    color: #fff;
+/* ============================================
+   统一按钮系统 - STEREOWOOD Color System
+   ============================================ */
+
+/* === 主色按钮（新增/主要操作） === */
+.add-button.el-button,
+.sw-btn-primary.el-button {
+    background: var(--sw-primary);
+    border-color: var(--sw-primary);
+    color: var(--sw-bg-white);
+    transition: all var(--sw-transition-base);
 }
-.add-button.el-button:hover {
-    background: var(--sw-add-btn-bg-hover);
-    border-color: var(--sw-add-btn-bg-hover);
-    color:#fff;
+.add-button.el-button:hover,
+.sw-btn-primary.el-button:hover {
+    background: var(--sw-primary-hover);
+    border-color: var(--sw-primary-hover);
+    color: var(--sw-bg-white);
 }
-.add-button.el-button:active, .add-button.el-button.is-active {
-    background: var(--sw-add-btn-bg-active);
-    border-color: var(--sw-add-btn-bg-active);
-    color:#fff;
+.add-button.el-button:active,
+.add-button.el-button.is-active,
+.sw-btn-primary.el-button:active,
+.sw-btn-primary.el-button.is-active {
+    background: var(--sw-primary-active);
+    border-color: var(--sw-primary-active);
+    color: var(--sw-bg-white);
 }
-.add-button.el-button:focus-visible { box-shadow: 0 0 0 2px rgba(111,66,193,0.35); }
+.add-button.el-button:focus-visible,
+.sw-btn-primary.el-button:focus-visible {
+    box-shadow: 0 0 0 2px rgba(111,66,193,0.35);
+}
+
+/* === 次要按钮（常规操作） === */
+.sw-btn-secondary.el-button {
+    background: var(--sw-bg-white);
+    border-color: var(--sw-border-base);
+    color: var(--sw-text-primary);
+    transition: all var(--sw-transition-base);
+}
+.sw-btn-secondary.el-button:hover {
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
+}
+
+/* === 危险按钮（删除操作） === */
+.sw-btn-danger.el-button {
+    background: var(--sw-danger);
+    border-color: var(--sw-danger);
+    color: var(--sw-bg-white);
+    transition: all var(--sw-transition-base);
+}
+.sw-btn-danger.el-button:hover {
+    background: #c1251a;
+    border-color: #c1251a;
+    color: var(--sw-bg-white);
+}
+
+/* === 成功按钮（保存/确认操作） === */
+.sw-btn-success.el-button {
+    background: var(--sw-success);
+    border-color: var(--sw-success);
+    color: var(--sw-bg-white);
+    transition: all var(--sw-transition-base);
+}
+.sw-btn-success.el-button:hover {
+    background: #268e3a;
+    border-color: #268e3a;
+    color: var(--sw-bg-white);
+}
+
+/* === 按钮尺寸统一 === */
+.sw-btn-xs.el-button { padding: 2px 6px; font-size: 12px; }
+.sw-btn-sm.el-button { padding: 4px 8px; font-size: 12px; }
+.sw-btn-md.el-button { padding: 6px 12px; font-size: 14px; }
+.sw-btn-lg.el-button { padding: 8px 16px; font-size: 14px; }
 
 /* 双按钮切换组（视图 / 排序） */
 .dual-toggle-group { display:inline-flex; border:1px solid var(--el-border-color, #dcdfe6); border-radius: var(--radius-sm); overflow:hidden; }
@@ -511,10 +845,80 @@ body {
 .back-to-top:active { transform:translateY(0); }
 
 /* ============================================
-   响应式设计
+   响应式设计优化 - STEREOWOOD Color System
    ============================================ */
+
+/* === 平板设备优化 (768px-1024px) === */
+@media (max-width: 1024px) {
+    .main-container {
+        padding: var(--sw-gap-md) var(--sw-gap-lg) var(--sw-gap-xl);
+    }
+    
+    .artwork-bar,
+    .sw-card {
+        margin: var(--sw-gap-sm) var(--sw-gap-sm) var(--sw-gap-md) var(--sw-gap-sm);
+    }
+}
+
+/* === 移动设备优化 (≤768px) === */
 @media (max-width: 768px) {
-    /* 移除旧自配/原料布局的响应式占位 */
+    .main-container {
+        padding: var(--sw-gap-sm) var(--sw-gap-md) var(--sw-gap-lg);
+    }
+    
+    .artwork-bar,
+    .sw-card {
+        margin: var(--sw-gap-xs) var(--sw-gap-xs) var(--sw-gap-sm) var(--sw-gap-xs);
+    }
+    
+    .color-actions {
+        flex-wrap: wrap;
+        gap: var(--sw-gap-sm);
+    }
+    
+    .category-switch-group {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .category-switch-group .category-switch {
+        flex: 1;
+        text-align: center;
+        min-width: 0;
+    }
+    
+    .scheme-thumbnail,
+    .sw-thumbnail {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .thumb-preview-overlay {
+        width: 280px;
+        height: 280px;
+    }
+}
+
+/* === 小屏手机优化 (≤480px) === */
+@media (max-width: 480px) {
+    .sw-btn-md.el-button,
+    .sw-btn-lg.el-button {
+        padding: var(--sw-gap-sm) var(--sw-gap-md);
+        font-size: 13px;
+    }
+    
+    .artwork-title,
+    .sw-card-title {
+        font-size: 14px;
+    }
+    
+    #backToTopBtn,
+    .sw-float-btn {
+        width: 42px;
+        height: 42px;
+        right: 12px;
+        bottom: 12px;
+    }
 }
 
 /* ============================================

@@ -12,6 +12,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../db/index');
 const { cascadeRenameInFormulas } = require('../services/formula');
+const ImageService = require('../services/ImageService');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -44,11 +45,29 @@ router.get('/mont-marte-colors', (req, res) => {
 });
 
 // POST /api/mont-marte-colors
-router.post('/mont-marte-colors', upload.single('image'), (req, res) => {
+router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
   const { name, category } = req.body;
   const supplier_id = req.body.supplier_id ? Number(req.body.supplier_id) : null;
   const purchase_link_id = req.body.purchase_link_id ? Number(req.body.purchase_link_id) : null;
-  const image_path = req.file ? req.file.filename : null;
+  
+  let image_path = null;
+  // 处理图片上传
+  if (req.file) {
+    try {
+      const processResult = await ImageService.processUploadedImage(
+        req.file.path,
+        path.basename(req.file.filename, path.extname(req.file.filename))
+      );
+      
+      // 使用缩略图作为存储路径
+      image_path = processResult.files.thumbnail;
+      console.log('蒙马特颜色图片处理完成:', processResult);
+    } catch (imageError) {
+      console.error('蒙马特颜色图片处理失败:', imageError);
+      // 图片处理失败时保留原图
+      image_path = req.file.filename;
+    }
+  }
 
   if (!name || !name.trim()) return res.status(400).json({ error: '颜色名称不能为空' });
   if (!category || !category.trim()) return res.status(400).json({ error: '原料类别不能为空' });
@@ -80,20 +99,39 @@ router.post('/mont-marte-colors', upload.single('image'), (req, res) => {
 });
 
 // PUT /api/mont-marte-colors/:id
-router.put('/mont-marte-colors/:id', upload.single('image'), (req, res) => {
+router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) => {
   const colorId = req.params.id;
   const { name, existingImagePath, category } = req.body;
   const supplier_id = req.body.supplier_id ? Number(req.body.supplier_id) : null;
   const purchase_link_id = req.body.purchase_link_id ? Number(req.body.purchase_link_id) : null;
 
-  db.get('SELECT name, image_path FROM mont_marte_colors WHERE id = ?', [colorId], (err, oldData) => {
+  db.get('SELECT name, image_path FROM mont_marte_colors WHERE id = ?', [colorId], async (err, oldData) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!oldData) return res.status(404).json({ error: '颜色不存在' });
 
     let newImagePath;
-    if (req.file) newImagePath = req.file.filename;
-    else if (existingImagePath) newImagePath = existingImagePath;
-    else newImagePath = null;
+    
+    // 处理新上传的图片
+    if (req.file) {
+      try {
+        const processResult = await ImageService.processUploadedImage(
+          req.file.path,
+          path.basename(req.file.filename, path.extname(req.file.filename))
+        );
+        
+        // 使用缩略图作为存储路径
+        newImagePath = processResult.files.thumbnail;
+        console.log('蒙马特颜色编辑图片处理完成:', processResult);
+      } catch (imageError) {
+        console.error('蒙马特颜色图片处理失败:', imageError);
+        // 图片处理失败时保留原图
+        newImagePath = req.file.filename;
+      }
+    } else if (existingImagePath) {
+      newImagePath = existingImagePath;
+    } else {
+      newImagePath = null;
+    }
 
     db.run(
       `UPDATE mont_marte_colors
@@ -105,8 +143,10 @@ router.put('/mont-marte-colors/:id', upload.single('image'), (req, res) => {
 
         // 删除旧图片文件（若替换了）
         if (req.file && oldData.image_path && oldData.image_path !== newImagePath) {
-          const oldPath = path.join(__dirname, '..', 'uploads', oldData.image_path);
-          fs.unlink(oldPath, () => {});
+          ImageService.deleteImageFiles(
+            path.join(__dirname, '..', 'uploads'),
+            oldData.image_path
+          ).catch(() => {}); // 静默删除，不影响主流程
         }
 
         const doRespond = (updatedReferences = 0, warn) => {
@@ -164,12 +204,12 @@ router.delete('/mont-marte-colors/:id', (req, res) => {
 
         // 如果有图片，尝试删除图片文件
         if (row && row.image_path) {
-          const imagePath = path.join(__dirname, '..', 'uploads', row.image_path);
-          fs.unlink(imagePath, (err) => {
-            if (err) {
-              console.error('删除图片文件失败:', err);
-              // 图片删除失败不影响整体操作
-            }
+          ImageService.deleteImageFiles(
+            path.join(__dirname, '..', 'uploads'),
+            row.image_path
+          ).catch((err) => {
+            console.error('删除图片文件失败:', err);
+            // 图片删除失败不影响整体操作
           });
         }
 

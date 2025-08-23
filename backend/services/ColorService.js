@@ -7,6 +7,7 @@
    ========================================================= */
 
 const { db } = require('../db/index')
+const ImageService = require('./ImageService')
 const path = require('path')
 const fs = require('fs')
 
@@ -103,8 +104,10 @@ class ColorService {
           else {
             // 如果图片路径发生变化，删除旧图片
             if (image_path !== oldData.image_path && oldData.image_path) {
-              const oldImagePath = path.join(__dirname, '..', 'uploads', oldData.image_path)
-              fs.unlink(oldImagePath, () => {}) // 静默删除，不影响主流程
+              ImageService.deleteImageFiles(
+                path.join(__dirname, '..', 'uploads'),
+                oldData.image_path
+              ).catch(() => {}) // 静默删除，不影响主流程
             }
             resolve({ id: colorId, ...colorData })
           }
@@ -138,12 +141,13 @@ class ColorService {
         if (err) reject(err)
         else if (this.changes === 0) reject(new Error('颜色不存在'))
         else {
-          // 删除图片文件
+          // 使用ImageService删除图片文件（包括缩略图和预览图）
           if (color.image_path) {
-            const imagePath = path.join(__dirname, '..', 'uploads', color.image_path)
-            fs.unlink(imagePath, (err) => {
-              if (err) console.error('删除图片文件失败:', err)
-              else console.log('旧图片已删除:', color.image_path)
+            ImageService.deleteImageFiles(
+              path.join(__dirname, '..', 'uploads'),
+              color.image_path
+            ).catch(err => {
+              console.error('删除图片文件失败:', err)
             })
           }
           resolve({
