@@ -21,13 +21,37 @@ const helpers = {
     return `${baseURL || window.location.origin}/${withPrefix}`;
     },
     /**
-     * 格式化日期为中文格式
+     * 格式化日期
      * @param {String} dateString - 日期字符串
+     * @param {String} format - 格式类型: 'locale'(本地化格式) 或 'simple'(YYYY-MM-DD HH:MM)
      * @returns {String} 格式化后的日期
      */
-    formatDate(dateString) {
+    formatDate(dateString, format = 'simple') {
         if (!dateString) return '未知';
-        return new Date(dateString).toLocaleString('zh-CN');
+        
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '未知';
+        
+        if (format === 'locale') {
+            return date.toLocaleString('zh-CN');
+        } else {
+            // simple format: YYYY-MM-DD HH:MM
+            const pad = (n) => (n < 10 ? '0' + n : '' + n);
+            return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+    },
+    
+    /**
+     * 格式化作品标题
+     * @param {Object} artwork - 作品对象
+     * @returns {String} 格式化后的标题
+     */
+    formatArtworkTitle(artwork) {
+        if (!artwork) return '';
+        const code = artwork.code || artwork.no || '';
+        const name = artwork.name || artwork.title || '';
+        if (code && name) return `${code}-${name}`;
+        return code || name || `作品#${artwork.id}`;
     },
     
     /**

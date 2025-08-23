@@ -56,7 +56,7 @@ const CustomColorsComponent = {
                                             </div>
                                         </div>
                                         <div class="meta-text">分类：{{ categoryName(color) }}</div>
-                                        <div class="meta-text" v-if="color.updated_at">更新：{{ formatDate(color.updated_at) }}</div>
+                                        <div class="meta-text" v-if="color.updated_at">更新：{{ $helpers.formatDate(color.updated_at) }}</div>
                                         <div class="meta-text">适用层：
                                             <template v-if="usageGroups(color).length">
                                                 <span class="usage-chips">
@@ -159,7 +159,7 @@ const CustomColorsComponent = {
                                     <span>保留</span>
                                 </label>
                                 <span class="code" @click="focusCustomColor(rec.color_code)">{{ rec.color_code }}</span>
-                                <span class="meta" v-if="rec.updated_at">{{ formatDate(rec.updated_at) }}</span>
+                                <span class="meta" v-if="rec.updated_at">{{ $helpers.formatDate(rec.updated_at) }}</span>
                                 <span class="ref-flag" v-if="isColorReferenced(rec)">被引用</span>
                             </div>
                         </div>
@@ -341,19 +341,6 @@ const CustomColorsComponent = {
                 }
             });
         },
-        formatDate(ts) {
-            if (!ts) return '';
-            const d = new Date(ts);
-            const p = n => n < 10 ? '0'+n : ''+n;
-            return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-        },
-        artworkTitle(art) {
-            if (!art) return '';
-            const code = art.code || art.no || '';
-            const name = art.name || art.title || '';
-            if (code && name) return `${code}-${name}`;
-            return code || name || `作品#${art.id}`;
-        },
         usageGroups(color) {
             if (!color) return [];
             const code = color.color_code;
@@ -372,7 +359,7 @@ const CustomColorsComponent = {
                     if (layers.length) {
                         layers.sort((x,y)=>x-y);
                         const schemeName = s.name || s.scheme_name || '-';
-                        const header = `${this.artworkTitle(a)}-[${schemeName}]`;
+                        const header = `${this.$helpers.formatArtworkTitle(a)}-[${schemeName}]`;
                         const suffix = layers.map(n=>`(${n})`).join('');
                         groups.push({
                             display: header + suffix,

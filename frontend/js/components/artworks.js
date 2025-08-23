@@ -23,7 +23,7 @@ const ArtworksComponent = {
         <!-- 母bar：作品 -->
   <div v-for="art in artworks" :key="art.id" class="artwork-bar" :data-art-id="art.id" :data-focus-single="art._swFocusSingle ? 'true' : null">
           <div class="artwork-header">
-            <div class="artwork-title">{{ artworkTitle(art) }}</div>
+            <div class="artwork-title">{{ $helpers.formatArtworkTitle(art) }}</div>
             <div class="color-actions">
               <el-button size="small" @click="addScheme(art)"><el-icon><Plus /></el-icon> 新增配色方案</el-button>
               <template v-if="(art.schemes||[]).length>0">
@@ -48,7 +48,7 @@ const ArtworksComponent = {
                 <div style="flex: 1;">
                   <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
                   <div class="meta-text">层数：{{ (scheme.layers || []).length }}</div>
-                  <div class="meta-text" v-if="scheme.updated_at">更新：{{ formatDate(scheme.updated_at) }}</div>
+                  <div class="meta-text" v-if="scheme.updated_at">更新：{{ $helpers.formatDate(scheme.updated_at) }}</div>
                 </div>
                 <div class="color-actions">
                   <el-button size="small" type="primary" @click="editScheme(art, scheme)">
@@ -358,7 +358,7 @@ const ArtworksComponent = {
       const raw = (this.globalData.artworks?.value || []).slice();
       // 排序
       if (this.sortMode === 'name') {
-        raw.sort((a,b)=>this.artworkTitle(a).localeCompare(this.artworkTitle(b)));
+        raw.sort((a,b)=>this.$helpers.formatArtworkTitle(a).localeCompare(this.$helpers.formatArtworkTitle(b)));
       } else {
         raw.sort((a,b)=> new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
       }
@@ -432,10 +432,10 @@ const ArtworksComponent = {
     editingArtTitle() {
       // 优先从 schemeEditing.art 取，回退按 editingArtId 查找
       if (this.schemeEditing && this.schemeEditing.art) {
-        return this.artworkTitle(this.schemeEditing.art);
+        return this.$helpers.formatArtworkTitle(this.schemeEditing.art);
       }
       const art = this.artworks.find(a => a.id === this.editingArtId);
-      return art ? this.artworkTitle(art) : '';
+      return art ? this.$helpers.formatArtworkTitle(art) : '';
     }
   },
   methods: {
@@ -448,7 +448,7 @@ const ArtworksComponent = {
       return c;
     },
     displaySchemeName(art, scheme) {
-      const title = this.artworkTitle(art);
+      const title = this.$helpers.formatArtworkTitle(art);
       const sn = (scheme && (scheme.name || scheme.scheme_name)) || '-';
       return `${title}-[${sn}]`;
     },
@@ -458,19 +458,6 @@ const ArtworksComponent = {
         this.globalData.loadCustomColors(),
         this.globalData.loadArtworks(),
       ]);
-    },
-    formatDate(ts) {
-      if (!ts) return '';
-      const d = new Date(ts);
-      const p = n => (n < 10 ? '0' + n : '' + n);
-      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-    },
-    artworkTitle(art) {
-      // 兼容 code/name/title 三种字段
-      const code = art.code || art.no || '';
-      const name = art.name || art.title || '';
-      if (code && name) return `${code}-${name}`;
-      return code || name || `作品 #${art.id}`;
     },
     toggleViewMode() {
   this.viewMode = this.viewMode === 'byLayer' ? 'byColor' : 'byLayer';
@@ -984,7 +971,7 @@ const ArtworksComponent = {
     , async deleteArtwork(art) {
       if ((art.schemes||[]).length > 0) return; // 保险拦截
       const ok = await this.$helpers.doubleDangerConfirm({
-        firstMessage: `确定要删除作品 “${this.artworkTitle(art)}” 吗？`,
+        firstMessage: `确定要删除作品 "${this.$helpers.formatArtworkTitle(art)}" 吗？`,
         secondMessage: '删除后将无法恢复，确认最终删除？',
         secondConfirmText: '永久删除'
       });

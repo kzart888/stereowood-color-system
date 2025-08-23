@@ -39,12 +39,12 @@ const MontMarteComponent = {
                                         </div>
                                     </div>
                                     <div style="display:flex; gap:12px; padding:6px 4px 4px;">
-                                                            <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, buildImageURL(color.image_path))">
+                                                            <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, color.image_path))">
                                                                 <template v-if="!color.image_path">未上传图片</template>
-                                                                <img v-else :src="buildImageURL(color.image_path)" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                                                                <img v-else :src="$helpers.buildUploadURL(baseURL, color.image_path)" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                                                             </div>
                                         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
-                                            <div class="meta-text" v-if="color.updated_at">更新：{{ formatDate(color.updated_at) }}</div>
+                                            <div class="meta-text" v-if="color.updated_at">更新：{{ $helpers.formatDate(color.updated_at) }}</div>
                                             <div class="meta-text">分类：<template v-if="color.category">{{ mapCategoryLabel(color.category) }}</template><template v-else>（未填）</template></div>
                                             <div class="meta-text">供应商：<template v-if="color.supplier_name">{{ color.supplier_name }}</template><template v-else>（未填）</template></div>
                                             <div class="meta-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="color.purchase_link_url || ''">采购：<template v-if="color.purchase_link_url">{{ color.purchase_link_url }}</template><template v-else>（未填）</template></div>
@@ -324,19 +324,12 @@ const MontMarteComponent = {
             });
             return Array.from(set).sort((a,b)=>a.localeCompare(b));
         },
-    buildImageURL(raw) { return this.$helpers ? this.$helpers.buildUploadURL(this.baseURL, raw) : ''; },
         onThumbError(e) {
             // 若加载失败，移除背景以显示占位文本
             const el = e.currentTarget;
             if (el) {
                 el.classList.add('no-image');
             }
-        },
-        formatDate(ts) {
-            if (!ts) return '';
-            const d = new Date(ts);
-            const pad = (n) => (n < 10 ? '0' + n : '' + n);
-            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
         },
 
         async refreshDictionaries() {
@@ -356,7 +349,7 @@ const MontMarteComponent = {
             this.form.supplier_id = row.supplier_id || null;
             this.form.purchase_link_id = row.purchase_link_id || null;
             this.form.imageFile = null;
-            this.form.imagePreview = row.image_path ? this.buildImageURL(row.image_path) : null;
+            this.form.imagePreview = row.image_path ? this.$helpers.buildUploadURL(this.baseURL, row.image_path) : null;
             this.showDialog = true;
         },
         closeDialog() {
