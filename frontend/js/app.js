@@ -218,6 +218,14 @@ if (typeof FormulaEditorComponent !== 'undefined') {
     console.error('FormulaEditorComponent 未定义');
 }
 
+// 添加冲突解决组件注册
+if (typeof ConflictResolver !== 'undefined') {
+    app.component('conflict-resolver', ConflictResolver);
+    console.log('冲突解决组件已注册');
+} else {
+    console.error('ConflictResolver 未定义');
+}
+
 // 全局计算器服务封装：提供 $calc.open(code, formula, triggerEl)
 if (window.$formulaCalc) {
     app.config.globalProperties.$calc = {

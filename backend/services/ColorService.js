@@ -77,15 +77,25 @@ class ColorService {
   }
 
   /**
-   * 更新自配颜色
+   * 更新自配颜色（带乐观锁）
    */
-  static async updateColor(colorId, colorData) {
+  static async updateColor(colorId, colorData, expectedVersion = null) {
     const { category_id, color_code, image_path, formula, applicable_layers } = colorData
     
     // 先获取旧数据
     const oldData = await this.getColorById(colorId)
     if (!oldData) {
       throw new Error('自配颜色不存在')
+    }
+
+    // 乐观锁检查
+    if (expectedVersion !== null && oldData.version !== expectedVersion) {
+      const error = new Error('数据已被其他用户修改，请刷新后重试')
+      error.code = 'VERSION_CONFLICT'
+      error.expectedVersion = expectedVersion
+      error.actualVersion = oldData.version
+      error.latestData = oldData
+      throw error
     }
 
     return new Promise((resolve, reject) => {
@@ -96,6 +106,7 @@ class ColorService {
             image_path = ?, 
             formula = ?, 
             applicable_layers = ?, 
+            version = version + 1,
             updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [category_id, color_code, image_path, formula, applicable_layers, colorId],

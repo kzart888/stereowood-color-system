@@ -192,6 +192,22 @@ async function runMigrations() {
       });
     }
 
+    // 并发控制优化：添加版本字段到关键表
+    if (!(await columnExists('custom_colors', 'version'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN version INTEGER DEFAULT 1`);
+      console.log('[迁移] custom_colors 版本字段添加完成');
+    }
+    
+    if (!(await columnExists('color_schemes', 'version'))) {
+      await runSafe(`ALTER TABLE color_schemes ADD COLUMN version INTEGER DEFAULT 1`);
+      console.log('[迁移] color_schemes 版本字段添加完成');
+    }
+    
+    if (!(await columnExists('mont_marte_colors', 'version'))) {
+      await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN version INTEGER DEFAULT 1`);
+      console.log('[迁移] mont_marte_colors 版本字段添加完成');
+    }
+
     console.log('数据库迁移完成 (db/migrations.js)');
   } catch (e) {
     console.error('数据库迁移失败:', e);

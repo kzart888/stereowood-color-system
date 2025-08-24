@@ -105,7 +105,8 @@ router.delete('/custom-colors/:id', async (req, res) => {
 router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
   try {
     const colorId = req.params.id;
-    const { category_id, color_code, formula, applicable_layers, existingImagePath } = req.body;
+    const { category_id, color_code, formula, applicable_layers, existingImagePath, version } = req.body;
+    const expectedVersion = version ? parseInt(version) : null;
     let imagePath = existingImagePath || null;
 
     // 处理新上传的图片
@@ -139,12 +140,20 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
       applicable_layers
     };
 
-    const result = await ColorService.updateColor(colorId, colorData);
+    const result = await ColorService.updateColor(colorId, colorData, expectedVersion);
     // 返回更新后的完整颜色信息
     const updatedColor = await ColorService.getColorById(colorId);
     res.json(updatedColor);
   } catch (error) {
-    if (error.message === '自配颜色不存在') {
+    if (error.code === 'VERSION_CONFLICT') {
+      res.status(409).json({ 
+        error: error.message, 
+        code: 'VERSION_CONFLICT',
+        expectedVersion: error.expectedVersion,
+        actualVersion: error.actualVersion,
+        latestData: error.latestData
+      });
+    } else if (error.message === '自配颜色不存在') {
       res.status(404).json({ error: error.message });
     } else {
       res.status(400).json({ error: error.message });

@@ -176,6 +176,15 @@ const CustomColorsComponent = {
                     </el-tooltip>
                 </template>
             </el-dialog>
+
+            <!-- 冲突解决对话框 -->
+            <conflict-resolver
+                v-model:visible="showConflictDialog"
+                :conflict-data="conflictData"
+                :my-data="getMyFormData()"
+                :latest-data="conflictData?.latestData || {}"
+                @resolve="handleConflictResolve"
+            />
         </div>
     `,
     
@@ -210,7 +219,11 @@ const CustomColorsComponent = {
                 ]
             },
             _originalColorFormSnapshot: null,
-            _escHandler: null
+            _escHandler: null,
+            // 冲突解决
+            showConflictDialog: false,
+            conflictData: null,
+            pendingFormData: null
         };
     },
     
@@ -601,6 +614,10 @@ const CustomColorsComponent = {
                 }
                 
                 if (this.editingColor) {
+                    // 添加版本信息用于乐观锁
+                    if (this.editingColor.version) {
+                        formData.append('version', this.editingColor.version);
+                    }
                     await api.customColors.update(this.editingColor.id, formData);
                     ElementPlus.ElMessage.success('修改成功');
                 } else {
@@ -626,7 +643,12 @@ const CustomColorsComponent = {
                     }
                 }
             } catch (error) {
-                ElementPlus.ElMessage.error('操作失败');
+                if (error.response?.status === 409 && error.response?.data?.code === 'VERSION_CONFLICT') {
+                    // 处理版本冲突
+                    this.handleVersionConflict(error.response.data, formData);
+                } else {
+                    ElementPlus.ElMessage.error('操作失败');
+                }
             }
         },
         
@@ -835,6 +857,100 @@ const CustomColorsComponent = {
             } finally {
                 this.mergingPending = false;
             }
+        },
+
+        // 冲突处理相关方法
+        handleVersionConflict(conflictData, formData) {
+            this.conflictData = conflictData;
+            this.pendingFormData = formData;
+            this.showConflictDialog = true;
+        },
+
+        getMyFormData() {
+            const categoryName = this.categories.find(c => c.id == this.form.category_id)?.name || '其他';
+            return {
+                color_code: this.form.color_code,
+                formula: this.form.formula,
+                category_name: categoryName,
+                image_path: this.form.imageFile ? '新上传图片' : null
+            };
+        },
+
+        async handleConflictResolve(resolution) {
+            const { action } = resolution;
+            this.showConflictDialog = false;
+
+            try {
+                switch (action) {
+                    case 'overwrite':
+                        // 强制覆盖：忽略版本检查
+                        await this.forceUpdateColor();
+                        break;
+                    
+                    case 'merge':
+                        // 手动合并：用最新数据填充表单
+                        this.mergeLatestData();
+                        break;
+                    
+                    case 'refresh':
+                        // 刷新数据：丢弃修改，重新加载
+                        await this.refreshColorData();
+                        break;
+                }
+            } catch (error) {
+                ElementPlus.ElMessage.error('冲突处理失败');
+            }
+
+            // 清理状态
+            this.conflictData = null;
+            this.pendingFormData = null;
+        },
+
+        async forceUpdateColor() {
+            if (!this.pendingFormData || !this.editingColor) return;
+            
+            try {
+                // 移除版本检查，强制更新
+                this.pendingFormData.delete('version');
+                await api.customColors.update(this.editingColor.id, this.pendingFormData);
+                
+                ElementPlus.ElMessage.success('强制覆盖成功');
+                this.showAddDialog = false;
+                this.resetForm();
+                await this.globalData.loadCustomColors();
+                await this.globalData.loadArtworks();
+            } catch (error) {
+                ElementPlus.ElMessage.error('强制覆盖失败');
+            }
+        },
+
+        mergeLatestData() {
+            if (!this.conflictData?.latestData) return;
+            
+            const latest = this.conflictData.latestData;
+            
+            // 用最新数据更新表单，但保持用户的图片修改
+            const keepImageChange = this.form.imageFile !== null;
+            
+            this.form.color_code = latest.color_code;
+            this.form.formula = latest.formula;
+            this.form.category_id = latest.category_id;
+            
+            if (!keepImageChange && latest.image_path) {
+                this.form.imagePreview = this.$helpers.buildUploadURL(this.baseURL, latest.image_path);
+            }
+            
+            // 更新编辑状态为最新版本
+            this.editingColor = { ...this.editingColor, ...latest };
+            
+            ElementPlus.ElMessage.info('已用最新数据填充表单，请检查后重新保存');
+        },
+
+        async refreshColorData() {
+            await this.globalData.loadCustomColors();
+            this.showAddDialog = false;
+            this.resetForm();
+            ElementPlus.ElMessage.info('已刷新到最新数据');
         }
     }
 };
