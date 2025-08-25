@@ -8,10 +8,14 @@ const MontMarteComponent = {
         },
         template: `
                 <div>
-                        <div class="category-switch-group" role="tablist" aria-label="原料类别筛选">
-                            <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
-                            <button v-for="cat in materialCategories" :key="cat.value" type="button" class="category-switch" :class="{active: activeCategory===cat.value}" @click="activeCategory=cat.value" role="tab" :aria-selected="activeCategory===cat.value">{{ cat.label }}</button>
-                        </div>
+                    <CategoryManager
+                        :categories="materialCategories"
+                        :active-category="activeCategory"
+                        category-type="material_categories"
+                        :can-delete="canDeleteMaterialCategory"
+                        @category-change="activeCategory = $event"
+                        @categories-updated="handleMaterialCategoriesUpdated"
+                    />
                         <div v-if="loading" class="loading">
                                 <el-icon class="is-loading"><Loading /></el-icon> 加载中...
                         </div>
@@ -201,11 +205,24 @@ const MontMarteComponent = {
     
     // 注入全局数据
     inject: ['globalData'],
+    
+    // 子组件
+    components: {
+        CategoryManager: CategoryManagerComponent
+    },
+    
     data() {
         return {
             // 当前原料类别筛选；'all' 表示不过滤
             activeCategory: 'all',
             loading: false,
+            materialCategories: [ // 动态加载的分类列表，默认值防止初始化错误
+                { value: 'acrylic', label: '丙烯色' },
+                { value: 'essence', label: '色精' },
+                { value: 'water', label: '水性漆' },
+                { value: 'oil', label: '油性漆' },
+                { value: 'other', label: '其他' }
+            ],
             showDialog: false,
             editing: null, // 当前编辑的记录
 
@@ -242,15 +259,6 @@ const MontMarteComponent = {
             }
             return list;
         },
-        materialCategories() {
-            return [
-                { value: 'acrylic', label: '丙烯色' },
-                { value: 'essence', label: '色精' },
-                { value: 'water', label: '水性漆' },
-                { value: 'oil', label: '油性漆' },
-                { value: 'other', label: '其他' }
-            ];
-        },
         filteredColors() {
             let list = (this.activeCategory==='all') ? this.montMarteColors : this.montMarteColors.filter(c => (c.category||'') === this.activeCategory);
             const q = (this.$root && this.$root.globalSearchQuery || '').trim().toLowerCase();
@@ -268,7 +276,50 @@ const MontMarteComponent = {
         }
     },
     methods: {
+        // 加载颜料分类
+        async loadMaterialCategories() {
+            try {
+                const response = await fetch('/api/material_categories');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    this.materialCategories = data;
+                } else {
+                    throw new Error('API返回数据格式错误');
+                }
+            } catch (error) {
+                console.error('加载颜料分类失败:', error);
+                // 使用默认分类作为后备
+                this.materialCategories = [
+                    { value: 'acrylic', label: '丙烯色' },
+                    { value: 'essence', label: '色精' },
+                    { value: 'water', label: '水性漆' },
+                    { value: 'oil', label: '油性漆' },
+                    { value: 'other', label: '其他' }
+                ];
+            }
+        },
+        
+        // 处理分类更新事件
+        async handleMaterialCategoriesUpdated() {
+            await this.loadMaterialCategories();
+            // 重新加载颜料数据，因为可能有分类变更影响
+            await this.globalData.loadMontMarteColors();
+        },
+        
+        // 检查分类是否可以删除
+        canDeleteMaterialCategory(category) {
+            const categoryValue = category.value;
+            const count = this.montMarteColors.filter(color => color.category === categoryValue).length;
+            return count === 0;
+        },
+        
         mapCategoryLabel(val) {
+            if (!this.materialCategories || !Array.isArray(this.materialCategories)) {
+                return val;
+            }
             const f = this.materialCategories.find(c=>c.value===val);
             return f?f.label:val;
         },
@@ -589,5 +640,10 @@ const MontMarteComponent = {
             this._originalFormSnapshot = null;
             this._unbindEsc();
         }
+    },
+    
+    // 组件挂载时加载分类数据
+    async mounted() {
+        await this.loadMaterialCategories();
     }
 };

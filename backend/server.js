@@ -892,8 +892,10 @@ db.run('INSERT OR IGNORE INTO color_categories (code, name) VALUES (?, ?)', ['SJ
   if (err) console.warn('确保色精色系存在时出错:', err.message);
 });
 
-// 更新自配颜色
+// 更新自配颜色 - 已迁移到 routes/custom-colors.js (带版本控制)
+/*
 app.put('/api/custom-colors/:id', upload.single('image'), (req, res) => {
+    // 此路由已废弃，现在使用 routes/custom-colors.js 中的路由（支持乐观锁版本控制）
     const colorId = req.params.id;
     const { category_id, color_code, formula, applicable_layers, existingImagePath } = req.body;
     const imagePath = req.file ? req.file.filename : existingImagePath || null;
@@ -929,6 +931,7 @@ app.put('/api/custom-colors/:id', upload.single('image'), (req, res) => {
         );
     });
 });
+*/
 
 // 强制合并自配色：更新引用后删除重复 (Phase A)
 // POST /api/custom-colors/force-merge  Body: { keepId, removeIds:[], signature? }
@@ -1088,3 +1091,21 @@ app.post('/api/custom-colors/force-merge', (req, res) => {
   });
 });
 // ========== /强制合并 ==========
+
+// ==================== 新路由挂载 ====================
+// 挂载模块化路由（带版本控制和冲突处理）
+const customColorsRouter = require('./routes/custom-colors');
+const artworksRouter = require('./routes/artworks');
+const montMarteRouter = require('./routes/mont-marte-colors');
+const categoriesRouter = require('./routes/categories');
+const materialCategoriesRouter = require('./routes/material-categories');
+const classificationRulesRouter = require('./routes/classification-rules');
+
+app.use('/api', customColorsRouter);
+app.use('/api', artworksRouter);
+app.use('/api', montMarteRouter);
+app.use('/api', categoriesRouter);
+app.use('/api', materialCategoriesRouter);
+app.use('/api', classificationRulesRouter);
+
+console.log('✅ 模块化路由已挂载 (带并发冲突控制及分类管理)');

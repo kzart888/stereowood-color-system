@@ -208,9 +208,221 @@ async function runMigrations() {
       console.log('[迁移] mont_marte_colors 版本字段添加完成');
     }
 
+    // 添加颜料分类标签映射表
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS material_category_labels (
+        value TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[迁移] material_category_labels 表创建完成');
+
+    // 添加排序字段到color_categories表
+    if (!(await columnExists('color_categories', 'order_index'))) {
+      await runSafe(`ALTER TABLE color_categories ADD COLUMN order_index INTEGER NULL`);
+      console.log('[迁移] color_categories order_index 字段添加完成');
+    }
+    
+    // 添加排序字段到material_category_labels表
+    if (!(await columnExists('material_category_labels', 'order_index'))) {
+      await runSafe(`ALTER TABLE material_category_labels ADD COLUMN order_index INTEGER NULL`);
+      console.log('[迁移] material_category_labels order_index 字段添加完成');
+    }
+
+    // 规则引擎：分类规则表
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS category_rules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rule_name TEXT NOT NULL UNIQUE,
+        rule_type TEXT NOT NULL, -- 'color_code_generation' | 'auto_classification'
+        source_type TEXT NOT NULL, -- 'category_code' | 'color_name_pattern' | 'manual'
+        target_category_id INTEGER NOT NULL,
+        pattern TEXT, -- 正则表达式模式或匹配规则
+        priority INTEGER DEFAULT 100, -- 优先级，数值越小越优先
+        is_active BOOLEAN DEFAULT true,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (target_category_id) REFERENCES color_categories (id) ON DELETE CASCADE
+      )
+    `);
+    console.log('[迁移] category_rules 分类规则表创建完成');
+
+    // 规则引擎：分类映射表（用于处理分类代码变更历史）
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS category_mappings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        old_code TEXT NOT NULL,
+        new_code TEXT NOT NULL,
+        category_id INTEGER NOT NULL,
+        mapping_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT true,
+        notes TEXT,
+        FOREIGN KEY (category_id) REFERENCES color_categories (id) ON DELETE CASCADE
+      )
+    `);
+    console.log('[迁移] category_mappings 分类映射表创建完成');
+
+    // 规则引擎：颜色分类日志表（用于审计自动分类结果）
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS color_classification_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        color_id INTEGER NOT NULL,
+        original_category_id INTEGER,
+        new_category_id INTEGER,
+        classification_method TEXT NOT NULL, -- 'rule_engine' | 'manual' | 'migration'
+        rule_id INTEGER, -- 如果是规则引擎分类，记录使用的规则ID
+        confidence_score REAL, -- 置信度分数(0-1)
+        color_name TEXT,
+        color_code TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (color_id) REFERENCES custom_colors (id) ON DELETE CASCADE,
+        FOREIGN KEY (original_category_id) REFERENCES color_categories (id),
+        FOREIGN KEY (new_category_id) REFERENCES color_categories (id),
+        FOREIGN KEY (rule_id) REFERENCES category_rules (id)
+      )
+    `);
+    console.log('[迁移] color_classification_logs 分类日志表创建完成');
+
+    // 初始化默认分类规则（幂等操作）
+    await initializeDefaultRules();
+
+    // 修复"其他"分类代码格式（OTHER -> OT）
+    await fixOtherCategoryCode();
+
     console.log('数据库迁移完成 (db/migrations.js)');
   } catch (e) {
     console.error('数据库迁移失败:', e);
+  }
+}
+
+// 初始化默认分类规则
+async function initializeDefaultRules() {
+  try {
+    console.log('[迁移] 开始初始化默认分类规则...');
+    
+    // 获取所有现有分类
+    const categories = await new Promise((resolve, reject) => {
+      db.all('SELECT * FROM color_categories ORDER BY code ASC', (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+    
+    // 为每个分类创建默认规则（如果不存在）
+    for (const category of categories) {
+      // 1. 编号生成规则
+      const codeGenRuleName = `${category.code}_编号生成`;
+      await runSafe(`
+        INSERT OR IGNORE INTO category_rules 
+        (rule_name, rule_type, source_type, target_category_id, pattern, priority, is_active)
+        VALUES (?, 'color_code_generation', 'category_code', ?, ?, 10, true)
+      `, [codeGenRuleName, category.id, `${category.code}{number}`]);
+      
+      // 2. 自动分类规则（基于分类代码前缀）
+      const autoClassifyRuleName = `${category.code}_自动分类`;
+      await runSafe(`
+        INSERT OR IGNORE INTO category_rules 
+        (rule_name, rule_type, source_type, target_category_id, pattern, priority, is_active)
+        VALUES (?, 'auto_classification', 'category_code', ?, ?, 20, true)
+      `, [autoClassifyRuleName, category.id, category.code]);
+    }
+    
+    // 添加一些通用的名称模式规则
+    const commonRules = [
+      {
+        name: '蓝色系_名称模式',
+        type: 'auto_classification',
+        sourceType: 'color_name_pattern',
+        pattern: '(蓝|blue|BU|bu)',
+        categoryCode: 'BU',
+        priority: 30
+      },
+      {
+        name: '绿色系_名称模式',
+        type: 'auto_classification',
+        sourceType: 'color_name_pattern',
+        pattern: '(绿|green|GN|gn)',
+        categoryCode: 'GN',
+        priority: 30
+      },
+      {
+        name: '红色系_名称模式',
+        type: 'auto_classification',
+        sourceType: 'color_name_pattern',
+        pattern: '(红|red|RD|rd)',
+        categoryCode: 'RD',
+        priority: 30
+      },
+      {
+        name: '棕色系_名称模式',
+        type: 'auto_classification',
+        sourceType: 'color_name_pattern',
+        pattern: '(棕|咖|褐|brown|BR|br)',
+        categoryCode: 'BR',
+        priority: 30
+      },
+      {
+        name: '黄色系_名称模式',
+        type: 'auto_classification',
+        sourceType: 'color_name_pattern',
+        pattern: '(黄|金|yellow|YL|yl)',
+        categoryCode: 'YL',
+        priority: 30
+      }
+    ];
+    
+    for (const rule of commonRules) {
+      // 查找对应的分类ID
+      const category = categories.find(c => c.code === rule.categoryCode);
+      if (category) {
+        await runSafe(`
+          INSERT OR IGNORE INTO category_rules 
+          (rule_name, rule_type, source_type, target_category_id, pattern, priority, is_active)
+          VALUES (?, ?, ?, ?, ?, ?, true)
+        `, [rule.name, rule.type, rule.sourceType, category.id, rule.pattern, rule.priority]);
+      }
+    }
+    
+    // 统计初始化的规则数量
+    const ruleCount = await new Promise((resolve, reject) => {
+      db.get('SELECT COUNT(*) as count FROM category_rules', (err, row) => {
+        if (err) return reject(err);
+        resolve(row.count);
+      });
+    });
+    
+    console.log(`[迁移] 默认分类规则初始化完成，共 ${ruleCount} 条规则`);
+    
+  } catch (error) {
+    console.error('[迁移] 初始化默认规则失败:', error);
+  }
+}
+
+// 修复"其他"分类代码格式
+async function fixOtherCategoryCode() {
+  try {
+    console.log('[迁移] 开始修复"其他"分类代码格式...');
+    
+    // 检查是否存在代码为"OTHER"的分类
+    const otherCategory = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM color_categories WHERE code = ?', ['OTHER'], (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+    
+    if (otherCategory) {
+      // 更新代码从 OTHER 到 OT
+      await runSafe('UPDATE color_categories SET code = ? WHERE code = ?', ['OT', 'OTHER']);
+      console.log('[迁移] "其他"分类代码已从 OTHER 更新为 OT');
+    } else {
+      console.log('[迁移] 未找到代码为 OTHER 的分类，跳过修复');
+    }
+    
+  } catch (error) {
+    console.error('[迁移] 修复"其他"分类代码失败:', error);
   }
 }
 

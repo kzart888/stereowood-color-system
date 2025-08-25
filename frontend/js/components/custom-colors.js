@@ -8,19 +8,14 @@ const CustomColorsComponent = {
         },
         template: `
                 <div>
-                                                <div class="category-switch-group" role="tablist" aria-label="颜色分类筛选">
-                                                        <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
-                                                        <button 
-                                                            v-for="cat in orderedCategoriesWithOther" 
-                                                            :key="cat.id || 'other'"
-                                                            type="button"
-                                                            class="category-switch"
-                                                            :class="{active: activeCategory===String(cat.id || 'other')}"
-                                                            @click="activeCategory=String(cat.id || 'other')"
-                                                            role="tab"
-                                                            :aria-selected="activeCategory===String(cat.id || 'other')"
-                                                        >{{ cat.name }}</button>
-                                                </div>
+                    <CategoryManager
+                        :categories="orderedCategoriesWithOther"
+                        :active-category="activeCategory"
+                        category-type="categories"
+                        :can-delete="canDeleteCategory"
+                        @category-change="activeCategory = $event"
+                        @categories-updated="handleCategoriesUpdated"
+                    />
                         <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
                         <div v-else>
                             <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角“新自配色”添加</div>
@@ -96,7 +91,6 @@ const CustomColorsComponent = {
                             <el-input 
                                 v-model="form.color_code" 
                                 placeholder="例如: BU001"
-                                @input="onColorCodeInput"
                                 class="short-inline-input"
                             ></el-input>
                             <span v-if="colorCodeDuplicate" class="dup-msg">编号重复</span>
@@ -191,6 +185,11 @@ const CustomColorsComponent = {
     // 注入全局数据
     inject: ['globalData'],
     
+    // 子组件
+    components: {
+        CategoryManager: CategoryManagerComponent
+    },
+    
     data() {
         return {
             loading: false,
@@ -211,6 +210,10 @@ const CustomColorsComponent = {
                 formula: '',
                 imageFile: null,
                 imagePreview: null
+            },
+            // 智能判断控制标志
+            autoJudgeFlags: {
+                categoryToCode: true  // 色系改变自动生成编号
             },
             rules: {
                 category_id: [{ required: true, message: '请选择分类', trigger: 'change' }],
@@ -264,8 +267,8 @@ const CustomColorsComponent = {
                 const yeIndex = result.findIndex(c=>c.code==='YE');
                 if (yeIndex !== -1) result.splice(yeIndex+1,0,sjCat); else result.push(sjCat);
             }
-            // 添加“其他”
-            result.push({ id: 'other', name: '其他', code: 'OTHER' });
+            // 添加"其他" - 给它一个很大的order_index以便参与排序
+            result.push({ id: 'other', name: '其他', code: 'OTHER', order_index: 9999 });
             return result;
         },
         // 供对话框选择使用（不包含自动追加的“其他”逻辑重复 — 这里仍附带 other 选项以便选择）
@@ -330,6 +333,26 @@ const CustomColorsComponent = {
     },
     
     methods: {
+        // 处理分类更新事件
+        async handleCategoriesUpdated() {
+            // 重新加载分类数据
+            await this.globalData.loadCategories();
+            // 重新加载自配色数据，因为可能有分类变更影响
+            await this.globalData.loadCustomColors();
+        },
+        
+        // 检查分类是否可以删除（用于CategoryManager）
+        canDeleteCategory(category) {
+            // "其他"分类不能删除
+            if (category.id === 'other' || category.value === 'other') {
+                return false;
+            }
+            
+            const categoryId = category.id;
+            const count = this.customColors.filter(color => color.category_id === categoryId).length;
+            return count === 0;
+        },
+        
         setColorItemRef(color) {
             return (el) => {
                 if (el) this._colorItemRefs.set(color.color_code, el); else this._colorItemRefs.delete(color.color_code);
@@ -429,8 +452,8 @@ const CustomColorsComponent = {
                 } else {
                     const categoryId = parseInt(this.activeCategory);
                     this.form.category_id = categoryId;
-                    // 自动生成颜色编号
-                    this.generateColorCode(categoryId);
+                    this.form.color_code = '';
+                    // 不在这里生成编号，让onOpenColorDialog中的智能判断处理
                 }
             } else {
                 // 在"全部"标签页时，分类保持为空
@@ -446,9 +469,13 @@ const CustomColorsComponent = {
             // 打开对话框
             this.showAddDialog = true;
         },
-        onOpenColorDialog() {
+        async onOpenColorDialog() {
             // 复用原逻辑
-            this.initForm();
+            await this.initForm();
+            // 重置自动判断标志 - 每次打开对话框时重新启用
+            this.autoJudgeFlags = {
+                categoryToCode: true  // 色系改变自动生成编号
+            };
             // 建立初始快照
             this._originalColorFormSnapshot = JSON.stringify(this._normalizedColorForm());
             // 绑定 ESC
@@ -494,44 +521,7 @@ const CustomColorsComponent = {
             }
         },
         
-        // 颜色编号输入时智能识别分类
-        onColorCodeInput(value) {
-            // 规则：
-            // 1. 编辑模式不自动分类
-            // 2. 当前分类若为 "色精"(SJ) 或 "其他" 则不再自动切换
-            // 3. 若首字符为 酒/沙/红/黑/蓝 => 设置分类为 色精(SJ)
-            // 4. 否则按前两位字母 BU GN RD VT YE 识别；无匹配 => 其他
-            if (this.editingColor) return;
-            const sjId = this.sjCategoryId;
-            if (this.form.category_id === 'other' || (sjId && this.form.category_id === sjId)) return;
-            if (!value) return;
-
-            const firstChar = value.charAt(0);
-            const sjTriggers = ['酒','沙','红','黑','蓝'];
-            if (sjId && sjTriggers.includes(firstChar)) {
-                if (this.form.category_id !== sjId) {
-                    this.form.category_id = sjId;
-                    ElementPlus.ElMessage.info('已自动识别为 色精');
-                }
-                return; // 不再继续字母前缀匹配
-            }
-
-            if (value.length >= 2) {
-                const prefix = value.substring(0,2).toUpperCase();
-                const matchedCategory = this.categories.find(cat => cat.code === prefix);
-                if (matchedCategory) {
-                    if (this.form.category_id !== matchedCategory.id) {
-                        this.form.category_id = matchedCategory.id;
-                        ElementPlus.ElMessage.info(`已自动切换到 ${matchedCategory.name}`);
-                    }
-                } else {
-                    if (this.form.category_id !== 'other') {
-                        this.form.category_id = 'other';
-                        ElementPlus.ElMessage.warning('无法识别的前缀，已切换到"其他"');
-                    }
-                }
-            }
-        },
+        // 删除编号自动判定功能，简化逻辑
         
         // 验证颜色编号唯一性
         validateColorCode(rule, value, callback) {
@@ -550,28 +540,41 @@ const CustomColorsComponent = {
         },
         
         // 初始化表单（对话框打开时）
-        initForm() {
-            // 只在编辑模式下或已有分类时生成编号
+        async initForm() {
+            // 新建模式下，如果已有分类，触发智能编号生成
             if (!this.editingColor && this.form.category_id && this.form.category_id !== 'other' && this.form.category_id !== this.sjCategoryId) {
-                this.generateColorCode(this.form.category_id);
+                // 通过onCategoryChange触发智能判断，这样会正确处理标志位
+                await this.onCategoryChange(this.form.category_id);
             }
         },
         
         // 分类改变时自动生成编号
-        onCategoryChange(categoryId) {
+        async onCategoryChange(categoryId) {
+            // 智能判断控制：只在对话框打开后首次操作时触发
+            if (!this.autoJudgeFlags.categoryToCode) return;
+            
             if (!this.editingColor && categoryId && categoryId !== 'other' && categoryId !== this.sjCategoryId) {
-                this.generateColorCode(categoryId);
+                await this.generateColorCode(categoryId);
+                // 只有成功生成编号时才禁用自动判断
+                this.autoJudgeFlags.categoryToCode = false;
             } else if (categoryId === 'other' || categoryId === this.sjCategoryId) {
                 // 选择"其他"分类时清空编号，让用户自行输入
                 this.form.color_code = '';
+                // 选择特殊分类时也禁用自动编号
+                this.autoJudgeFlags.categoryToCode = false;
             }
         },
         
         // 生成颜色编号
-        generateColorCode(categoryId) {
+        async generateColorCode(categoryId) {
             if (!categoryId || categoryId === 'other' || categoryId === this.sjCategoryId) return; // 色精与其他不自动编号
-            const code = helpers.generateColorCode(this.categories, this.customColors, categoryId);
-            this.form.color_code = code;
+            try {
+                const code = await helpers.generateColorCode(this.categories, this.customColors, categoryId);
+                this.form.color_code = code;
+            } catch (error) {
+                console.warn('生成颜色编号失败:', error);
+                ElementPlus.ElMessage.warning('自动生成编号失败，请手动输入');
+            }
         },
         
         // 处理图片选择
@@ -589,22 +592,22 @@ const CustomColorsComponent = {
                 return;
             }
             
+            // 处理分类ID（"其他"分类特殊处理）- 移到函数开头以便catch块使用
+            let actualCategoryId = this.form.category_id;
+            if (actualCategoryId === 'other') {
+                // 对于"其他"分类，尝试根据编号前缀找到正确的分类
+                const prefix = this.form.color_code.substring(0, 2).toUpperCase();
+                const matchedCategory = this.categories.find(cat => cat.code === prefix);
+                if (matchedCategory) {
+                    actualCategoryId = matchedCategory.id;
+                } else {
+                    // 如果确实无法匹配，使用第一个分类或创建特殊标记
+                    actualCategoryId = this.categories[0]?.id || 1;
+                }
+            }
+            
             try {
                 const formData = new FormData();
-                
-                // 处理分类ID（"其他"分类特殊处理）
-                let actualCategoryId = this.form.category_id;
-                if (actualCategoryId === 'other') {
-                    // 对于"其他"分类，尝试根据编号前缀找到正确的分类
-                    const prefix = this.form.color_code.substring(0, 2).toUpperCase();
-                    const matchedCategory = this.categories.find(cat => cat.code === prefix);
-                    if (matchedCategory) {
-                        actualCategoryId = matchedCategory.id;
-                    } else {
-                        // 如果确实无法匹配，使用第一个分类或创建特殊标记
-                        actualCategoryId = this.categories[0]?.id || 1;
-                    }
-                }
                 
                 formData.append('category_id', actualCategoryId);
                 formData.append('color_code', this.form.color_code);
@@ -617,8 +620,13 @@ const CustomColorsComponent = {
                     // 添加版本信息用于乐观锁
                     if (this.editingColor.version) {
                         formData.append('version', this.editingColor.version);
+                    } else {
+                        console.warn('[WARNING] 保存时 - editingColor没有version字段!');
                     }
-                    await api.customColors.update(this.editingColor.id, formData);
+                    
+                    // 发送PUT请求
+                    
+                    const response = await api.customColors.update(this.editingColor.id, formData);
                     ElementPlus.ElMessage.success('修改成功');
                 } else {
                     await api.customColors.create(formData);
@@ -644,9 +652,17 @@ const CustomColorsComponent = {
                 }
             } catch (error) {
                 if (error.response?.status === 409 && error.response?.data?.code === 'VERSION_CONFLICT') {
-                    // 处理版本冲突
-                    this.handleVersionConflict(error.response.data, formData);
+                    // 处理版本冲突（重新构建formData以传递给冲突处理器）
+                    const conflictFormData = new FormData();
+                    conflictFormData.append('category_id', actualCategoryId);
+                    conflictFormData.append('color_code', this.form.color_code);
+                    conflictFormData.append('formula', this.form.formula);
+                    if (this.form.imageFile) {
+                        conflictFormData.append('image', this.form.imageFile);
+                    }
+                    this.handleVersionConflict(error.response.data, conflictFormData);
                 } else {
+                    console.error('[ERROR] 非版本冲突错误:', error);
                     ElementPlus.ElMessage.error('操作失败');
                 }
             }
@@ -655,6 +671,12 @@ const CustomColorsComponent = {
         // 编辑颜色
         editColor(color) {
             this.editingColor = color;
+            
+            // 编辑模式下禁用自动判断
+            this.autoJudgeFlags = {
+                categoryToCode: false,
+                codeToCategory: false
+            };
             
             // 判断颜色是否属于"其他"分类
             const prefix = color.color_code.substring(0, 2).toUpperCase();
@@ -877,19 +899,20 @@ const CustomColorsComponent = {
         },
 
         async handleConflictResolve(resolution) {
-            const { action } = resolution;
+            console.log('🔧 CustomColors: 收到冲突解决事件:', resolution);
+            const { action, finalFormula } = resolution;
             this.showConflictDialog = false;
 
             try {
                 switch (action) {
                     case 'overwrite':
-                        // 强制覆盖：忽略版本检查
+                        // 强制覆盖：使用我的修改版本
                         await this.forceUpdateColor();
                         break;
                     
                     case 'merge':
-                        // 手动合并：用最新数据填充表单
-                        this.mergeLatestData();
+                        // 手动合并：使用用户选择的配方组合
+                        await this.mergeUpdateColor(finalFormula);
                         break;
                     
                     case 'refresh':
@@ -921,6 +944,27 @@ const CustomColorsComponent = {
                 await this.globalData.loadArtworks();
             } catch (error) {
                 ElementPlus.ElMessage.error('强制覆盖失败');
+            }
+        },
+
+        async mergeUpdateColor(finalFormula) {
+            if (!this.pendingFormData || !this.editingColor) return;
+            
+            try {
+                // 使用合并后的配方更新FormData
+                this.pendingFormData.set('formula', finalFormula || '');
+                // 移除版本检查，因为合并操作需要强制更新
+                this.pendingFormData.delete('version');
+                
+                await api.customColors.update(this.editingColor.id, this.pendingFormData);
+                
+                ElementPlus.ElMessage.success('手动合并成功');
+                this.showAddDialog = false;
+                this.resetForm();
+                await this.globalData.loadCustomColors();
+                await this.globalData.loadArtworks();
+            } catch (error) {
+                ElementPlus.ElMessage.error('手动合并失败');
             }
         },
 

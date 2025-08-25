@@ -107,6 +107,14 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
     const colorId = req.params.id;
     const { category_id, color_code, formula, applicable_layers, existingImagePath, version } = req.body;
     const expectedVersion = version ? parseInt(version) : null;
+    
+    console.log('[DEBUG] PUT请求完整body:', req.body);
+    console.log('[DEBUG] PUT请求参数:');
+    console.log('  - colorId:', colorId);
+    console.log('  - version字段值:', version, '(类型:', typeof version, ')');
+    console.log('  - expectedVersion:', expectedVersion);
+    console.log('  - color_code:', color_code);
+    console.log('  - 所有body属性:', Object.keys(req.body));
     let imagePath = existingImagePath || null;
 
     // 处理新上传的图片
@@ -140,9 +148,13 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
       applicable_layers
     };
 
+    console.log('[DEBUG] 调用ColorService.updateColor，expectedVersion:', expectedVersion);
     const result = await ColorService.updateColor(colorId, colorData, expectedVersion);
+    console.log('[DEBUG] updateColor成功，返回结果:', result);
+    
     // 返回更新后的完整颜色信息
     const updatedColor = await ColorService.getColorById(colorId);
+    console.log('[DEBUG] 获取更新后数据，新version:', updatedColor.version);
     res.json(updatedColor);
   } catch (error) {
     if (error.code === 'VERSION_CONFLICT') {
