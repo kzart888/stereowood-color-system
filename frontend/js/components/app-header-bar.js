@@ -22,6 +22,7 @@ const AppHeaderBar = {
 		'add-custom-color',
 		'add-raw-material',
 		'check-duplicates',
+		'show-color-palette',
 		'global-search-input',
 		'search-select',
 		'open-search-dropdown',
@@ -234,6 +235,7 @@ const AppHeaderBar = {
 							<el-button size="small" :type="customColorsSortMode==='name' ? 'primary':'default'" @click="setSort('customColors','name')">按名称</el-button>
 						</span>
 						<el-button size="small" @click="$emit('check-duplicates')">查重</el-button>
+						<el-button size="small" @click="$emit('show-color-palette')"><el-icon><Grid /></el-icon> 自配色列表</el-button>
 					</template>
 					<template v-else-if="activeTab==='mont-marte'">
 						<el-button size="small" type="primary" class="add-button" @click="$emit('add-raw-material')"><el-icon><Plus /></el-icon> 新原料</el-button>

@@ -1031,3 +1031,381 @@ table.mapping-table td:nth-child(3) { width:110px; text-align:right; }
 .dup-record-row .ref-flag { font-size:11px; color:#2f6f1d; background:#dcefd4; padding:2px 6px; border-radius:12px; }
 .dup-group-foot { margin-top:4px; }
 .dup-groups-dialog .el-dialog__footer { padding:8px 14px 14px; }
+
+/* ============================================
+   色彩列表对话框样式
+   ============================================ */
+.color-palette-dialog .el-dialog__header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e4e7ed;
+}
+
+.color-palette-dialog .el-dialog__body {
+    padding: 16px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.custom-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.palette-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.palette-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.palette-stats {
+    font-size: 13px;
+    color: #909399;
+}
+
+.close-btn {
+    margin-left: 8px;
+}
+
+.color-palette-content {
+    padding: 0;
+}
+
+.empty-palette {
+    text-align: center;
+    color: #909399;
+    font-size: 14px;
+    padding: 40px 20px;
+}
+
+.palette-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.palette-group {
+    margin-bottom: 0;
+}
+
+.palette-group.group-spacing {
+    margin-top: 14px;
+}
+
+.group-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.group-label {
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+    background: #f8f9fa;
+    padding: 8px 4px;
+    border-radius: 4px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.group-colors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 1;
+}
+
+.color-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.color-block {
+    width: 70px;
+    height: 70px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.color-preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.no-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    color: #909399;
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.2;
+    padding: 4px;
+}
+
+.color-name {
+    font-weight: 500;
+    font-size: 12px;
+    color: #303133;
+    text-align: center;
+    line-height: 1.2;
+}
+
+
+/* ============================================
+   打印样式
+   ============================================ */
+@media print {
+    /* 重置页面样式 */
+    * {
+        box-sizing: border-box;
+    }
+    
+    html, body {
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: white !important;
+    }
+    
+    /* 隐藏不需要的元素 */
+    body > *:not(.el-overlay),
+    .app-header-sticky,
+    .main-container > div:not([class*="color-palette"]),
+    #backToTopBtn {
+        display: none !important;
+    }
+    
+    /* 确保对话框遮罩层显示 */
+    .el-overlay {
+        position: static !important;
+        background: white !important;
+        z-index: auto !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* 确保色彩对话框及其内容显示 */
+    .color-palette-dialog,
+    .color-palette-dialog *,
+    .el-dialog,
+    .el-dialog * {
+        visibility: visible !important;
+    }
+    
+    /* 保持必要的flex布局 */
+    .custom-dialog-header,
+    .palette-header-right,
+    .group-layout,
+    .group-colors,
+    .color-item {
+        display: flex !important;
+    }
+    
+    /* 保持块级显示 */
+    .color-palette-dialog,
+    .el-dialog,
+    .el-dialog__wrapper,
+    .el-dialog__header,
+    .el-dialog__body,
+    .color-palette-content,
+    .palette-main,
+    .palette-group {
+        display: block !important;
+    }
+    
+    /* 对话框包装器 */
+    .color-palette-dialog .el-dialog__wrapper {
+        position: static !important;
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        display: block !important;
+        overflow: visible !important;
+    }
+    
+    /* 对话框主体 */
+    .color-palette-dialog .el-dialog {
+        position: static !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: auto !important;
+        max-height: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        display: block !important;
+        overflow: visible !important;
+    }
+    
+    /* 对话框头部 */
+    .color-palette-dialog .el-dialog__header {
+        padding: 10px 15px !important;
+        border-bottom: 2px solid #333 !important;
+        background: white !important;
+        display: block !important;
+        position: static !important;
+    }
+    
+    /* 隐藏按钮 */
+    .palette-header-right .el-button {
+        display: none !important;
+    }
+    
+    .custom-dialog-header {
+        justify-content: center !important;
+        display: flex !important;
+    }
+    
+    /* 对话框内容 */
+    .color-palette-dialog .el-dialog__body {
+        padding: 15px !important;
+        max-height: none !important;
+        overflow: visible !important;
+        height: auto !important;
+        display: block !important;
+        position: static !important;
+    }
+    
+    /* 内容区域 */
+    .color-palette-content {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+    
+    .palette-main {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+    
+    .palette-title {
+        font-size: 20px !important;
+        font-weight: bold !important;
+        color: #000 !important;
+    }
+    
+    .palette-stats {
+        font-size: 14px !important;
+        color: #666 !important;
+        margin-left: 20px !important;
+    }
+    
+    /* 分组样式 */
+    .palette-group {
+        display: block !important;
+        page-break-inside: avoid;
+        margin-bottom: 0 !important;
+    }
+    
+    .palette-group.group-spacing {
+        margin-top: 20px !important;
+    }
+    
+    .group-layout {
+        display: flex !important;
+        gap: 12px !important;
+        align-items: flex-start !important;
+    }
+    
+    .group-label {
+        font-size: 14px !important;
+        font-weight: bold !important;
+        color: #000 !important;
+        background: #f0f0f0 !important;
+        border: 1px solid #ccc !important;
+        min-height: 60px !important;
+        writing-mode: vertical-lr !important;
+        text-orientation: mixed !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 8px 4px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .group-colors {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        flex: 1 !important;
+    }
+    
+    .color-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .color-block {
+        width: 50px !important;
+        height: 50px !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        border-radius: 4px !important;
+        overflow: hidden !important;
+        margin-bottom: 3px !important;
+    }
+    
+    .color-preview-image {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        display: block !important;
+    }
+    
+    .no-image-placeholder {
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: #f5f5f5 !important;
+        font-size: 8px !important;
+        text-align: center !important;
+        padding: 2px !important;
+    }
+    
+    .color-name {
+        font-size: 9px !important;
+        color: #000 !important;
+        font-weight: bold !important;
+        text-align: center !important;
+        line-height: 1.2 !important;
+    }
+}

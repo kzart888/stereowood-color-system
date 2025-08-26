@@ -53,3 +53,7 @@ coverage/
 # 构建输出
 dist/
 build/
+
+# Claude Code 配置文件
+.claude/
+*.local.json

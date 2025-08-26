@@ -185,6 +185,58 @@ const CustomColorsComponent = {
                 :latest-data="conflictData?.latestData || {}"
                 @resolve="handleConflictResolve"
             />
+
+            <!-- 色彩列表对话框 -->
+            <el-dialog
+                v-model="showColorPaletteDialog"
+                width="95%"
+                :close-on-click-modal="false"
+                class="color-palette-dialog"
+                :show-close="false"
+            >
+                <template #header>
+                    <div class="custom-dialog-header">
+                        <div class="palette-title">自配色列表</div>
+                        <div class="palette-header-right">
+                            <span class="palette-stats">共{{ (globalData.customColors && globalData.customColors.value) ? globalData.customColors.value.length : 0 }}个颜色，{{ paletteGroups.length }}个分类</span>
+                            <el-button type="primary" size="small" @click="printColorPalette">
+                                <el-icon><Printer /></el-icon>
+                                打印
+                            </el-button>
+                            <el-button size="small" @click="showColorPaletteDialog = false" class="close-btn">
+                                <el-icon><Close /></el-icon>
+                            </el-button>
+                        </div>
+                    </div>
+                </template>
+                
+                <div class="color-palette-content">
+                    <div v-if="paletteGroups.length === 0" class="empty-palette">
+                        暂无自配色数据
+                    </div>
+                    <div v-else class="palette-main">
+                        <div v-for="(group, groupIndex) in paletteGroups" :key="group.categoryCode" class="palette-group" :class="{ 'group-spacing': groupIndex > 0 }">
+                            <div class="group-layout">
+                                <div class="group-label">{{ group.categoryName }}</div>
+                                <div class="group-colors">
+                                    <div v-for="color in group.colors" :key="color.id" class="color-item">
+                                        <div class="color-block">
+                                            <img 
+                                                v-if="color.image_path" 
+                                                :src="$helpers.buildUploadURL(baseURL, color.image_path)" 
+                                                class="color-preview-image"
+                                                @error="$event.target.style.display='none'"
+                                            />
+                                            <div v-if="!color.image_path" class="no-image-placeholder">未上传图片</div>
+                                        </div>
+                                        <div class="color-name">{{ color.color_code }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </el-dialog>
         </div>
     `,
     
@@ -223,7 +275,10 @@ const CustomColorsComponent = {
             // 冲突解决
             showConflictDialog: false,
             conflictData: null,
-            pendingFormData: null
+            pendingFormData: null,
+            // 色彩列表对话框
+            showColorPaletteDialog: false,
+            paletteGroups: [] // 添加一个data属性来存储分组数据
         };
     },
     
@@ -951,6 +1006,243 @@ const CustomColorsComponent = {
             this.showAddDialog = false;
             this.resetForm();
             ElementPlus.ElMessage.info('已刷新到最新数据');
+        },
+
+        // 显示色彩列表对话框
+        async showColorPalette() {
+            try {
+                // 打开对话框前刷新数据
+                await this.globalData.loadCustomColors();
+                await this.globalData.loadCategories();
+                
+                // 使用真实数据创建分组
+                const categories = this.globalData.categories?.value || [];
+                const customColors = this.globalData.customColors?.value || [];
+                
+                const groups = [];
+                
+                if (customColors.length === 0) {
+                    this.paletteGroups = [];
+                    this.showColorPaletteDialog = true;
+                    return;
+                }
+                
+                if (categories.length === 0) {
+                    // 没有分类，创建一个默认分组
+                    groups.push({
+                        categoryName: '所有自配色',
+                        categoryCode: 'ALL',
+                        colors: customColors
+                    });
+                } else {
+                    // 按分类分组
+                    const colorsByCategory = {};
+                    const unCategorized = [];
+                    
+                    customColors.forEach(color => {
+                        if (!color.category_id) {
+                            unCategorized.push(color);
+                        } else {
+                            if (!colorsByCategory[color.category_id]) {
+                                colorsByCategory[color.category_id] = [];
+                            }
+                            colorsByCategory[color.category_id].push(color);
+                        }
+                    });
+                    
+                    // 按分类创建分组
+                    categories.forEach(category => {
+                        const categoryColors = colorsByCategory[category.id] || [];
+                        if (categoryColors.length > 0) {
+                            groups.push({
+                                categoryName: category.name,
+                                categoryCode: category.code || category.id,
+                                colors: categoryColors
+                            });
+                        }
+                    });
+                    
+                    // 添加未分类的颜色
+                    if (unCategorized.length > 0) {
+                        groups.push({
+                            categoryName: '其他',
+                            categoryCode: 'OTHER',
+                            colors: unCategorized
+                        });
+                    }
+                }
+                
+                this.paletteGroups = groups;
+                this.showColorPaletteDialog = true;
+            } catch (error) {
+                console.error('加载色彩数据失败:', error);
+                ElementPlus.ElMessage.error('加载数据失败，请重试');
+            }
+        },
+
+        // 打印色彩列表
+        printColorPalette() {
+            // 添加打印提示
+            ElementPlus.ElMessage.info('正在准备打印，请稍候...');
+            
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this.createPrintWindow();
+                }, 300);
+            });
+        },
+
+        // 创建打印窗口
+        createPrintWindow() {
+            // 构建打印内容HTML
+            const printContent = this.generatePrintHTML();
+            
+            // 创建新窗口
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            
+            // 等待内容加载后打印
+            printWindow.onload = () => {
+                setTimeout(() => {
+                    printWindow.print();
+                    printWindow.close();
+                }, 500);
+            };
+        },
+
+        // 生成打印HTML内容
+        generatePrintHTML() {
+            const colorCount = (this.globalData.customColors?.value || []).length;
+            const groupCount = this.paletteGroups.length;
+            
+            let html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>自配色列表</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: white;
+        }
+        .print-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .print-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .print-stats {
+            font-size: 14px;
+            color: #666;
+        }
+        .print-group {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .print-group-label {
+            writing-mode: vertical-lr;
+            text-orientation: mixed;
+            font-size: 16px;
+            font-weight: bold;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 8px 4px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .print-colors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1;
+        }
+        .print-color-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .print-color-block {
+            width: 50px;
+            height: 50px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            margin-bottom: 4px;
+            overflow: hidden;
+        }
+        .print-color-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .print-no-image {
+            width: 100%;
+            height: 100%;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            text-align: center;
+            padding: 2px;
+        }
+        .print-color-name {
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="print-header">
+        <div class="print-title">自配色列表</div>
+        <div class="print-stats">共${colorCount}个颜色，${groupCount}个分类</div>
+    </div>
+    <div class="print-content">`;
+
+            // 添加每个分组的内容
+            this.paletteGroups.forEach(group => {
+                html += `
+        <div class="print-group">
+            <div class="print-group-label">${group.categoryName}</div>
+            <div class="print-colors">`;
+                
+                group.colors.forEach(color => {
+                    const imageHtml = color.image_path 
+                        ? `<img src="${this.$helpers.buildUploadURL(this.baseURL, color.image_path)}" class="print-color-image" />`
+                        : `<div class="print-no-image">未上传图片</div>`;
+                    
+                    html += `
+                <div class="print-color-item">
+                    <div class="print-color-block">${imageHtml}</div>
+                    <div class="print-color-name">${color.color_code}</div>
+                </div>`;
+                });
+                
+                html += `
+            </div>
+        </div>`;
+            });
+
+            html += `
+    </div>
+</body>
+</html>`;
+
+            return html;
         }
     }
 };
