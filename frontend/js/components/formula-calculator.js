@@ -70,7 +70,7 @@
                     </template>
                     <span v-else class="dim">-</span>
                   </td>
-                  <td class="ing-rem" :class="{neg: remainder(i)<0}">
+                  <td class="ing-rem" :class="{neg: remainder(i)<0, rebalance: isRemainderRebalancing(i)}">
                     <span v-if="!ing.invalid && state.targets[i] != null">{{ remainderDisplay(i) }}</span>
                     <span v-else class="dim">-</span>
                   </td>
@@ -93,8 +93,12 @@
                     <span v-if="t.anyTarget">{{ round4(t.delivered) }}<span v-if="t.unit">{{ t.unit }}</span></span>
                     <span v-else class="dim">—</span>
                   </td>
-                  <td class="ing-rem" :class="{neg: t.remainder<0}">
-                    <span v-if="t.anyTarget">{{ round4(t.remainder) }}<span v-if="t.unit">{{ t.unit }}</span></span>
+                  <td class="ing-rem" :class="{neg: t.remainder<0 && !t.isRebalancing, rebalance: t.isRebalancing && t.remainder>0}">
+                    <span v-if="t.anyTarget">
+                      <template v-if="t.isRebalancing && t.remainder>0">+{{ round4(t.remainder) }}</template>
+                      <template v-else>{{ round4(t.remainder) }}</template>
+                      <span v-if="t.unit">{{ t.unit }}</span>
+                    </span>
                     <span v-else class="dim">—</span>
                   </td>
                 </tr>
@@ -133,10 +137,12 @@
       totals(){
         if (!this.state) return [];
         const buckets = {};
+        const rebalanceInfo = this.getRebalanceInfo();
+        
         this.state.ingredients.forEach((ing,i)=>{
           if (ing.invalid) return;
           const u = ing.unit||'';
-          if (!buckets[u]) buckets[u] = { base:0, target:0, delivered:0, remainder:0, anyTarget:false };
+          if (!buckets[u]) buckets[u] = { base:0, target:0, delivered:0, remainder:0, anyTarget:false, isRebalancing:false };
           buckets[u].base += ing.base;
           const target = this.state.targets[i];
           const delivered = this.state.delivered[i] || 0;
@@ -144,8 +150,16 @@
             buckets[u].target += target;
             buckets[u].anyTarget = true;
           }
+          
+          // 使用重平衡逻辑计算余量
           if (target!=null) {
-            buckets[u].remainder += (target - delivered);
+            const remainderValue = this.remainder(i);
+            buckets[u].remainder += remainderValue;
+            
+            // 检查是否处于重平衡状态
+            if(rebalanceInfo.isRebalancing && rebalanceInfo.groups[u] && rebalanceInfo.groups[u].needsRebalancing){
+              buckets[u].isRebalancing = true;
+            }
           }
           if (!isNaN(delivered)) buckets[u].delivered += delivered;
         });
@@ -292,10 +306,106 @@
         const t=this.state.targets[i];
         if(t==null) return 0;
         const d=this.state.delivered[i]||0;
+        
+        // 检查是否处于超配重平衡状态
+        const rebalanceInfo = this.getRebalanceInfo();
+        if(rebalanceInfo.isRebalancing){
+          const ing = this.state.ingredients[i];
+          if(ing && !ing.invalid){
+            const unitGroup = ing.unit || '';
+            const groupInfo = rebalanceInfo.groups[unitGroup];
+            if(groupInfo){
+              return groupInfo.additionalNeeded[i] || 0;
+            }
+          }
+        }
+        
+        // 常规余量计算
         return t - d;
+      },
+      
+      // 获取超配重平衡信息
+      getRebalanceInfo(){
+        if(!this.state || !this.state.ingredients) return { isRebalancing: false, groups: {} };
+        
+        const groups = {};
+        let hasRebalancing = false;
+        
+        // 按单位分组计算
+        this.state.ingredients.forEach((ing, i) => {
+          if(ing.invalid) return;
+          const unit = ing.unit || '';
+          if(!groups[unit]){
+            groups[unit] = {
+              ingredients: [],
+              totalTarget: 0,
+              totalDelivered: 0,
+              maxExcessRatio: 1,
+              additionalNeeded: {},
+              needsRebalancing: false
+            };
+          }
+          
+          const target = this.state.targets[i];
+          const delivered = this.state.delivered[i] || 0;
+          
+          if(target != null){
+            groups[unit].ingredients.push({ index: i, ing, target, delivered, base: ing.base });
+            groups[unit].totalTarget += target;
+            groups[unit].totalDelivered += delivered;
+            
+            // 检查单个成分的超配比例
+            if(target > 0 && delivered > target){
+              const excessRatio = delivered / target;
+              if(excessRatio > groups[unit].maxExcessRatio){
+                groups[unit].maxExcessRatio = excessRatio;
+                groups[unit].needsRebalancing = true;
+                hasRebalancing = true;
+              }
+            }
+          }
+        });
+        
+        // 计算每个单位组的重平衡需求
+        Object.keys(groups).forEach(unit => {
+          const group = groups[unit];
+          if(group.needsRebalancing && group.maxExcessRatio > 1){
+            // 以最大超配比例为基准，计算其他成分需要的额外量
+            group.ingredients.forEach(item => {
+              const { index, target, delivered, base } = item;
+              if(base > 0){
+                // 按超配比例计算新的目标量
+                const newTarget = target * group.maxExcessRatio;
+                // 计算还需要额外添加多少
+                const additional = Math.max(0, newTarget - delivered);
+                group.additionalNeeded[index] = additional;
+              }
+            });
+          }
+        });
+        
+        return { isRebalancing: hasRebalancing, groups };
+      },
+      
+      // 判断余量是否为重平衡状态（用于样式）
+      isRemainderRebalancing(i){
+        const rebalanceInfo = this.getRebalanceInfo();
+        if(!rebalanceInfo.isRebalancing) return false;
+        
+        const ing = this.state.ingredients[i];
+        if(!ing || ing.invalid) return false;
+        
+        const unitGroup = ing.unit || '';
+        const groupInfo = rebalanceInfo.groups[unitGroup];
+        return groupInfo && groupInfo.needsRebalancing && (groupInfo.additionalNeeded[i] || 0) > 0;
       },
       remainderDisplay(i){
         const r = this.remainder(i);
+        const isRebalancing = this.isRemainderRebalancing(i);
+        
+        if(isRebalancing && r > 0){
+          return '+' + trimZeros(r);
+        }
         return trimZeros(r);
       },
       bindGlobal(){

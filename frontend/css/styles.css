@@ -687,6 +687,7 @@ body {
 .sw-calc-table th { background:#f5f5f5; font-weight:600; }
 .sw-calc-table td.ing-name { text-align:left; }
 .sw-calc-table td.ing-rem.neg { color:#d93025; font-weight:600; }
+.sw-calc-table td.ing-rem.rebalance { color:#2e7d32; font-weight:600; }
 .sw-calc-table tr.invalid td { opacity:.6; }
 .sw-calc-layer .empty-msg { padding:20px 6px; text-align:center; color:#777; }
 .sw-calc-layer .dim { color:#aaa; }
