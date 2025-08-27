@@ -1,0 +1,159 @@
+/**
+ * 主布局样式
+ * 页面主体、容器、网格等布局
+ * @module layout/main
+ */
+
+/* === 主容器 === */
+.main-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .main-container {
+        padding: 12px;
+    }
+}
+
+/* === 加载状态 === */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--sw-text-muted);
+    font-size: 14px;
+}
+
+.loading .el-icon {
+    margin-right: 8px;
+    font-size: 20px;
+}
+
+/* === 空状态 === */
+.empty-message {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--sw-text-muted);
+    font-size: 14px;
+    background: var(--sw-bg-white);
+    border-radius: var(--sw-radius-md);
+    border: 1px solid var(--sw-border-light);
+}
+
+/* === 卡片布局 === */
+.card {
+    background: var(--sw-bg-white);
+    border-radius: var(--sw-radius-md);
+    border: 1px solid var(--sw-border-light);
+    padding: var(--sw-card-padding);
+    margin-bottom: 16px;
+    transition: box-shadow var(--sw-transition-base);
+}
+
+.card:hover {
+    box-shadow: var(--sw-shadow-sm);
+}
+
+.card-header {
+    padding: var(--sw-header-padding);
+    border-bottom: 1px solid var(--sw-border-light);
+    margin-bottom: 12px;
+}
+
+.card-body {
+    padding: 12px;
+}
+
+.card-footer {
+    padding: 12px;
+    border-top: 1px solid var(--sw-border-light);
+    margin-top: 12px;
+}
+
+/* === 网格布局 === */
+.grid {
+    display: grid;
+    gap: 16px;
+}
+
+.grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+.grid-cols-5 { grid-template-columns: repeat(5, 1fr); }
+.grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+
+@media (max-width: 1200px) {
+    .grid-cols-6 { grid-template-columns: repeat(4, 1fr); }
+    .grid-cols-5 { grid-template-columns: repeat(3, 1fr); }
+    .grid-cols-4 { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .grid-cols-6,
+    .grid-cols-5,
+    .grid-cols-4,
+    .grid-cols-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+    .grid-cols-6,
+    .grid-cols-5,
+    .grid-cols-4,
+    .grid-cols-3,
+    .grid-cols-2 { grid-template-columns: repeat(1, 1fr); }
+}
+
+/* === Flex布局工具类 === */
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.flex-row { flex-direction: row; }
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-nowrap { flex-wrap: nowrap; }
+
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.items-stretch { align-items: stretch; }
+
+.flex-1 { flex: 1; }
+.flex-auto { flex: auto; }
+.flex-none { flex: none; }
+
+/* === 间距工具类 === */
+.gap-xs { gap: var(--sw-gap-xs); }
+.gap-sm { gap: var(--sw-gap-sm); }
+.gap-md { gap: var(--sw-gap-md); }
+.gap-lg { gap: var(--sw-gap-lg); }
+.gap-xl { gap: var(--sw-gap-xl); }
+
+/* === 内边距工具类 === */
+.p-0 { padding: 0; }
+.p-xs { padding: var(--sw-gap-xs); }
+.p-sm { padding: var(--sw-gap-sm); }
+.p-md { padding: var(--sw-gap-md); }
+.p-lg { padding: var(--sw-gap-lg); }
+.p-xl { padding: var(--sw-gap-xl); }
+
+/* === 外边距工具类 === */
+.m-0 { margin: 0; }
+.m-xs { margin: var(--sw-gap-xs); }
+.m-sm { margin: var(--sw-gap-sm); }
+.m-md { margin: var(--sw-gap-md); }
+.m-lg { margin: var(--sw-gap-lg); }
+.m-xl { margin: var(--sw-gap-xl); }
+
+.mt-auto { margin-top: auto; }
+.mb-auto { margin-bottom: auto; }
+.ml-auto { margin-left: auto; }
+.mr-auto { margin-right: auto; }

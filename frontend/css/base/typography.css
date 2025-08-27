@@ -1,0 +1,117 @@
+/**
+ * 排版样式
+ * 定义文本、标题、段落等排版规则
+ * @module base/typography
+ */
+
+/* === 标题 === */
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: 500;
+    color: var(--sw-text-primary);
+    line-height: 1.4;
+}
+
+h1 { font-size: 28px; }
+h2 { font-size: 24px; }
+h3 { font-size: 20px; }
+h4 { font-size: 18px; }
+h5 { font-size: 16px; }
+h6 { font-size: 14px; }
+
+/* === 段落 === */
+p {
+    margin: 0 0 12px;
+    line-height: 1.6;
+}
+
+p:last-child {
+    margin-bottom: 0;
+}
+
+/* === 文本样式 === */
+strong, b {
+    font-weight: 600;
+}
+
+em, i {
+    font-style: italic;
+}
+
+small {
+    font-size: 12px;
+    color: var(--sw-text-muted);
+}
+
+code {
+    padding: 2px 6px;
+    background: var(--sw-bg-light);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-xs);
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 13px;
+}
+
+pre {
+    padding: 12px;
+    background: var(--sw-bg-light);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-sm);
+    overflow-x: auto;
+}
+
+pre code {
+    padding: 0;
+    background: none;
+    border: none;
+}
+
+/* === 引用 === */
+blockquote {
+    margin: 16px 0;
+    padding-left: 16px;
+    border-left: 4px solid var(--sw-primary);
+    color: var(--sw-text-secondary);
+}
+
+/* === 分隔线 === */
+hr {
+    margin: 16px 0;
+    border: none;
+    border-top: 1px solid var(--sw-border-light);
+}
+
+/* === 文本对齐 === */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-justify { text-align: justify; }
+
+/* === 文本颜色 === */
+.text-primary { color: var(--sw-text-primary); }
+.text-secondary { color: var(--sw-text-secondary); }
+.text-muted { color: var(--sw-text-muted); }
+.text-disabled { color: var(--sw-text-disabled); }
+.text-success { color: var(--sw-success); }
+.text-warning { color: var(--sw-warning); }
+.text-danger { color: var(--sw-danger); }
+.text-info { color: var(--sw-info); }
+
+/* === 文本大小 === */
+.text-xs { font-size: 12px; }
+.text-sm { font-size: 13px; }
+.text-md { font-size: 14px; }
+.text-lg { font-size: 16px; }
+.text-xl { font-size: 18px; }
+
+/* === 文本截断 === */
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.text-break {
+    word-wrap: break-word;
+    word-break: break-all;
+}

@@ -1,0 +1,283 @@
+/**
+ * 作品组件样式
+ * 作品卡片、配色方案、层矩阵等
+ * @module components/artworks
+ */
+
+/* === 作品卡片容器 === */
+.artwork-bar {
+    background: var(--sw-bg-white);
+    margin: var(--sw-gap-md) var(--sw-gap-md) var(--sw-gap-lg) var(--sw-gap-md);
+    border-radius: var(--sw-radius-md);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: box-shadow var(--sw-transition-base);
+}
+
+.artwork-bar:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* 聚焦状态 */
+.artwork-bar[data-focus-single="true"] {
+    box-shadow: 0 0 0 2px var(--sw-primary-light);
+    border: 1px solid var(--sw-primary);
+}
+
+/* === 作品头部 === */
+.artwork-header {
+    padding: 12px 12px 8px;
+    border-bottom: 1px solid var(--sw-border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.artwork-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+    flex: 1;
+}
+
+/* === 配色方案条 === */
+.scheme-bar {
+    padding: 6px 6px 8px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color var(--sw-transition-base);
+}
+
+.scheme-bar:last-child {
+    border-bottom: none;
+}
+
+.scheme-bar:hover {
+    background: var(--sw-bg-light);
+}
+
+.scheme-bar.highlight-pulse {
+    animation: highlight-pulse 1s ease-in-out;
+}
+
+/* === 方案头部 === */
+.scheme-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sw-actions-gap);
+    margin-bottom: 8px;
+    padding: 0 6px;
+}
+
+/* === 缩略图 === */
+.scheme-thumbnail {
+    width: var(--sw-thumb-size);
+    height: var(--sw-thumb-size);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #777;
+    border-radius: var(--sw-radius-sm);
+    border: 2px solid #ddd;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all var(--sw-transition-base);
+}
+
+.scheme-thumbnail:hover {
+    border-color: var(--sw-primary);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.scheme-thumbnail.no-image {
+    background: #fafafa;
+    border-style: dashed;
+    cursor: default;
+}
+
+.scheme-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* === 方案信息 === */
+.scheme-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+    margin-bottom: 4px;
+}
+
+.meta-text {
+    font-size: 12px;
+    color: var(--sw-text-muted);
+    line-height: 1.4;
+}
+
+/* === 层矩阵表格 === */
+.layer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+}
+
+.layer-table th,
+.layer-table td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: center;
+    font-size: 12px;
+}
+
+.layer-table th {
+    background: #f5f5f5;
+    font-weight: bold;
+    position: relative;
+}
+
+.layer-table td {
+    background: white;
+    vertical-align: middle;
+}
+
+.layer-table td strong {
+    display: block;
+    font-size: 13px;
+    color: var(--sw-text-primary);
+    margin-bottom: 4px;
+}
+
+/* 层单元格 */
+.layer-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* 重复标记 */
+.dup-badge {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 50%;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* === 配方显示 === */
+.formula-lines {
+    display: table;
+    width: 100%;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.fl {
+    display: table-row;
+}
+
+.fl-name {
+    display: table-cell;
+    color: var(--sw-text-secondary);
+    padding-right: 8px;
+}
+
+.fl-amount {
+    display: table-cell;
+    color: var(--sw-text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+    text-align: right;
+}
+
+/* === 应用层显示 === */
+.applicable-layers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.layer-chip {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--sw-bg-light);
+    border: 1px solid var(--sw-border-light);
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--sw-text-secondary);
+}
+
+/* === 快速计算按钮 === */
+.calc-mini-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    padding: 2px 6px;
+    background: var(--sw-primary);
+    color: white;
+    border: none;
+    border-radius: var(--sw-radius-xs);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+}
+
+.calc-mini-btn:hover {
+    background: var(--sw-primary-hover);
+    transform: scale(1.1);
+}
+
+/* === 操作按钮组 === */
+.color-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sw-gap-md);
+    flex-wrap: wrap;
+}
+
+/* === 响应式布局 === */
+@media (max-width: 768px) {
+    .artwork-bar {
+        margin: var(--sw-gap-sm) var(--sw-gap-sm) var(--sw-gap-md) var(--sw-gap-sm);
+    }
+    
+    .scheme-thumbnail {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .layer-table {
+        font-size: 11px;
+    }
+    
+    .layer-table th,
+    .layer-table td {
+        padding: 4px;
+    }
+}
+
+@media (max-width: 480px) {
+    .artwork-bar {
+        margin: var(--sw-gap-xs) var(--sw-gap-xs) var(--sw-gap-sm) var(--sw-gap-xs);
+    }
+    
+    .color-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .scheme-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

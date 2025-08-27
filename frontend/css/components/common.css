@@ -1,0 +1,256 @@
+/**
+ * 通用组件样式
+ * 按钮、表单、标签、徽章等通用组件
+ * @module components/common
+ */
+
+/* === 按钮基础样式 === */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    border-radius: var(--sw-radius-sm);
+    transition: all var(--sw-transition-base);
+    cursor: pointer;
+    border: 1px solid transparent;
+    outline: none;
+    gap: 4px;
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 按钮类型 */
+.btn-primary {
+    background: var(--sw-primary);
+    color: white;
+    border-color: var(--sw-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--sw-primary-hover);
+    border-color: var(--sw-primary-hover);
+}
+
+.btn-success {
+    background: var(--sw-success);
+    color: white;
+    border-color: var(--sw-success);
+}
+
+.btn-warning {
+    background: var(--sw-warning);
+    color: white;
+    border-color: var(--sw-warning);
+}
+
+.btn-danger {
+    background: var(--sw-danger);
+    color: white;
+    border-color: var(--sw-danger);
+}
+
+.btn-default {
+    background: var(--sw-bg-white);
+    color: var(--sw-text-primary);
+    border-color: var(--sw-border-base);
+}
+
+.btn-default:hover:not(:disabled) {
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
+}
+
+/* 按钮尺寸 */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.btn-lg {
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+/* === 标签/徽章 === */
+.tag,
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 12px;
+    border-radius: var(--sw-radius-xs);
+    white-space: nowrap;
+}
+
+.tag {
+    background: var(--sw-bg-light);
+    color: var(--sw-text-secondary);
+    border: 1px solid var(--sw-border-light);
+}
+
+.badge {
+    background: var(--sw-primary);
+    color: white;
+    font-weight: 600;
+}
+
+.badge-success { background: var(--sw-success); }
+.badge-warning { background: var(--sw-warning); }
+.badge-danger { background: var(--sw-danger); }
+.badge-info { background: var(--sw-info); }
+
+/* === 输入框组件 === */
+.input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-group-prepend,
+.input-group-append {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--sw-bg-light);
+    border: 1px solid var(--sw-border-base);
+    color: var(--sw-text-muted);
+    font-size: 14px;
+}
+
+.input-group-prepend {
+    border-right: none;
+    border-radius: var(--sw-radius-sm) 0 0 var(--sw-radius-sm);
+}
+
+.input-group-append {
+    border-left: none;
+    border-radius: 0 var(--sw-radius-sm) var(--sw-radius-sm) 0;
+}
+
+/* === 开关组件 === */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.switch input {
+    display: none;
+}
+
+.switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--sw-border-base);
+    transition: var(--sw-transition-base);
+    border-radius: 20px;
+}
+
+.switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background: white;
+    transition: var(--sw-transition-base);
+    border-radius: 50%;
+}
+
+.switch input:checked + .switch-slider {
+    background: var(--sw-primary);
+}
+
+.switch input:checked + .switch-slider:before {
+    transform: translateX(20px);
+}
+
+/* === 工具提示 === */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 12px;
+    border-radius: var(--sw-radius-sm);
+    white-space: nowrap;
+    z-index: var(--sw-z-tooltip);
+    transition: opacity var(--sw-transition-base);
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* === 进度条 === */
+.progress {
+    width: 100%;
+    height: 6px;
+    background: var(--sw-bg-light);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--sw-primary);
+    transition: width var(--sw-transition-slow);
+}
+
+/* === 分页 === */
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-item {
+    padding: 6px 12px;
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-sm);
+    color: var(--sw-text-primary);
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+}
+
+.page-item:hover {
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
+}
+
+.page-item.active {
+    background: var(--sw-primary);
+    border-color: var(--sw-primary);
+    color: white;
+}
+
+.page-item.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}

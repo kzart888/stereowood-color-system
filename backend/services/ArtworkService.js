@@ -1,489 +1,168 @@
-/* =========================================================
-   模块：services/ArtworkService.js
-   职责：作品配色管理的业务逻辑层
-   职能：作品CRUD、配色方案管理、层级映射处理
-   依赖：db/index.js
-   说明：将路由中的业务逻辑抽离，使路由专注于参数验证和响应格式化
-   ========================================================= */
+/**
+ * 作品业务逻辑服务
+ * 职责：处理作品和配色方案相关的业务逻辑
+ * 引用：被 routes/artworks.js 使用
+ * @module services/ArtworkService
+ */
 
-const { db } = require('../db/index')
-const path = require('path')
-const fs = require('fs')
+const artworkQueries = require('../db/queries/artworks');
+const fs = require('fs').promises;
+const path = require('path');
 
 class ArtworkService {
-  /**
-   * 获取所有作品及其配色方案
-   */
-  static async getAllArtworks() {
-    return new Promise((resolve, reject) => {
-      db.all('SELECT * FROM artworks ORDER BY code', [], (err, artworks) => {
-        if (err) return reject(err)
-
-        // 获取所有配色方案
-        db.all(
-          `SELECT cs.*, a.code as artwork_code 
-           FROM color_schemes cs 
-           LEFT JOIN artworks a ON cs.artwork_id = a.id`,
-          [],
-          (err2, schemes) => {
-            if (err2) return reject(err2)
-
-            const schemeIds = schemes.map(s => s.id)
-            if (schemeIds.length === 0) {
-              const result = artworks.map(art => ({ ...art, schemes: [] }))
-              return resolve(result)
-            }
-
-            // 获取所有层级映射
-            const placeholders = schemeIds.map(() => '?').join(',')
-            db.all(
-              `SELECT sl.scheme_id, sl.layer_number AS layer, COALESCE(cc.color_code,'') AS colorCode
-               FROM scheme_layers sl
-               LEFT JOIN custom_colors cc ON cc.id = sl.custom_color_id
-               WHERE sl.scheme_id IN (${placeholders})
-               ORDER BY sl.scheme_id ASC, sl.layer_number ASC`,
-              schemeIds,
-              (err3, layerRows) => {
-                if (err3) return reject(err3)
-
-                // 按方案ID分组层级数据
-                const layersByScheme = new Map()
-                layerRows.forEach(r => {
-                  if (!layersByScheme.has(r.scheme_id)) {
-                    layersByScheme.set(r.scheme_id, [])
-                  }
-                  layersByScheme.get(r.scheme_id).push({
-                    layer: Number(r.layer),
-                    colorCode: r.colorCode || ''
-                  })
-                })
-
-                // 组装最终结果
-                const result = artworks.map(art => {
-                  const relatedSchemes = schemes.filter(s => s.artwork_id === art.id)
-                  return {
-                    ...art,
-                    schemes: relatedSchemes.map(s => ({
-                      id: s.id,
-                      scheme_name: s.scheme_name,
-                      name: s.scheme_name, // 别名兼容
-                      thumbnail_path: s.thumbnail_path,
-                      updated_at: s.updated_at,
-                      layers: layersByScheme.get(s.id) || []
-                    }))
-                  }
-                })
-
-                resolve(result)
-              }
-            )
-          }
-        )
-      })
-    })
-  }
-
-  /**
-   * 根据ID获取作品详情（包含配色方案）
-   */
-  static async getArtworkById(artworkId) {
-    return new Promise((resolve, reject) => {
-      // 获取作品基本信息
-      db.get('SELECT * FROM artworks WHERE id = ?', [artworkId], (err, artwork) => {
-        if (err) return reject(err)
-        if (!artwork) return resolve(null)
-
-        // 获取该作品的所有配色方案
-        db.all(
-          `SELECT * FROM color_schemes WHERE artwork_id = ? ORDER BY id`,
-          [artworkId],
-          (err, schemes) => {
-            if (err) return reject(err)
-
-            // 获取每个配色方案的层数据
-            const schemePromises = schemes.map(scheme => {
-              return new Promise((resolveScheme) => {
-                db.all(
-                  `SELECT 
-                      sl.layer_number,
-                      sl.custom_color_id,
-                      cc.color_code,
-                      cc.formula
-                   FROM scheme_layers sl
-                   LEFT JOIN custom_colors cc ON sl.custom_color_id = cc.id
-                   WHERE sl.scheme_id = ?
-                   ORDER BY sl.layer_number`,
-                  [scheme.id],
-                  (err, layers) => {
-                    if (err) {
-                      console.error('获取层数据失败:', err)
-                      scheme.layers = []
-                    } else {
-                      scheme.layers = layers
-                    }
-                    resolveScheme(scheme)
-                  }
-                )
-              })
-            })
-
-            Promise.all(schemePromises).then(schemesWithLayers => {
-              artwork.schemes = schemesWithLayers
-              resolve(artwork)
-            })
-          }
-        )
-      })
-    })
-  }
-
-  /**
-   * 创建新作品
-   */
-  static async createArtwork(artworkData) {
-    const { code, name } = artworkData
-
-    // 验证参数
-    if (!code || !name) {
-      throw new Error('作品编号和名称不能为空')
-    }
-
-    // 验证编号格式
-    if (!/^[A-Z0-9]{3,5}$/.test(code)) {
-      throw new Error('作品编号格式不合法')
-    }
-
-    // 验证名称格式
-    if (!/^[A-Za-z0-9\u4e00-\u9fa5 ]+$/.test(name) || name.includes('-')) {
-      throw new Error('作品名称格式不合法')
-    }
-
-    return new Promise((resolve, reject) => {
-      db.run(
-        'INSERT INTO artworks (code, name) VALUES (?, ?)',
-        [code, name],
-        function (err) {
-          if (err) {
-            if (err.message && /UNIQUE/i.test(err.message)) {
-              reject(new Error('该作品编号已存在'))
-            } else {
-              reject(err)
-            }
-          } else {
-            resolve({
-              id: this.lastID,
-              code,
-              name
-            })
-          }
+    /**
+     * 获取所有作品
+     */
+    async getAllArtworks() {
+        try {
+            const rows = await artworkQueries.getAllArtworks();
+            return this.formatArtworkData(rows);
+        } catch (error) {
+            throw new Error(`获取作品列表失败: ${error.message}`);
         }
-      )
-    })
-  }
-
-  /**
-   * 删除作品（需检查是否有配色方案）
-   */
-  static async deleteArtwork(artworkId) {
-    // 检查是否有配色方案
-    const schemeCount = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT COUNT(*) AS cnt FROM color_schemes WHERE artwork_id = ?',
-        [artworkId],
-        (err, row) => {
-          if (err) reject(err)
-          else resolve(row ? row.cnt : 0)
-        }
-      )
-    })
-
-    if (schemeCount > 0) {
-      throw new Error('该作品下仍有配色方案，无法删除')
     }
 
-    return new Promise((resolve, reject) => {
-      db.run('DELETE FROM artworks WHERE id = ?', [artworkId], function (err) {
-        if (err) reject(err)
-        else if (this.changes === 0) reject(new Error('作品不存在'))
-        else resolve({ success: true })
-      })
-    })
-  }
-
-  /**
-   * 添加配色方案
-   */
-  static async addScheme(artworkId, schemeData) {
-    const { name, layers = [], thumbnail_path } = schemeData
-
-    if (!name || !name.trim()) {
-      throw new Error('方案名称不能为空')
-    }
-
-    return new Promise((resolve, reject) => {
-      db.serialize(() => {
-        db.run('BEGIN')
-
-        // 插入配色方案
-        db.run(
-          `INSERT INTO color_schemes(artwork_id, scheme_name, thumbnail_path) VALUES (?, ?, ?)`,
-          [artworkId, name.trim(), thumbnail_path],
-          function (err) {
-            if (err) {
-              db.run('ROLLBACK')
-              return reject(err)
+    /**
+     * 格式化作品数据结构
+     */
+    formatArtworkData(rows) {
+        const artworksMap = new Map();
+        
+        rows.forEach(row => {
+            if (!artworksMap.has(row.id)) {
+                artworksMap.set(row.id, {
+                    id: row.id,
+                    code: row.code,
+                    name: row.name,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    schemes: []
+                });
             }
-
-            const schemeId = this.lastID
-
-            // 批量插入层映射
-            if (layers.length > 0) {
-              const insertLayer = db.prepare(
-                `INSERT INTO scheme_layers(scheme_id, layer_number, custom_color_id)
-                 VALUES (?, ?, (SELECT id FROM custom_colors WHERE color_code = ?))`
-              )
-
-              layers.forEach(mapping => {
-                const layer = Number(mapping.layer)
-                const code = String(mapping.colorCode || '').trim()
-                if (Number.isFinite(layer) && layer > 0) {
-                  insertLayer.run([schemeId, layer, code])
+            
+            const artwork = artworksMap.get(row.id);
+            
+            if (row.scheme_id) {
+                let scheme = artwork.schemes.find(s => s.id === row.scheme_id);
+                if (!scheme) {
+                    scheme = {
+                        id: row.scheme_id,
+                        scheme_name: row.scheme_name,
+                        thumbnail_path: row.thumbnail_path,
+                        created_at: row.scheme_created_at,
+                        updated_at: row.scheme_updated_at,
+                        layers: []
+                    };
+                    artwork.schemes.push(scheme);
                 }
-              })
-
-              insertLayer.finalize((finErr) => {
-                if (finErr) {
-                  db.run('ROLLBACK')
-                  return reject(finErr)
+                
+                if (row.layer_number && row.custom_color_id) {
+                    scheme.layers.push({
+                        layer_number: row.layer_number,
+                        custom_color_id: row.custom_color_id,
+                        color_code: row.color_code,
+                        formula: row.formula
+                    });
                 }
-
-                // 更新方案的更新时间并提交
-                db.run(
-                  `UPDATE color_schemes SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                  [schemeId],
-                  () => {
-                    db.run('COMMIT', () => resolve({ id: schemeId }))
-                  }
-                )
-              })
-            } else {
-              // 没有层映射，直接提交
-              db.run('COMMIT', () => resolve({ id: schemeId }))
             }
-          }
-        )
-      })
-    })
-  }
-
-  /**
-   * 更新配色方案
-   */
-  static async updateScheme(artworkId, schemeId, schemeData) {
-    const { name, layers = [], thumbnail_path, existingThumbnailPath } = schemeData
-
-    if (!name || !name.trim()) {
-      throw new Error('方案名称不能为空')
+        });
+        
+        return Array.from(artworksMap.values());
     }
 
-    // 查询现有方案信息
-    const existingScheme = await new Promise((resolve, reject) => {
-      db.get(
-        `SELECT thumbnail_path FROM color_schemes WHERE id = ? AND artwork_id = ?`,
-        [schemeId, artworkId],
-        (err, row) => {
-          if (err) reject(err)
-          else resolve(row)
+    /**
+     * 创建新作品
+     */
+    async createArtwork(artworkData) {
+        try {
+            const artworkId = await artworkQueries.createArtwork(artworkData);
+            return await artworkQueries.getArtworkById(artworkId);
+        } catch (error) {
+            if (error.message.includes('UNIQUE')) {
+                throw new Error('作品编码已存在');
+            }
+            throw new Error(`创建作品失败: ${error.message}`);
         }
-      )
-    })
-
-    if (!existingScheme) {
-      throw new Error('配色方案不存在')
     }
 
-    const finalThumbnail = thumbnail_path || existingThumbnailPath || existingScheme.thumbnail_path || null
-
-    return new Promise((resolve, reject) => {
-      db.serialize(() => {
-        db.run('BEGIN')
-
-        // 更新配色方案基本信息
-        db.run(
-          `UPDATE color_schemes 
-           SET scheme_name = ?, thumbnail_path = ?, updated_at = CURRENT_TIMESTAMP
-           WHERE id = ? AND artwork_id = ?`,
-          [name.trim(), finalThumbnail, schemeId, artworkId],
-          (updateErr) => {
-            if (updateErr) {
-              db.run('ROLLBACK')
-              return reject(updateErr)
+    /**
+     * 删除作品
+     */
+    async deleteArtwork(id) {
+        try {
+            const schemes = await artworkQueries.getArtworkSchemes(id);
+            
+            // 删除所有配色方案的缩略图
+            for (const scheme of schemes) {
+                if (scheme.thumbnail_path) {
+                    await this.deleteUploadedImage(scheme.thumbnail_path);
+                }
             }
-
-            // 删除现有层映射
-            db.run(
-              `DELETE FROM scheme_layers WHERE scheme_id = ?`,
-              [schemeId],
-              (deleteErr) => {
-                if (deleteErr) {
-                  db.run('ROLLBACK')
-                  return reject(deleteErr)
-                }
-
-                // 重新插入层映射
-                if (layers.length > 0) {
-                  const insertLayer = db.prepare(
-                    `INSERT INTO scheme_layers(scheme_id, layer_number, custom_color_id)
-                     VALUES (?, ?, (SELECT id FROM custom_colors WHERE color_code = ?))`
-                  )
-
-                  layers.forEach(mapping => {
-                    const layer = Number(mapping.layer)
-                    const code = String(mapping.colorCode || '').trim()
-                    if (Number.isFinite(layer) && layer > 0) {
-                      insertLayer.run([schemeId, layer, code])
-                    }
-                  })
-
-                  insertLayer.finalize((finErr) => {
-                    if (finErr) {
-                      db.run('ROLLBACK')
-                      return reject(finErr)
-                    }
-
-                    db.run('COMMIT', () => {
-                      // 如有新缩略图，删除旧文件
-                      if (thumbnail_path && existingScheme.thumbnail_path && 
-                          existingScheme.thumbnail_path !== finalThumbnail) {
-                        const oldPath = path.join(__dirname, '..', 'uploads', existingScheme.thumbnail_path)
-                        fs.unlink(oldPath, () => {}) // 静默删除
-                      }
-                      resolve({ success: true })
-                    })
-                  })
-                } else {
-                  // 没有层映射，直接提交
-                  db.run('COMMIT', () => resolve({ success: true }))
-                }
-              }
-            )
-          }
-        )
-      })
-    })
-  }
-
-  /**
-   * 删除配色方案
-   */
-  static async deleteScheme(artworkId, schemeId) {
-    // 获取方案信息（包含缩略图路径）
-    const scheme = await new Promise((resolve, reject) => {
-      db.get(
-        'SELECT * FROM color_schemes WHERE id = ? AND artwork_id = ?',
-        [schemeId, artworkId],
-        (err, row) => {
-          if (err) reject(err)
-          else resolve(row)
+            
+            const changes = await artworkQueries.deleteArtwork(id);
+            return { success: changes > 0, deletedId: id };
+        } catch (error) {
+            throw new Error(`删除作品失败: ${error.message}`);
         }
-      )
-    })
-
-    if (!scheme) {
-      throw new Error('配色方案不存在')
     }
 
-    return new Promise((resolve, reject) => {
-      db.serialize(() => {
-        db.run('BEGIN')
+    /**
+     * 创建配色方案
+     */
+    async createScheme(schemeData) {
+        try {
+            const schemeId = await artworkQueries.createScheme(schemeData);
+            return { id: schemeId, ...schemeData };
+        } catch (error) {
+            throw new Error(`创建配色方案失败: ${error.message}`);
+        }
+    }
 
-        // 删除层映射
-        db.run('DELETE FROM scheme_layers WHERE scheme_id = ?', [schemeId], (e1) => {
-          if (e1) {
-            db.run('ROLLBACK')
-            return reject(e1)
-          }
+    /**
+     * 更新配色方案
+     */
+    async updateScheme(schemeId, schemeData) {
+        try {
+            await artworkQueries.updateScheme(schemeId, schemeData);
+            return { success: true };
+        } catch (error) {
+            throw new Error(`更新配色方案失败: ${error.message}`);
+        }
+    }
 
-          // 删除配色方案
-          db.run('DELETE FROM color_schemes WHERE id = ?', [schemeId], (e2) => {
-            if (e2) {
-              db.run('ROLLBACK')
-              return reject(e2)
+    /**
+     * 删除配色方案
+     */
+    async deleteScheme(schemeId) {
+        try {
+            // 获取方案信息以删除缩略图
+            const schemes = await artworkQueries.getArtworkSchemes(null);
+            const scheme = schemes.find(s => s.id === schemeId);
+            
+            if (scheme && scheme.thumbnail_path) {
+                await this.deleteUploadedImage(scheme.thumbnail_path);
             }
-
-            db.run('COMMIT', () => {
-              // 删除缩略图文件
-              if (scheme.thumbnail_path) {
-                const filePath = path.join(__dirname, '..', 'uploads', scheme.thumbnail_path)
-                fs.unlink(filePath, () => {}) // 静默删除
-              }
-              resolve({ success: true })
-            })
-          })
-        })
-      })
-    })
-  }
-
-  /**
-   * 获取作品编号列表（用于调试）
-   */
-  static async getArtworkCodes() {
-    return new Promise((resolve, reject) => {
-      db.all(
-        'SELECT id, code, name FROM artworks ORDER BY code',
-        [],
-        (err, rows) => {
-          if (err) reject(err)
-          else resolve(rows)
+            
+            const changes = await artworkQueries.deleteScheme(schemeId);
+            return { success: changes > 0, deletedId: schemeId };
+        } catch (error) {
+            throw new Error(`删除配色方案失败: ${error.message}`);
         }
-      )
-    })
-  }
+    }
 
-  /**
-   * 检查方案名称是否重复
-   */
-  static async checkSchemeNameDuplicate(artworkId, schemeName, excludeSchemeId = null) {
-    return new Promise((resolve, reject) => {
-      let sql = 'SELECT COUNT(*) as count FROM color_schemes WHERE artwork_id = ? AND scheme_name = ?'
-      let params = [artworkId, schemeName]
-
-      if (excludeSchemeId) {
-        sql += ' AND id != ?'
-        params.push(excludeSchemeId)
-      }
-
-      db.get(sql, params, (err, result) => {
-        if (err) reject(err)
-        else resolve((result?.count || 0) > 0)
-      })
-    })
-  }
-
-  /**
-   * 获取指定方案的层级统计信息
-   */
-  static async getSchemeLayerStats(schemeId) {
-    return new Promise((resolve, reject) => {
-      db.all(
-        `SELECT 
-            sl.layer_number,
-            COUNT(*) as count,
-            GROUP_CONCAT(cc.color_code) as color_codes
-         FROM scheme_layers sl
-         LEFT JOIN custom_colors cc ON sl.custom_color_id = cc.id
-         WHERE sl.scheme_id = ?
-         GROUP BY sl.layer_number
-         ORDER BY sl.layer_number`,
-        [schemeId],
-        (err, rows) => {
-          if (err) reject(err)
-          else resolve(rows || [])
+    /**
+     * 删除上传的图片文件
+     */
+    async deleteUploadedImage(imagePath) {
+        if (!imagePath) return;
+        
+        try {
+            const fullPath = path.join(__dirname, '..', 'uploads', path.basename(imagePath));
+            await fs.unlink(fullPath);
+        } catch (error) {
+            console.warn('删除图片文件失败:', error.message);
         }
-      )
-    })
-  }
+    }
 }
 
-module.exports = ArtworkService
+module.exports = new ArtworkService();

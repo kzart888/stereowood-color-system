@@ -1,0 +1,206 @@
+/**
+ * 颜色相关数据库查询模块
+ * 职责：封装所有与自配色相关的数据库操作
+ * 引用：被 services/ColorService.js 和 routes/colors.js 使用
+ * @module db/queries/colors
+ */
+
+const { db } = require('../index');
+
+/**
+ * 获取所有自配颜色
+ * @returns {Promise<Array>} 颜色列表
+ */
+function getAllColors() {
+    return new Promise((resolve, reject) => {
+        db.all(`
+            SELECT c.*, cat.name as category_name, cat.code as category_code 
+            FROM custom_colors c
+            LEFT JOIN color_categories cat ON c.category_id = cat.id
+            ORDER BY c.created_at DESC
+        `, [], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+}
+
+/**
+ * 根据ID获取颜色
+ * @param {number} id - 颜色ID
+ * @returns {Promise<Object>} 颜色对象
+ */
+function getColorById(id) {
+    return new Promise((resolve, reject) => {
+        db.get(`
+            SELECT c.*, cat.name as category_name, cat.code as category_code 
+            FROM custom_colors c
+            LEFT JOIN color_categories cat ON c.category_id = cat.id
+            WHERE c.id = ?
+        `, [id], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
+
+/**
+ * 根据颜色编码获取颜色
+ * @param {string} colorCode - 颜色编码
+ * @returns {Promise<Object>} 颜色对象
+ */
+function getColorByCode(colorCode) {
+    return new Promise((resolve, reject) => {
+        db.get(`
+            SELECT c.*, cat.name as category_name, cat.code as category_code 
+            FROM custom_colors c
+            LEFT JOIN color_categories cat ON c.category_id = cat.id
+            WHERE c.color_code = ?
+        `, [colorCode], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
+
+/**
+ * 创建新的自配颜色
+ * @param {Object} colorData - 颜色数据
+ * @returns {Promise<number>} 新创建的颜色ID
+ */
+function createColor(colorData) {
+    const { category_id, color_code, image_path, formula, applicable_layers } = colorData;
+    
+    return new Promise((resolve, reject) => {
+        db.run(`
+            INSERT INTO custom_colors (category_id, color_code, image_path, formula, applicable_layers)
+            VALUES (?, ?, ?, ?, ?)
+        `, [category_id, color_code, image_path, formula, applicable_layers], function(err) {
+            if (err) reject(err);
+            else resolve(this.lastID);
+        });
+    });
+}
+
+/**
+ * 更新自配颜色
+ * @param {number} id - 颜色ID
+ * @param {Object} colorData - 更新的颜色数据
+ * @returns {Promise<number>} 影响的行数
+ */
+function updateColor(id, colorData) {
+    const { category_id, color_code, image_path, formula, applicable_layers } = colorData;
+    
+    return new Promise((resolve, reject) => {
+        db.run(`
+            UPDATE custom_colors 
+            SET category_id = ?, color_code = ?, image_path = ?, formula = ?, 
+                applicable_layers = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `, [category_id, color_code, image_path, formula, applicable_layers, id], function(err) {
+            if (err) reject(err);
+            else resolve(this.changes);
+        });
+    });
+}
+
+/**
+ * 删除自配颜色
+ * @param {number} id - 颜色ID
+ * @returns {Promise<number>} 影响的行数
+ */
+function deleteColor(id) {
+    return new Promise((resolve, reject) => {
+        db.run(`DELETE FROM custom_colors WHERE id = ?`, [id], function(err) {
+            if (err) reject(err);
+            else resolve(this.changes);
+        });
+    });
+}
+
+/**
+ * 归档颜色到历史记录
+ * @param {number} colorId - 颜色ID
+ * @param {Object} colorData - 颜色数据
+ * @returns {Promise<number>} 新创建的历史记录ID
+ */
+function archiveColorHistory(colorId, colorData) {
+    const { color_code, image_path, formula, applicable_layers } = colorData;
+    
+    return new Promise((resolve, reject) => {
+        db.run(`
+            INSERT INTO custom_colors_history 
+            (custom_color_id, color_code, image_path, formula, applicable_layers)
+            VALUES (?, ?, ?, ?, ?)
+        `, [colorId, color_code, image_path, formula, applicable_layers], function(err) {
+            if (err) reject(err);
+            else resolve(this.lastID);
+        });
+    });
+}
+
+/**
+ * 获取颜色的历史记录
+ * @param {number} colorId - 颜色ID
+ * @returns {Promise<Array>} 历史记录列表
+ */
+function getColorHistory(colorId) {
+    return new Promise((resolve, reject) => {
+        db.all(`
+            SELECT * FROM custom_colors_history 
+            WHERE custom_color_id = ?
+            ORDER BY archived_at DESC
+        `, [colorId], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+}
+
+/**
+ * 批量更新配方中的颜色名称
+ * @param {string} oldName - 旧颜色名称
+ * @param {string} newName - 新颜色名称
+ * @param {Function} replaceFunc - 替换函数
+ * @returns {Promise<number>} 更新的记录数
+ */
+function updateFormulasWithNewName(oldName, newName, replaceFunc) {
+    return new Promise((resolve, reject) => {
+        db.all('SELECT id, formula FROM custom_colors', [], (err, rows) => {
+            if (err) return reject(err);
+
+            let updatedCount = 0;
+            db.serialize(() => {
+                db.run('BEGIN TRANSACTION');
+                rows.forEach(row => {
+                    const newFormula = replaceFunc(row.formula, oldName, newName);
+                    if (newFormula !== row.formula) {
+                        updatedCount++;
+                        db.run(
+                            `UPDATE custom_colors 
+                               SET formula = ?, updated_at = CURRENT_TIMESTAMP 
+                             WHERE id = ?`,
+                            [newFormula, row.id]
+                        );
+                    }
+                });
+                db.run('COMMIT', (commitErr) => {
+                    if (commitErr) return reject(commitErr);
+                    resolve(updatedCount);
+                });
+            });
+        });
+    });
+}
+
+module.exports = {
+    getAllColors,
+    getColorById,
+    getColorByCode,
+    createColor,
+    updateColor,
+    deleteColor,
+    archiveColorHistory,
+    getColorHistory,
+    updateFormulasWithNewName
+};

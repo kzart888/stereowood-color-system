@@ -1,0 +1,223 @@
+/**
+ * 头部布局样式
+ * 应用头部、导航栏、搜索框等布局
+ * @module layout/header
+ */
+
+/* === 固定头部容器 === */
+.app-header-sticky {
+    position: sticky;
+    top: 0;
+    z-index: var(--sw-z-sticky);
+    background: var(--sw-bg-white);
+    border-bottom: 1px solid var(--sw-border-light);
+    box-shadow: var(--sw-shadow-sm);
+}
+
+/* === 主头部布局 === */
+.app-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    min-height: 60px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* 响应式布局 */
+@media (max-width: 1200px) {
+    .app-header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+}
+
+/* === 左侧标题区域 === */
+.app-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-title-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-title {
+    font-size: 18px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-active));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+    white-space: nowrap;
+    text-shadow: 0 0 30px rgba(111, 66, 193, 0.3);
+}
+
+/* === 中间导航区域 === */
+.app-header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Tab切换组 */
+.tab-switch-group {
+    display: inline-flex;
+    background: var(--sw-bg-light);
+    border-radius: var(--sw-radius-md);
+    padding: 2px;
+    gap: 2px;
+}
+
+.tab-switch {
+    padding: 8px 20px;
+    border-radius: var(--sw-radius-sm);
+    background: transparent;
+    color: var(--sw-text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all var(--sw-transition-base);
+    border: none;
+    cursor: pointer;
+}
+
+.tab-switch:hover {
+    color: var(--sw-text-primary);
+    background: rgba(111, 66, 193, 0.08);
+}
+
+.tab-switch.active {
+    background: var(--sw-primary);
+    color: white;
+    box-shadow: var(--sw-shadow-sm);
+}
+
+/* === 搜索区域 === */
+.app-header-search {
+    position: relative;
+    flex: 0 0 280px;
+}
+
+@media (max-width: 1200px) {
+    .app-header-search {
+        flex: 1;
+        width: 100%;
+    }
+}
+
+/* 全局搜索下拉 */
+.global-search-dropdown {
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    box-shadow: var(--sw-shadow-lg);
+    margin-top: 4px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.global-search-dropdown.floating {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: var(--sw-z-dropdown);
+}
+
+.global-search-dropdown.edge-shift {
+    right: auto;
+    left: auto;
+    transform: translateX(-50%);
+}
+
+/* 搜索结果分组 */
+.gs-group {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--sw-border-light);
+}
+
+.gs-group:last-child {
+    border-bottom: none;
+}
+
+.gs-group-title {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sw-text-muted);
+    text-transform: uppercase;
+}
+
+.gs-items {
+    padding: 0;
+}
+
+.gs-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background var(--sw-transition-fast);
+}
+
+.gs-item:hover,
+.gs-item.active {
+    background: var(--sw-primary-light);
+}
+
+.gs-text {
+    font-size: 14px;
+    color: var(--sw-text-primary);
+}
+
+/* === 右侧工具区域 === */
+.app-header-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--sw-actions-gap);
+    flex-wrap: wrap;
+}
+
+/* 双按钮组 */
+.dual-toggle-group {
+    display: inline-flex;
+    border: 1px solid var(--sw-border-base);
+    border-radius: var(--sw-radius-sm);
+    overflow: hidden;
+}
+
+.dual-toggle-group .el-button {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0 !important;
+}
+
+.dual-toggle-group .el-button + .el-button {
+    margin-left: 0 !important;
+    border-left: 1px solid var(--sw-border-base);
+}
+
+.dual-toggle-group button {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+/* 添加按钮 */
+.add-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+@media (max-width: 768px) {
+    .app-header-tools {
+        width: 100%;
+        justify-content: center;
+    }
+}

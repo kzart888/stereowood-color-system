@@ -1,0 +1,122 @@
+/**
+ * 全局重置样式
+ * 重置浏览器默认样式，建立统一基础
+ * @module base/reset
+ */
+
+/* === 基础重置 === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 14px;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--sw-text-primary);
+    background-color: var(--sw-bg-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* === 链接 === */
+a {
+    color: var(--sw-primary);
+    text-decoration: none;
+    transition: color var(--sw-transition-fast);
+}
+
+a:hover {
+    color: var(--sw-primary-hover);
+}
+
+/* === 列表 === */
+ul, ol {
+    list-style: none;
+}
+
+/* === 表格 === */
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+/* === 表单元素 === */
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    outline: none;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+input,
+textarea {
+    border: 1px solid var(--sw-border-base);
+    border-radius: var(--sw-radius-sm);
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color var(--sw-transition-fast);
+}
+
+input:focus,
+textarea:focus {
+    border-color: var(--sw-primary);
+}
+
+/* === 图片 === */
+img {
+    max-width: 100%;
+    height: auto;
+    vertical-align: middle;
+    border: 0;
+}
+
+/* === 辅助类 === */
+.clearfix::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* === 滚动条样式 === */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--sw-bg-light);
+    border-radius: var(--sw-radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--sw-border-dark);
+    border-radius: var(--sw-radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--sw-text-muted);
+}

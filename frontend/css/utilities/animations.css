@@ -1,0 +1,252 @@
+/**
+ * 动画效果库
+ * 定义各种动画和过渡效果
+ * @module utilities/animations
+ */
+
+/* === 动画关键帧定义 === */
+
+/* 淡入 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* 淡出 */
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* 从上滑入 */
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 从下滑入 */
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 缩放入 */
+@keyframes zoomIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 旋转 */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 脉冲 */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* 抖动 */
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-2px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(2px);
+    }
+}
+
+/* 高亮闪烁 */
+@keyframes highlight-pulse {
+    0%, 100% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: var(--sw-primary-light);
+    }
+}
+
+/* 加载中旋转 */
+@keyframes loading {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* === 动画工具类 === */
+
+/* 淡入淡出 */
+.fade-in {
+    animation: fadeIn var(--sw-transition-base);
+}
+
+.fade-out {
+    animation: fadeOut var(--sw-transition-base);
+}
+
+/* 滑动 */
+.slide-in-down {
+    animation: slideInDown var(--sw-transition-base);
+}
+
+.slide-in-up {
+    animation: slideInUp var(--sw-transition-base);
+}
+
+/* 缩放 */
+.zoom-in {
+    animation: zoomIn var(--sw-transition-base);
+}
+
+/* 旋转 */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+/* 脉冲 */
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* 抖动 */
+.shake {
+    animation: shake 0.5s;
+}
+
+/* 高亮闪烁 */
+.highlight-pulse {
+    animation: highlight-pulse 1s ease-in-out;
+}
+
+/* 加载中 */
+.is-loading {
+    animation: loading 1s linear infinite;
+}
+
+/* === 过渡效果 === */
+
+/* 通用过渡 */
+.transition-all {
+    transition: all var(--sw-transition-base);
+}
+
+.transition-fast {
+    transition: all var(--sw-transition-fast);
+}
+
+.transition-slow {
+    transition: all var(--sw-transition-slow);
+}
+
+/* 特定属性过渡 */
+.transition-opacity {
+    transition: opacity var(--sw-transition-base);
+}
+
+.transition-transform {
+    transition: transform var(--sw-transition-base);
+}
+
+.transition-colors {
+    transition: color var(--sw-transition-base), 
+                background-color var(--sw-transition-base), 
+                border-color var(--sw-transition-base);
+}
+
+/* 悬停效果 */
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sw-shadow-md);
+}
+
+.hover-scale:hover {
+    transform: scale(1.05);
+}
+
+.hover-rotate:hover {
+    transform: rotate(5deg);
+}
+
+/* === Vue过渡动画 === */
+
+/* 淡入淡出 */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity var(--sw-transition-base);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* 滑动 */
+.slide-enter-active,
+.slide-leave-active {
+    transition: all var(--sw-transition-base);
+}
+
+.slide-enter-from {
+    transform: translateX(-20px);
+    opacity: 0;
+}
+
+.slide-leave-to {
+    transform: translateX(20px);
+    opacity: 0;
+}
+
+/* 展开收起 */
+.expand-enter-active,
+.expand-leave-active {
+    transition: all var(--sw-transition-base);
+    overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+    max-height: 0;
+    opacity: 0;
+}

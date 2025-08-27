@@ -1,0 +1,274 @@
+/**
+ * 自配色组件样式
+ * 颜色卡片、颜色列表、配方显示等
+ * @module components/custom-colors
+ */
+
+/* === 颜色网格容器 === */
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 16px 0;
+}
+
+/* === 颜色卡片 === */
+.color-card {
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    overflow: hidden;
+    transition: all var(--sw-transition-base);
+    cursor: pointer;
+}
+
+.color-card:hover {
+    box-shadow: var(--sw-shadow-md);
+    transform: translateY(-2px);
+}
+
+.color-card.selected {
+    border-color: var(--sw-primary);
+    box-shadow: 0 0 0 2px var(--sw-primary-light);
+}
+
+/* 颜色预览图 */
+.color-image {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--sw-bg-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.color-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.color-image.no-image {
+    color: var(--sw-text-muted);
+    font-size: 12px;
+}
+
+/* 颜色信息 */
+.color-info {
+    padding: 8px;
+}
+
+.color-code {
+    font-weight: 600;
+    color: var(--sw-text-primary);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.color-category {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--sw-primary-light);
+    color: var(--sw-primary);
+    border-radius: var(--sw-radius-xs);
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+/* === 配方显示 === */
+.formula-display {
+    padding: 8px;
+    background: var(--sw-bg-light);
+    border-radius: var(--sw-radius-sm);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.formula-lines {
+    display: table;
+    width: 100%;
+}
+
+.formula-line {
+    display: table-row;
+}
+
+.formula-name,
+.formula-amount {
+    display: table-cell;
+    padding: 2px 4px;
+}
+
+.formula-name {
+    color: var(--sw-text-primary);
+    font-weight: 500;
+}
+
+.formula-amount {
+    text-align: right;
+    color: var(--sw-text-secondary);
+    white-space: nowrap;
+}
+
+/* === 配方编辑器 === */
+.formula-editor {
+    padding: 12px;
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+}
+
+.formula-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.formula-table th {
+    padding: 8px;
+    background: var(--sw-bg-light);
+    border: 1px solid var(--sw-border-light);
+    font-weight: 600;
+    font-size: 13px;
+    text-align: left;
+}
+
+.formula-table td {
+    padding: 6px;
+    border: 1px solid var(--sw-border-light);
+}
+
+.drag-handle {
+    cursor: move;
+    color: var(--sw-text-muted);
+    text-align: center;
+}
+
+.formula-table tr.dragging {
+    opacity: 0.5;
+}
+
+/* === 颜色选择器 === */
+.color-picker {
+    position: relative;
+}
+
+.color-picker-trigger {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--sw-border-base);
+    border-radius: var(--sw-radius-sm);
+    cursor: pointer;
+    background: var(--pattern);
+}
+
+.color-picker-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    box-shadow: var(--sw-shadow-lg);
+    padding: 12px;
+    z-index: var(--sw-z-dropdown);
+}
+
+/* === 分类标签组 === */
+.category-tabs {
+    margin-bottom: 20px;
+}
+
+.category-switch-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.category-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: 16px;
+    color: var(--sw-text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+}
+
+.category-chip:hover {
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+}
+
+.category-chip.active {
+    background: var(--sw-primary);
+    border-color: var(--sw-primary);
+    color: white;
+}
+
+.category-chip .count {
+    margin-left: 4px;
+    padding: 0 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    font-size: 11px;
+}
+
+/* === 适用层标签 === */
+.applicable-layer-chip {
+    display: inline-block;
+    padding: 2px 6px;
+    margin: 0 2px 2px 0;
+    background: var(--sw-primary-light);
+    color: var(--sw-primary);
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+/* === 查重检测 === */
+.duplicate-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--sw-warning);
+    color: white;
+    border-radius: var(--sw-radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.duplicate-list {
+    padding: 12px;
+    background: var(--sw-bg-light);
+    border-radius: var(--sw-radius-md);
+    margin-top: 8px;
+}
+
+.duplicate-item {
+    padding: 8px;
+    background: var(--sw-bg-white);
+    border-radius: var(--sw-radius-sm);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.duplicate-item:last-child {
+    margin-bottom: 0;
+}
+
+.similarity-badge {
+    padding: 2px 6px;
+    background: var(--sw-danger);
+    color: white;
+    border-radius: var(--sw-radius-xs);
+    font-size: 11px;
+    font-weight: 600;
+}

@@ -1,0 +1,145 @@
+/**
+ * 颜色原料组件样式
+ * Mont-Marte原料管理相关样式
+ * @module components/mont-marte
+ */
+
+/* === 原料卡片 === */
+.mont-marte-card {
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    padding: 12px;
+    margin-bottom: 12px;
+    transition: all var(--sw-transition-base);
+}
+
+.mont-marte-card:hover {
+    box-shadow: var(--sw-shadow-sm);
+    transform: translateY(-1px);
+}
+
+/* === 原料图片 === */
+.material-image {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--sw-bg-light);
+    border-radius: var(--sw-radius-sm);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.material-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.material-image.no-image {
+    border: 2px dashed var(--sw-border-light);
+    color: var(--sw-text-muted);
+    font-size: 12px;
+}
+
+/* === 原料信息 === */
+.material-info {
+    padding: 8px 0;
+}
+
+.material-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+    margin-bottom: 4px;
+}
+
+.material-meta {
+    font-size: 12px;
+    color: var(--sw-text-secondary);
+    line-height: 1.5;
+}
+
+.material-meta span {
+    display: block;
+    margin-bottom: 2px;
+}
+
+/* === 供应商标签 === */
+.supplier-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--sw-info);
+    color: white;
+    border-radius: var(--sw-radius-xs);
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+/* === 采购链接 === */
+.purchase-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--sw-bg-light);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-sm);
+    color: var(--sw-primary);
+    text-decoration: none;
+    font-size: 12px;
+    transition: all var(--sw-transition-fast);
+}
+
+.purchase-link:hover {
+    background: var(--sw-primary-light);
+    border-color: var(--sw-primary);
+}
+
+/* === 规格信息 === */
+.specification {
+    padding: 4px 8px;
+    background: var(--sw-bg-light);
+    border-left: 3px solid var(--sw-primary);
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--sw-text-secondary);
+}
+
+/* === 原料操作按钮 === */
+.material-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--sw-border-light);
+}
+
+.material-actions button {
+    flex: 1;
+    padding: 6px 0;
+    font-size: 12px;
+}
+
+/* === 响应式网格 === */
+.mont-marte-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 16px 0;
+}
+
+@media (max-width: 768px) {
+    .mont-marte-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .mont-marte-grid {
+        grid-template-columns: 1fr;
+    }
+}

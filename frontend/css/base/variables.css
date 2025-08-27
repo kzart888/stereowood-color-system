@@ -1,0 +1,75 @@
+/**
+ * CSS变量定义
+ * 所有设计系统的变量定义
+ * @module base/variables
+ */
+
+:root {
+    /* === 间距系统 === */
+    --sw-gap-xs: 2px;
+    --sw-gap-sm: 4px;
+    --sw-gap-md: 6px;
+    --sw-gap-lg: 8px;
+    --sw-gap-xl: 12px;
+    --sw-actions-gap: 8px; /* 统一工具按钮间距 */
+    
+    /* === 圆角系统 === */
+    --sw-radius-xs: 2px;
+    --sw-radius-sm: 4px;
+    --sw-radius-md: 6px;
+    --sw-radius-lg: 8px;
+    
+    /* === 布局系统 === */
+    --sw-card-padding: 4px 6px 8px;
+    --sw-header-padding: 6px 6px 4px;
+    --sw-chip-gap: 4px;
+    --sw-thumb-size: 80px;
+    --sw-thumb-preview-size: 320px; /* 预览图尺寸 */
+    
+    /* === 颜色系统 === */
+    --sw-primary: #6f42c1;              /* 主色调-紫色 */
+    --sw-primary-hover: #5a34a0;        /* 主色-悬停 */
+    --sw-primary-active: #4b2c85;       /* 主色-激活 */
+    --sw-primary-light: rgba(111,66,193,0.12); /* 主色-浅色背景 */
+    --sw-primary-border: rgba(111,66,193,0.25); /* 主色-边框 */
+    
+    --sw-success: #2f9e44;              /* 成功色 */
+    --sw-warning: #f59e0b;              /* 警告色 */
+    --sw-danger: #d93025;               /* 危险色 */
+    --sw-info: #409EFF;                 /* 信息色 */
+    
+    --sw-text-primary: #222;            /* 主要文本 */
+    --sw-text-secondary: #666;          /* 次要文本 */
+    --sw-text-muted: #909399;           /* 辅助文本 */
+    --sw-text-disabled: #c0c4cc;        /* 禁用文本 */
+    
+    --sw-border-light: #e4e7ed;         /* 浅边框 */
+    --sw-border-base: #dcdfe6;          /* 基础边框 */
+    --sw-border-dark: #c0c4cc;          /* 深边框 */
+    
+    --sw-bg-white: #fff;                /* 白色背景 */
+    --sw-bg-light: #fafafa;             /* 浅灰背景 */
+    --sw-bg-base: #f5f5f5;              /* 基础背景 */
+    --sw-bg-gray: #eee;                 /* 灰色背景 */
+    
+    /* === 阴影系统 === */
+    --sw-shadow-xs: 0 1px 3px rgba(0,0,0,0.08);
+    --sw-shadow-sm: 0 2px 5px rgba(0,0,0,0.1);
+    --sw-shadow-md: 0 4px 10px rgba(0,0,0,0.12);
+    --sw-shadow-lg: 0 6px 16px rgba(0,0,0,0.15);
+    --sw-shadow-float: 0 6px 20px rgba(111,66,193,0.3);
+    
+    /* === 动画时长 === */
+    --sw-transition-fast: 0.15s ease;
+    --sw-transition-base: 0.25s ease;
+    --sw-transition-slow: 0.35s ease;
+    
+    /* === 层级系统 === */
+    --sw-z-normal: 1;
+    --sw-z-dropdown: 100;
+    --sw-z-sticky: 200;
+    --sw-z-modal: 1000;
+    --sw-z-popover: 1100;
+    --sw-z-tooltip: 1200;
+    --sw-z-notification: 1300;
+}
