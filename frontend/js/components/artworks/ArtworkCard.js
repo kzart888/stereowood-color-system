@@ -46,7 +46,8 @@ export const ArtworkCard = {
         setSchemeRef(scheme) {
             return (el) => {
                 if (el && scheme._scrollIntoView) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // 直接跳转，无动画
+                    el.scrollIntoView({ behavior: 'instant', block: 'center' });
                     scheme._scrollIntoView = false;
                 }
             };

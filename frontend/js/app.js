@@ -206,9 +206,44 @@ if (typeof FormulaCalculatorOverlay !== 'undefined') {
     app.component('formula-calculator-overlay', FormulaCalculatorOverlay);
 }
 
-// 将 helpers 与 thumbPreview 暴露到全局 (供组件模板中通过 this.$helpers / this.$thumbPreview 使用)
-if (window.helpers) app.config.globalProperties.$helpers = window.helpers;
-if (window.thumbPreview) app.config.globalProperties.$thumbPreview = window.thumbPreview;
+// === Provide services to components (both provide and global properties for full compatibility) ===
+
+// API service
+app.provide('$api', window.api || {});
+
+// Helpers service
+if (window.helpers) {
+    app.provide('$helpers', window.helpers);
+    app.config.globalProperties.$helpers = window.helpers;
+    console.log('✓ Helpers service initialized');
+} else {
+    console.error('✗ Helpers service not found');
+}
+
+// Thumbnail preview service
+if (window.thumbPreview) {
+    app.provide('$thumbPreview', window.thumbPreview);
+    app.config.globalProperties.$thumbPreview = window.thumbPreview;
+    console.log('✓ ThumbPreview service initialized');
+} else {
+    console.error('✗ ThumbPreview service not found');
+}
+
+// Calculator service
+if (window.$formulaCalc) {
+    const calcService = {
+        open: (code, formula, triggerEl) => window.$formulaCalc.open(code, formula, triggerEl, app),
+        close: () => window.$formulaCalc.close()
+    };
+    app.provide('$calc', calcService);
+    app.config.globalProperties.$calc = calcService;
+    console.log('✓ Calculator service initialized');
+} else {
+    console.error('✗ Calculator service not found');
+}
+
+// Root properties access
+app.provide('$root', app.config.globalProperties);
 
 // 添加配方编辑器组件注册
 if (typeof FormulaEditorComponent !== 'undefined') {
@@ -226,13 +261,6 @@ if (typeof ConflictResolver !== 'undefined') {
     console.error('ConflictResolver 未定义');
 }
 
-// 全局计算器服务封装：提供 $calc.open(code, formula, triggerEl)
-if (window.$formulaCalc) {
-    app.config.globalProperties.$calc = {
-        open: (code, formula, triggerEl)=> window.$formulaCalc.open(code, formula, triggerEl, app),
-        close: ()=> window.$formulaCalc.close()
-    };
-}
 
 // ===== 挂载应用 =====
 // 使用Element Plus UI库并挂载到#app元素

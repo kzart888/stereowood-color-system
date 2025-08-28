@@ -15,10 +15,14 @@
 
 /* === 3. 组件样式 === */
 @import './components/common.css';        /* 通用组件 */
+@import './components/buttons.css';       /* 按钮样式 */
+@import './components/chips.css';         /* 标签样式 */
 @import './components/custom-colors.css'; /* 自配色组件 */
 @import './components/artworks.css';      /* 作品组件 */
 @import './components/mont-marte.css';    /* 原料组件 */
 @import './components/formula-calc.css';  /* 计算器组件 */
+@import './components/print-dialog.css';  /* 打印对话框 */
+@import './components/duplicate-dialog.css';  /* 重复检测对话框 */
 
 /* === 4. 工具样式 === */
 @import './utilities/helpers.css';        /* 辅助类 */

@@ -1,0 +1,174 @@
+/**
+ * 统一标签（Chip）样式
+ * 配方标签、使用层标签等小型信息展示组件
+ * @module components/chips
+ */
+
+/* === 基础标签样式 === */
+.chip-base {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    font-size: 12px;
+    line-height: 16px;
+    border-radius: 3px;
+    white-space: nowrap;
+    transition: all var(--sw-transition-fast);
+}
+
+/* === 配方标签 === */
+.mf-chip,
+.formula-chip {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #f0f4f8;
+    border: 1px solid #d6dee6;
+    border-radius: 3px;
+    color: var(--sw-text-primary);
+    font-size: 12px;
+    line-height: 16px;
+    white-space: nowrap;
+    margin: 0 2px 2px 0;
+}
+
+/* === 使用层标签 === */
+.usage-chip {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #f5f7f2;
+    border: 1px solid #d9e2cc;
+    color: #56624a;
+    font-size: 12px;
+    line-height: 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+    margin: 0 2px 2px 0;
+}
+
+.usage-chip:hover {
+    background: #e8ece2;
+    border-color: #c1d1a6;
+    transform: translateY(-1px);
+}
+
+/* === 适用层标签 === */
+.applicable-layer-chip,
+.layer-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--sw-primary-light);
+    color: var(--sw-primary);
+    border: 1px solid var(--sw-primary);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 0 2px 2px 0;
+}
+
+/* === 标签容器 === */
+.chips-container,
+.usage-chips,
+.mapping-formula-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+/* 配方标签容器特殊处理 */
+.mapping-formula-chips {
+    margin-top: 4px;
+}
+
+/* === 颜色分类标签 === */
+.color-category-chip {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--sw-primary-light);
+    color: var(--sw-primary);
+    border-radius: var(--sw-radius-xs);
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+/* === 状态标签 === */
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.status-chip.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #81c784;
+}
+
+.status-chip.warning {
+    background: #fff3e0;
+    color: #f57c00;
+    border: 1px solid #ffb74d;
+}
+
+.status-chip.error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef5350;
+}
+
+/* === 数量标签 === */
+.count-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+/* === 重复标记 === */
+.dup-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: #ff6b6b;
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+/* === 禁用提示 === */
+.mf-chip[data-no-tip],
+.formula-chip[data-no-tip],
+.usage-chip[data-no-tip] {
+    -webkit-touch-callout: none;
+    pointer-events: auto;
+}
+
+/* === 响应式调整 === */
+@media (max-width: 768px) {
+    .chips-container {
+        gap: 2px;
+    }
+    
+    .mf-chip,
+    .formula-chip,
+    .usage-chip {
+        font-size: 11px;
+        padding: 1px 4px;
+    }
+}

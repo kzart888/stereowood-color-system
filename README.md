@@ -1,53 +1,29 @@
-# STEREOWOOD Color System
+# STEREOWOOD Color Management System
 
-<div align="center">
+## 🎯 Purpose
+Simple, reliable color management system for STEREOWOOD factory production (3-5 users).
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)
-![Vue](https://img.shields.io/badge/vue-3.3.4-4FC08D.svg)
-![Docker](https://img.shields.io/badge/docker-%3E%3D20.0.0-blue.svg)
+## 📋 System Overview
 
-**专业的叠雕画颜色管理解决方案**
+STEREOWOOD Color System is a simplified web application designed for managing color formulas and artwork schemes in a small factory setting. Built for ease of maintenance by a 2-person team.
 
-[快速开始](#快速开始) • [功能特性](#功能特性) • [技术架构](#技术架构) • [文档索引](#文档索引) • [部署指南](#部署指南)
+### Core Features
+- **自配色管理** - Custom color formula management with duplicate detection
+- **作品配色管理** - Artwork layer-to-color mapping
+- **颜色原料管理** - Mont-Marte raw material management  
+- **配方计算器** - Quick formula ratio calculations
+- **查重功能** - Automatic duplicate formula detection
 
-</div>
+## 🚀 Quick Start
 
----
+### Windows Users
+1. Double-click `start.bat`
+2. Open browser: http://localhost:3000
 
-## 📋 项目概述
-
-STEREOWOOD Color System（叠雕画颜色管理系统）是一个专为叠雕画工艺设计的Web应用程序，用于管理多层激光切割木板的颜色配方和施工信息。系统提供直观的界面，帮助工厂师傅管理复杂的颜色配方、作品配色方案以及原料信息。
-
-### 🎯 核心价值
-- **标准化管理**：统一颜色配方标准，减少人为错误
-- **历史追溯**：完整的修改历史记录和版本回溯功能  
-- **智能查重**：自动检测重复配方，优化存储和管理
-- **实时计算**：内置配方计算器，支持比例换算和用量计算
-- **多维搜索**：全局智能搜索，快速定位所需信息
-
----
-
-## 🚀 快速开始
-
-### 环境要求
-- **Node.js**: ≥ 18.0.0
-- **npm**: ≥ 8.0.0
-- **Git**: 最新版本
-- **Docker**: ≥ 20.0.0（可选，用于容器化部署）
-
-### 本地开发部署
-
+### Mac/Linux Users
 ```bash
-# 1. 克隆项目
-git clone https://github.com/kzart888/stereowood-color-system.git
-cd stereowood-color-system
-
-# 2. 安装后端依赖
-cd backend
-npm install
-
-# 3. 启动开发服务器
+npm install  # First time only
+npm start    # Start the system
 npm start
 
 # 4. 访问应用

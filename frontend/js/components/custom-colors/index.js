@@ -182,7 +182,7 @@ export const CustomColorsComponent = {
             const color = this.colors.find(c => c.color_code === colorCode);
             if (color && this.colorItemRefs[color.id]) {
                 const element = this.colorItemRefs[color.id];
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.scrollIntoView({ behavior: 'instant', block: 'center' });
                 
                 // 3秒后清除高亮
                 setTimeout(() => {

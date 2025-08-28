@@ -29,13 +29,23 @@ const helpers = {
     formatDate(dateString, format = 'simple') {
         if (!dateString) return '未知';
         
-        const date = new Date(dateString);
+        // Handle UTC time from server - ensure proper timezone conversion
+        let date = new Date(dateString);
+        
+        // If the date string doesn't include timezone info and looks like UTC (ends with Z or is ISO format without timezone)
+        if (!dateString.includes('+') && !dateString.includes('-08:00') && !dateString.includes('GMT')) {
+            // Assume it's UTC and needs conversion to local time
+            if (!dateString.endsWith('Z')) {
+                date = new Date(dateString + 'Z');
+            }
+        }
+        
         if (isNaN(date.getTime())) return '未知';
         
         if (format === 'locale') {
-            return date.toLocaleString('zh-CN');
+            return date.toLocaleString('zh-CN', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
         } else {
-            // simple format: YYYY-MM-DD HH:MM
+            // simple format: YYYY-MM-DD HH:MM - using local time
             const pad = (n) => (n < 10 ? '0' + n : '' + n);
             return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
         }

@@ -1,0 +1,246 @@
+/**
+ * 统一按钮样式
+ * 所有按钮的一致性设计
+ * @module components/buttons
+ */
+
+/* === 基础按钮样式 === */
+.btn-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    border-radius: var(--sw-radius-sm);
+    border: 1px solid var(--sw-border-base);
+    background: var(--sw-bg-white);
+    color: var(--sw-text-secondary);
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.btn-base:hover {
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
+}
+
+.btn-base:active {
+    transform: scale(0.98);
+}
+
+.btn-base.active {
+    background: var(--sw-primary);
+    border-color: var(--sw-primary);
+    color: white;
+}
+
+/* === 页面切换按钮（顶部导航） === */
+.tab-switch-group {
+    display: inline-flex;
+    background: transparent;
+    gap: 4px;
+    align-items: center;
+}
+
+.tab-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 14px;
+    height: 32px;
+    min-width: 80px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--sw-radius-sm);
+    border: 1px solid var(--sw-border-light);
+    background: var(--sw-bg-white);
+    color: var(--sw-text-secondary);
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+}
+
+.tab-switch:hover {
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
+}
+
+.tab-switch.active {
+    background: var(--sw-primary);
+    border-color: var(--sw-primary);
+    color: white;
+}
+
+/* === 工具按钮组（时间/名称等） === */
+.dual-toggle-group {
+    display: inline-flex;
+    height: 32px;
+    border: 1px solid var(--sw-border-base);
+    border-radius: var(--sw-radius-sm);
+    overflow: hidden;
+    background: var(--sw-bg-white);
+}
+
+.dual-toggle-group button,
+.dual-toggle-group .el-button {
+    height: 30px;
+    padding: 0 12px;
+    margin: 0 !important;
+    font-size: 13px;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent;
+    color: var(--sw-text-secondary);
+    transition: all var(--sw-transition-fast);
+}
+
+.dual-toggle-group button:not(:last-child),
+.dual-toggle-group .el-button:not(:last-child) {
+    border-right: 1px solid var(--sw-border-light) !important;
+}
+
+.dual-toggle-group button:hover,
+.dual-toggle-group .el-button:hover {
+    background: var(--sw-bg-light);
+    color: var(--sw-primary);
+}
+
+.dual-toggle-group button.is-active,
+.dual-toggle-group .el-button.is-active,
+.dual-toggle-group button.active,
+.dual-toggle-group .el-button.active,
+.dual-toggle-group .el-button--primary {
+    background: var(--sw-primary) !important;
+    border-color: var(--sw-primary) !important;
+    color: white !important;
+}
+
+.dual-toggle-group .el-button--primary:hover {
+    background: var(--sw-primary-hover) !important;
+    border-color: var(--sw-primary-hover) !important;
+}
+
+/* === 分类筛选按钮 === */
+.category-switch-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.category-switch,
+.category-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    height: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: 15px;
+    color: var(--sw-text-secondary);
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+}
+
+.category-switch:hover,
+.category-chip:hover {
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
+}
+
+.category-switch.active,
+.category-chip.active {
+    background: var(--sw-primary);
+    border-color: var(--sw-primary);
+    color: white;
+}
+
+.category-switch .count,
+.category-chip .count {
+    padding: 0 6px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.category-switch.active .count,
+.category-chip.active .count {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* === 计算按钮（小） === */
+.calc-mini-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    padding: 2px 6px;
+    min-width: 24px;
+    height: 20px;
+    background: var(--sw-primary);
+    color: white;
+    border: none;
+    border-radius: var(--sw-radius-xs);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+    z-index: 10;
+}
+
+.calc-mini-btn:hover {
+    background: var(--sw-primary-hover);
+    transform: scale(1.05);
+}
+
+.calc-mini-btn:active {
+    background: var(--sw-primary-active);
+    transform: scale(0.98);
+}
+
+/* === 新增按钮 === */
+.add-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 14px;
+}
+
+/* === 操作按钮 === */
+.el-button--small {
+    height: 28px;
+    padding: 5px 12px;
+    font-size: 13px;
+}
+
+.el-button--mini {
+    height: 24px;
+    padding: 3px 9px;
+    font-size: 12px;
+}
+
+/* === 响应式调整 === */
+@media (max-width: 768px) {
+    .tab-switch-group,
+    .category-switch-group {
+        justify-content: center;
+    }
+    
+    .tab-switch,
+    .category-switch {
+        min-width: auto;
+        padding: 5px 10px;
+    }
+}

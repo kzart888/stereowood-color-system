@@ -116,28 +116,30 @@ const ArtworksComponent = {
     <table class="layer-table bycolor-table">
                   <thead>
                     <tr>
-          <th v-for="g in groupedByColorWithFlags(scheme)" :key="'hc'+g.code" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}">{{ g.code ? g.code : (g.isEmptyGroup ? '(未指定)' : '-') }}</th>
+          <th v-for="g in groupedByColorWithFlags(scheme)" :key="'hc'+g.code" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}" style="position:relative;">
+            {{ g.code ? g.code : (g.isEmptyGroup ? '(未指定)' : '-') }}
+            <template v-if="g.code && colorByCode(g.code) && colorByCode(g.code).formula">
+              <button class="calc-mini-btn" @click.stop="$calc && $calc.open(g.code, colorByCode(g.code).formula||'', $event.currentTarget)" title="快速计算" style="position:absolute; top:2px; right:4px;">算</button>
+            </template>
+          </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text formula-chip-row" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}" style="position:relative;">
+                      <td v-for="g in groupedByColorWithFlags(scheme)" :key="'fc'+g.code" class="meta-text formula-chip-row" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}">
                         <template v-if="g.isEmptyGroup">
                           -
                         </template>
                         <template v-else-if="colorByCode(g.code)">
-                          <div
-                            v-if="parseFormulaLines(colorByCode(g.code).formula).length"
-                            class="mapping-formula-chips"
-                          >
-                            <el-tooltip v-for="(line,i) in parseFormulaLines(colorByCode(g.code).formula)" :key="'bcf'+g.code+'-'+i" :content="line" placement="top">
-                              <span class="mf-chip">{{ line }}</span>
-                            </el-tooltip>
-                          </div>
-                          <span v-else>（无配方）</span>
-                          <template v-if="colorByCode(g.code).formula">
-                            <button class="calc-mini-btn" @click.stop="$calc && $calc.open(g.code, colorByCode(g.code).formula||'', $event.currentTarget)" title="快速计算">算</button>
+                          <template v-if="structuredFormula(colorByCode(g.code).formula).lines.length">
+                            <div class="formula-lines" :style="{ '--max-name-ch': structuredFormula(colorByCode(g.code).formula).maxNameChars }">
+                              <div class="fl" v-for="(p,i) in structuredFormula(colorByCode(g.code).formula).lines" :key="'bcfl'+g.code+'-'+i">
+                                <span class="fl-name">{{ p.name }}</span>
+                                <span class="fl-amt" v-if="p.amount">{{ p.amount }}{{ p.unit }}</span>
+                              </div>
+                            </div>
                           </template>
+                          <span v-else>（无配方）</span>
                         </template>
                         <span v-else>（未匹配到自配色：{{ g.code }}）</span>
                       </td>
@@ -642,7 +644,8 @@ const ArtworksComponent = {
             const vh = window.innerHeight || document.documentElement.clientHeight;
             const current = window.pageYOffset || document.documentElement.scrollTop;
             const targetScroll = current + rect.top - (vh/2 - rect.height/2);
-            window.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+            // 直接跳转，无动画
+            window.scrollTo(0, Math.max(0, targetScroll));
           } catch(e) { el.scrollIntoView({ block:'center' }); }
         }
       });

@@ -180,13 +180,6 @@
     margin-bottom: 20px;
 }
 
-.category-switch-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 16px;
-}
-
 .category-chip {
     display: inline-flex;
     align-items: center;

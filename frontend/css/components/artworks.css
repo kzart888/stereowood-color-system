@@ -154,7 +154,7 @@
 
 /* 层单元格 */
 .layer-cell {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 4px;
@@ -179,6 +179,7 @@
     width: 100%;
     font-size: 11px;
     line-height: 1.4;
+    table-layout: auto;
 }
 
 .fl {
@@ -187,16 +188,17 @@
 
 .fl-name {
     display: table-cell;
-    color: var(--sw-text-secondary);
     padding-right: 8px;
+    white-space: nowrap;
+    color: var(--sw-text-secondary);
 }
 
 .fl-amount {
     display: table-cell;
-    color: var(--sw-text-primary);
-    font-weight: 500;
-    white-space: nowrap;
     text-align: right;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--sw-text-primary);
 }
 
 /* === 应用层显示 === */

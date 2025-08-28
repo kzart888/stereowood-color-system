@@ -1,0 +1,281 @@
+/**
+ * 打印对话框样式
+ * 自配色列表和查重对话框的打印样式
+ * @module components/print-dialog
+ */
+
+/* === 自配色列表打印对话框 === */
+.color-palette-dialog {
+    --dialog-padding: 16px;
+}
+
+.color-palette-dialog .el-dialog__header {
+    padding: 12px var(--dialog-padding);
+    border-bottom: 1px solid var(--sw-border-base);
+    background: var(--sw-bg-white);
+}
+
+.color-palette-dialog .el-dialog__body {
+    padding: var(--dialog-padding);
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.color-palette-dialog .custom-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.color-palette-dialog .palette-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+}
+
+.color-palette-dialog .palette-header-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* 调色板内容 */
+.color-palette-content {
+    padding: 8px 0;
+}
+
+.palette-stats {
+    display: flex;
+    gap: 16px;
+    padding: 8px 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--sw-border-light);
+    font-size: 13px;
+    color: var(--sw-text-secondary);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-label {
+    font-weight: 500;
+}
+
+.stat-value {
+    color: var(--sw-primary);
+    font-weight: 600;
+}
+
+/* 颜色分组 */
+.palette-group {
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+}
+
+.group-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--sw-border-light);
+}
+
+.group-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+}
+
+.group-count {
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: var(--sw-bg-light);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--sw-text-secondary);
+}
+
+/* 颜色网格 */
+.group-colors {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.color-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: transform var(--sw-transition-fast);
+}
+
+.color-item:hover {
+    transform: translateY(-2px);
+}
+
+.color-block {
+    width: 80px;
+    height: 80px;
+    border: 1px solid var(--sw-border-base);
+    border-radius: var(--sw-radius-sm);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sw-bg-light);
+}
+
+.color-block img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.color-block.no-image {
+    font-size: 11px;
+    color: var(--sw-text-muted);
+    text-align: center;
+    padding: 4px;
+}
+
+.color-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--sw-text-primary);
+    text-align: center;
+    max-width: 80px;
+    word-break: break-all;
+}
+
+/* === 查重对话框 === */
+.dup-groups-dialog {
+    --dialog-padding: 16px;
+}
+
+.dup-groups-dialog .el-dialog__header {
+    padding: 12px var(--dialog-padding);
+    border-bottom: 1px solid var(--sw-border-base);
+}
+
+.dup-groups-dialog .el-dialog__body {
+    padding: var(--dialog-padding);
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.dup-group {
+    margin-bottom: 20px;
+    padding: 12px;
+    background: var(--sw-bg-light);
+    border-radius: var(--sw-radius-md);
+    border: 1px solid var(--sw-border-light);
+}
+
+.dup-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--sw-border-light);
+}
+
+.dup-formula-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+}
+
+.dup-count {
+    padding: 2px 8px;
+    background: var(--sw-warning);
+    color: white;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dup-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dup-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-sm);
+}
+
+.dup-item-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dup-color-code {
+    font-weight: 600;
+    color: var(--sw-primary);
+}
+
+.dup-category {
+    padding: 2px 6px;
+    background: var(--sw-bg-light);
+    border-radius: var(--sw-radius-xs);
+    font-size: 11px;
+    color: var(--sw-text-secondary);
+}
+
+.dup-date {
+    font-size: 12px;
+    color: var(--sw-text-muted);
+}
+
+.dup-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* === 打印样式覆盖 === */
+@media print {
+    .color-palette-dialog .el-dialog__wrapper,
+    .dup-groups-dialog .el-dialog__wrapper {
+        position: static !important;
+        background: white !important;
+    }
+    
+    .color-palette-dialog .el-dialog,
+    .dup-groups-dialog .el-dialog {
+        margin: 0 !important;
+        box-shadow: none !important;
+        width: 100% !important;
+    }
+    
+    .color-palette-dialog .palette-header-right,
+    .dup-groups-dialog .el-dialog__headerbtn {
+        display: none !important;
+    }
+    
+    .group-colors {
+        grid-template-columns: repeat(8, 1fr);
+    }
+    
+    .color-block {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .color-name {
+        font-size: 10px;
+    }
+}

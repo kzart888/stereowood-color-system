@@ -19,10 +19,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px;
-    min-height: 60px;
-    gap: 20px;
-    flex-wrap: wrap;
+    padding: 8px 16px;
+    height: 48px;
+    gap: 16px;
 }
 
 /* 响应式布局 */
@@ -61,42 +60,46 @@
 
 /* === 中间导航区域 === */
 .app-header-center {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
-    justify-content: center;
+    align-items: center;
+    margin-left: 16px;
+}
+
+/* Tab切换组 - 页面导航按钮 */
+.tab-switch-group {
+    display: inline-flex;
+    gap: 6px;
     align-items: center;
 }
 
-/* Tab切换组 */
-.tab-switch-group {
-    display: inline-flex;
-    background: var(--sw-bg-light);
-    border-radius: var(--sw-radius-md);
-    padding: 2px;
-    gap: 2px;
-}
-
 .tab-switch {
-    padding: 8px 20px;
-    border-radius: var(--sw-radius-sm);
-    background: transparent;
-    color: var(--sw-text-secondary);
-    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 14px;
+    height: 32px;
+    min-width: 90px;
+    font-size: 13px;
     font-weight: 500;
-    transition: all var(--sw-transition-base);
-    border: none;
+    border-radius: var(--sw-radius-sm);
+    border: 1px solid var(--sw-border-light);
+    background: var(--sw-bg-white);
+    color: var(--sw-text-secondary);
     cursor: pointer;
+    transition: all var(--sw-transition-fast);
 }
 
 .tab-switch:hover {
-    color: var(--sw-text-primary);
-    background: rgba(111, 66, 193, 0.08);
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
 }
 
 .tab-switch.active {
     background: var(--sw-primary);
+    border-color: var(--sw-primary);
     color: white;
-    box-shadow: var(--sw-shadow-sm);
 }
 
 /* === 搜索区域 === */
@@ -180,32 +183,49 @@
     display: flex;
     align-items: center;
     gap: var(--sw-actions-gap);
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 450px;
+    justify-content: flex-end;
 }
 
 /* 双按钮组 */
 .dual-toggle-group {
     display: inline-flex;
+    height: 32px;
     border: 1px solid var(--sw-border-base);
     border-radius: var(--sw-radius-sm);
     overflow: hidden;
+    background: var(--sw-bg-white);
 }
 
+.dual-toggle-group button,
 .dual-toggle-group .el-button {
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
+    height: 30px;
+    padding: 0 12px;
     margin: 0 !important;
-}
-
-.dual-toggle-group .el-button + .el-button {
-    margin-left: 0 !important;
-    border-left: 1px solid var(--sw-border-base);
-}
-
-.dual-toggle-group button {
-    padding: 6px 12px;
     font-size: 13px;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent;
+    transition: all var(--sw-transition-fast);
+}
+
+.dual-toggle-group button:not(:last-child),
+.dual-toggle-group .el-button:not(:last-child) {
+    border-right: 1px solid var(--sw-border-light) !important;
+}
+
+.dual-toggle-group button:hover,
+.dual-toggle-group .el-button:hover {
+    background: var(--sw-bg-light);
+    color: var(--sw-primary);
+}
+
+.dual-toggle-group button.is-active,
+.dual-toggle-group .el-button.is-active {
+    background: var(--sw-primary);
+    color: white;
 }
 
 /* 添加按钮 */
