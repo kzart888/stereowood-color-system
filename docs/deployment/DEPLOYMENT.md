@@ -1,4 +1,26 @@
-# 部署指南
+# Deployment Guide
+
+## 🚀 Deployment Options
+
+### 1. Synology NAS (Recommended for Factory)
+- **Guide**: [Synology Deployment Guide](SYNOLOGY_DEPLOYMENT.md)
+- **Method**: Docker Hub → Container Manager
+- **Best for**: Production use in factory with Synology NAS
+- **Features**: Auto-updates, easy backup, no SSH needed
+
+### 2. Local Development
+- **Windows**: Run `start.bat`
+- **Mac/Linux**: Run `npm start`
+- **Port**: 9099
+- **Best for**: Development and testing
+
+### 3. Quick Reference
+- **Cheat Sheet**: [Quick Deploy Reference](QUICK_DEPLOY_REFERENCE.md)
+- **Print this**: Keep near your Synology server
+
+---
+
+## Original Cloud Server Deployment
 
 叠雕画颜色管理系统的快速部署指南。
 

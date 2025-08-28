@@ -1,20 +1,69 @@
-# Node / build artifacts
-node_modules
-npm-debug.log*
-Dockerfile*
-.dockerignore
+# Git files
 .git
 .gitignore
-*.swp
+.github
 
-# SQLite WAL/SHM transient (bind mount may regenerate)
+# Documentation (not needed in production)
+docs/
+README*.md
+LICENSE
+
+# Development files
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+*.swp
+*.swo
+
+# Test files
+test/
+tests/
+coverage/
+.nyc_output/
+
+# Local data (use volumes instead)
+database.db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+uploads/*
+backups/*
+backend/uploads/*
+backend/*.db
 backend/*.db-wal
 backend/*.db-shm
 
-# Local uploads already mounted at runtime
-backend/uploads/*
+# Node modules (will be installed fresh)
+node_modules/
+package-lock.json
 
-# OS / editor
+# Build artifacts
+dist/
+build/
+*.tar
+*.tar.gz
+
+# OS files
 .DS_Store
 Thumbs.db
-.vscode
+
+# Environment files
+.env
+.env.*
+
+# Docker files (not needed in build context)
+docker-compose*.yml
+Dockerfile.*
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Scripts not needed in container
+start.bat
+start.sh

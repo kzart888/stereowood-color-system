@@ -1,14 +1,20 @@
-# node_modules 等依赖包
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
 
-# 上传的文件
-backend/uploads/
-
-# 数据库文件
+# Production Data (NEVER commit these!)
+database.db
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
+uploads/
+backups/
+backend/uploads/
+backend/*.db
+backend/backups/
 
 # Docker 镜像文件
 *.tar
@@ -57,6 +63,14 @@ build/
 # Claude Code 配置文件
 .claude/
 *.local.json
-backend/color_management.db-shm
-backend/color_management.db-wal
 nul
+
+# Docker Hub & GitHub Actions
+.dockerignore.local
+docker-compose.override.yml
+.github/workflows/*.local.yml
+
+# Deployment logs & artifacts
+deployment-logs/
+*.deployment.log
+.docker-build-cache/

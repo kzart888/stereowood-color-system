@@ -1,22 +1,37 @@
 version: '3.8'
 services:
   stereowood:
-    build: .
+    image: ${DOCKER_IMAGE:-stereowood-color-system:latest}
     container_name: stereowood-color-system
     restart: unless-stopped
     environment:
       - TZ=Asia/Shanghai
-      - PORT=3000
-      - DB_FILE=/data/color_management.db
+      - PORT=9099
+      - NODE_ENV=production
+      - DB_FILE=/data/database.db
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-9099}:9099"
     volumes:
-      - ./backend/uploads:/app/backend/uploads
-      - ./backend/color_management.db:/data/color_management.db
-      # 可选：挂载整个 frontend 以便热替换静态文件
-      - ./frontend:/app/frontend:ro
+      - stereowood-data:/data
+      - stereowood-uploads:/app/uploads
+      - stereowood-backups:/app/backups
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9099/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 40s
+    networks:
+      - stereowood-network
+
+networks:
+  stereowood-network:
+    driver: bridge
+
+volumes:
+  stereowood-data:
+    name: stereowood-data
+  stereowood-uploads:
+    name: stereowood-uploads
+  stereowood-backups:
+    name: stereowood-backups

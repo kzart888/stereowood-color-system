@@ -5,15 +5,25 @@ Simple, reliable color management system for STEREOWOOD factory production (3-5 
 
 ## 🚀 Quick Start
 
-### Windows Users
+### Local Development
+#### Windows Users
 1. Double-click `start.bat`
-2. Open browser: http://localhost:3000
+2. Open browser: http://localhost:9099
 
-### Mac/Linux Users
+#### Mac/Linux Users
 ```bash
 npm install  # First time only
 npm start    # Start the system
 ```
+
+### 🐳 Docker Deployment (Synology NAS)
+See [Synology Deployment Guide](docs/deployment/SYNOLOGY_DEPLOYMENT.md) for detailed instructions.
+
+Quick steps:
+1. Push code to GitHub
+2. Auto-build on Docker Hub
+3. Pull image in Synology Container Manager
+4. Run container with proper volumes
 
 ## 📁 System Features
 
