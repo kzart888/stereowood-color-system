@@ -44,6 +44,14 @@ docker run -d \
   stereowood-color-system:latest
 ```
 
+## Current State (v0.8.1 - 2025-01-03)
+
+### Major Recent Changes
+- **Backend**: Completely refactored from 1090-line monolithic server.js to 100-line modular version
+- **Routes**: All API routes now properly connected via `backend/routes/index.js`
+- **UI Fixes**: Fixed table cell layouts and formula chips display
+- **Cleanup**: Removed 3400+ lines of obsolete code
+
 ## Architecture Overview
 
 ### Three-Tier Architecture

@@ -52,6 +52,16 @@ temp/
 *.backup
 *backup*
 backup/
+backups/
+*-backup-*.js
+*backup*.js
+
+# Windows null device
+nul
+
+# Old server file (if accidentally restored)
+backend/server-old.js
+backend/server-monolithic.js
 
 # 测试覆盖率
 coverage/

@@ -89,15 +89,41 @@ function createColor(colorData) {
  * @returns {Promise<number>} 影响的行数
  */
 function updateColor(id, colorData) {
-    const { category_id, color_code, image_path, formula, applicable_layers } = colorData;
-    
     return new Promise((resolve, reject) => {
-        db.run(`
-            UPDATE custom_colors 
-            SET category_id = ?, color_code = ?, image_path = ?, formula = ?, 
-                applicable_layers = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `, [category_id, color_code, image_path, formula, applicable_layers, id], function(err) {
+        // 动态构建UPDATE语句，只更新提供的字段
+        const updates = [];
+        const values = [];
+        
+        if (colorData.category_id !== undefined) {
+            updates.push('category_id = ?');
+            values.push(colorData.category_id);
+        }
+        if (colorData.color_code !== undefined) {
+            updates.push('color_code = ?');
+            values.push(colorData.color_code);
+        }
+        if (colorData.image_path !== undefined) {
+            updates.push('image_path = ?');
+            values.push(colorData.image_path);
+        }
+        if (colorData.formula !== undefined) {
+            updates.push('formula = ?');
+            values.push(colorData.formula);
+        }
+        if (colorData.applicable_layers !== undefined) {
+            updates.push('applicable_layers = ?');
+            values.push(colorData.applicable_layers);
+        }
+        
+        // 总是更新updated_at
+        updates.push('updated_at = CURRENT_TIMESTAMP');
+        
+        // 添加WHERE条件的id
+        values.push(id);
+        
+        const sql = `UPDATE custom_colors SET ${updates.join(', ')} WHERE id = ?`;
+        
+        db.run(sql, values, function(err) {
             if (err) reject(err);
             else resolve(this.changes);
         });

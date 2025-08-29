@@ -54,8 +54,6 @@ router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
   if (req.file) {
     image_path = req.file.filename;
     console.log('蒙马特颜色图片上传成功:', image_path);
-      image_path = req.file.filename;
-    }
   }
 
   if (!name || !name.trim()) return res.status(400).json({ error: '颜色名称不能为空' });
@@ -104,8 +102,6 @@ router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) =>
     if (req.file) {
       newImagePath = req.file.filename;
       console.log('蒙马特颜色编辑图片上传成功:', newImagePath);
-        newImagePath = req.file.filename;
-      }
     } else if (existingImagePath) {
       newImagePath = existingImagePath;
     } else {

@@ -26,7 +26,7 @@ const upload = multer({ storage: storage });
  * GET /api/artworks
  * 获取所有作品及其配色方案
  */
-router.get('/', async (req, res) => {
+router.get('/artworks', async (req, res) => {
     try {
         const artworks = await ArtworkService.getAllArtworks();
         res.json(artworks);
@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
  * POST /api/artworks
  * 创建新作品
  */
-router.post('/', async (req, res) => {
+router.post('/artworks', async (req, res) => {
     try {
         const { code, name } = req.body;
         const newArtwork = await ArtworkService.createArtwork({ code, name });
@@ -57,7 +57,7 @@ router.post('/', async (req, res) => {
  * DELETE /api/artworks/:id
  * 删除作品
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/artworks/:id', async (req, res) => {
     try {
         const result = await ArtworkService.deleteArtwork(req.params.id);
         res.json(result);
@@ -70,10 +70,11 @@ router.delete('/:id', async (req, res) => {
  * POST /api/artworks/:artworkId/schemes
  * 为作品创建配色方案
  */
-router.post('/:artworkId/schemes', upload.single('thumbnail'), async (req, res) => {
+router.post('/artworks/:artworkId/schemes', upload.single('thumbnail'), async (req, res) => {
     try {
         const { artworkId } = req.params;
-        const { scheme_name, layers } = req.body;
+        // Frontend sends 'name' not 'scheme_name'
+        const { name, layers } = req.body;
         const thumbnail_path = req.file ? req.file.filename : null;
         
         // 解析layers（前端可能传递JSON字符串）
@@ -88,7 +89,7 @@ router.post('/:artworkId/schemes', upload.single('thumbnail'), async (req, res) 
         
         const newScheme = await ArtworkService.createScheme({
             artwork_id: artworkId,
-            scheme_name,
+            scheme_name: name,  // Map 'name' to 'scheme_name'
             thumbnail_path,
             layers: parsedLayers
         });
@@ -107,10 +108,11 @@ router.post('/:artworkId/schemes', upload.single('thumbnail'), async (req, res) 
  * PUT /api/artworks/:artworkId/schemes/:schemeId
  * 更新配色方案
  */
-router.put('/:artworkId/schemes/:schemeId', upload.single('thumbnail'), async (req, res) => {
+router.put('/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail'), async (req, res) => {
     try {
         const { schemeId } = req.params;
-        const { scheme_name, layers, existingThumbnailPath } = req.body;
+        // Frontend sends 'name' not 'scheme_name'
+        const { name, layers, existingThumbnailPath } = req.body;
         const newThumbnailPath = req.file ? req.file.filename : existingThumbnailPath;
         
         // 解析layers
@@ -124,7 +126,7 @@ router.put('/:artworkId/schemes/:schemeId', upload.single('thumbnail'), async (r
         }
         
         await ArtworkService.updateScheme(schemeId, {
-            scheme_name,
+            scheme_name: name,  // Map 'name' to 'scheme_name'
             thumbnail_path: newThumbnailPath,
             layers: parsedLayers
         });
@@ -148,7 +150,7 @@ router.put('/:artworkId/schemes/:schemeId', upload.single('thumbnail'), async (r
  * DELETE /api/artworks/:artworkId/schemes/:schemeId
  * 删除配色方案
  */
-router.delete('/:artworkId/schemes/:schemeId', async (req, res) => {
+router.delete('/artworks/:artworkId/schemes/:schemeId', async (req, res) => {
     try {
         const result = await ArtworkService.deleteScheme(req.params.schemeId);
         res.json(result);

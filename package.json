@@ -1,6 +1,6 @@
 {
   "name": "stereowood-color-system",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "STEREOWOOD Color Management System - Simplified for Factory Use (3-5 users)",
   "main": "server.js",
   "scripts": {

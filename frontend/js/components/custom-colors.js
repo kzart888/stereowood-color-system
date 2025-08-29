@@ -149,7 +149,10 @@ const CustomColorsComponent = {
                 </el-form>
                 <template #footer>
                     <el-button @click="attemptCloseAddDialog">取消</el-button>
-                    <el-button type="primary" @click="saveColor" :disabled="colorCodeDuplicate">保存</el-button>
+                    <el-button type="primary" @click="saveColor" :disabled="colorCodeDuplicate || saving">
+                        <el-icon v-if="saving" class="is-loading"><Loading /></el-icon>
+                        {{ saving ? '保存中...' : '保存' }}
+                    </el-button>
                 </template>
             </el-dialog>
             <!-- 查重对话框 (比例查重 阶段A) -->
@@ -702,6 +705,10 @@ const CustomColorsComponent = {
                 }
                 
                 if (this.editingColor) {
+                    // 如果没有新图片但有旧图片，保留旧图片路径
+                    if (!this.form.imageFile && this.editingColor.image_path) {
+                        formData.append('existingImagePath', this.editingColor.image_path);
+                    }
                     // 添加版本信息用于乐观锁
                     if (this.editingColor.version) {
                         formData.append('version', this.editingColor.version);

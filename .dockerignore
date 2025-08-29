@@ -73,6 +73,20 @@ start.sh
 *.backup
 *backup*
 backup/
+backups/
+*-backup-*.js
+*backup*.js
+
+# Windows null device
+nul
+
+# Old server files
+backend/server-old.js
+backend/server-monolithic.js
+
+# Empty directories
+frontend/js/composables/
+frontend/js/stores/
 
 # Cache files
 .npm/

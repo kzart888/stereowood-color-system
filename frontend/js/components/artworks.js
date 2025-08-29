@@ -412,7 +412,11 @@ const ArtworksComponent = {
 
         <template #footer>
           <el-button @click="attemptCloseSchemeDialog"><el-icon><Close /></el-icon> 取消</el-button>
-          <el-button type="primary" :loading="saving" :disabled="schemeNameDuplicate" @click="saveScheme"><el-icon><Check /></el-icon> 保存</el-button>
+          <el-button type="primary" :disabled="schemeNameDuplicate || saving" @click="saveScheme">
+            <el-icon v-if="saving" class="is-loading"><Loading /></el-icon>
+            <el-icon v-else><Check /></el-icon>
+            {{ saving ? '保存中...' : '保存' }}
+          </el-button>
         </template>
       </el-dialog>
     </div>

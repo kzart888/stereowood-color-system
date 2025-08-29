@@ -213,8 +213,10 @@ const MontMarteComponent = {
                     <el-button @click="attemptCloseDialog">
                         <el-icon><Close /></el-icon> 取消
                     </el-button>
-                    <el-button type="primary" @click="saveColor" :loading="saving" :disabled="nameDuplicate">
-                        <el-icon><Check /></el-icon> 保存
+                    <el-button type="primary" @click="saveColor" :disabled="nameDuplicate || saving">
+                        <el-icon v-if="saving" class="is-loading"><Loading /></el-icon>
+                        <el-icon v-else><Check /></el-icon>
+                        {{ saving ? '保存中...' : '保存' }}
                     </el-button>
                 </template>
             </el-dialog>

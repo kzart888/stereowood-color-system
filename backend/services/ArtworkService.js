@@ -6,6 +6,7 @@
  */
 
 const artworkQueries = require('../db/queries/artworks');
+const { db } = require('../db/index');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -47,7 +48,7 @@ class ArtworkService {
                 if (!scheme) {
                     scheme = {
                         id: row.scheme_id,
-                        scheme_name: row.scheme_name,
+                        name: row.scheme_name,  // Frontend expects 'name' not 'scheme_name'
                         thumbnail_path: row.thumbnail_path,
                         created_at: row.scheme_created_at,
                         updated_at: row.scheme_updated_at,
@@ -58,9 +59,9 @@ class ArtworkService {
                 
                 if (row.layer_number && row.custom_color_id) {
                     scheme.layers.push({
-                        layer_number: row.layer_number,
-                        custom_color_id: row.custom_color_id,
-                        color_code: row.color_code,
+                        layer: row.layer_number,  // Frontend expects 'layer' not 'layer_number'
+                        colorCode: row.color_code,  // Frontend expects 'colorCode' not 'color_code'
+                        custom_color_id: row.custom_color_id,  // Keep for backend reference
                         formula: row.formula
                     });
                 }
@@ -107,11 +108,58 @@ class ArtworkService {
     }
 
     /**
+     * 将颜色代码转换为颜色ID
+     */
+    async convertColorCodesToIds(layers) {
+        if (!layers || !layers.length) return [];
+        
+        const convertedLayers = [];
+        for (const layer of layers) {
+            // Handle both frontend format (layer, colorCode) and backend format (layer_number, custom_color_id)
+            const layerNumber = layer.layer || layer.layer_number;
+            let colorId = layer.custom_color_id;
+            
+            // If we have colorCode but not custom_color_id, look it up
+            if (layer.colorCode && !layer.custom_color_id) {
+                if (layer.colorCode) {
+                    // Look up the color ID from the database
+                    const color = await new Promise((resolve, reject) => {
+                        db.get(
+                            `SELECT id FROM custom_colors WHERE color_code = ?`,
+                            [layer.colorCode],
+                            (err, row) => {
+                                if (err) reject(err);
+                                else resolve(row);
+                            }
+                        );
+                    });
+                    colorId = color ? color.id : null;
+                }
+            }
+            
+            if (layerNumber && colorId) {
+                convertedLayers.push({
+                    layer_number: layerNumber,
+                    custom_color_id: colorId
+                });
+            }
+        }
+        return convertedLayers;
+    }
+
+    /**
      * 创建配色方案
      */
     async createScheme(schemeData) {
         try {
-            const schemeId = await artworkQueries.createScheme(schemeData);
+            // Convert color codes to IDs if needed
+            const convertedLayers = await this.convertColorCodesToIds(schemeData.layers);
+            const dataWithConvertedLayers = {
+                ...schemeData,
+                layers: convertedLayers
+            };
+            
+            const schemeId = await artworkQueries.createScheme(dataWithConvertedLayers);
             return { id: schemeId, ...schemeData };
         } catch (error) {
             throw new Error(`创建配色方案失败: ${error.message}`);
@@ -123,7 +171,14 @@ class ArtworkService {
      */
     async updateScheme(schemeId, schemeData) {
         try {
-            await artworkQueries.updateScheme(schemeId, schemeData);
+            // Convert color codes to IDs if needed
+            const convertedLayers = await this.convertColorCodesToIds(schemeData.layers);
+            const dataWithConvertedLayers = {
+                ...schemeData,
+                layers: convertedLayers
+            };
+            
+            await artworkQueries.updateScheme(schemeId, dataWithConvertedLayers);
             return { success: true };
         } catch (error) {
             throw new Error(`更新配色方案失败: ${error.message}`);

@@ -94,11 +94,15 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
     const colorId = req.params.id;
     const { category_id, color_code, formula, applicable_layers, existingImagePath, version } = req.body;
     const expectedVersion = version ? parseInt(version) : null;
-    let imagePath = existingImagePath || null;
-
-    // 处理新上传的图片（保存原图）
+    
+    // 处理图片：只有在有新上传或明确提供existingImagePath时才更新
+    let imagePath;
+    let shouldUpdateImage = false;
+    
     if (req.file) {
+      // 有新上传的图片
       imagePath = req.file.filename;
+      shouldUpdateImage = true;
       console.log('编辑图片上传成功:', imagePath);
 
       // 删除旧图片（如果存在）
@@ -110,15 +114,23 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
           else console.log('删除旧图片成功:', existingImagePath);
         });
       }
+    } else if (existingImagePath !== undefined) {
+      // 明确提供了existingImagePath（包括null，表示要清除图片）
+      imagePath = existingImagePath;
+      shouldUpdateImage = true;
     }
 
     const colorData = {
       category_id,
       color_code,
-      image_path: imagePath,
       formula,
       applicable_layers
     };
+    
+    // 只有在需要更新图片时才添加image_path字段
+    if (shouldUpdateImage) {
+      colorData.image_path = imagePath;
+    }
 
     const result = await ColorService.updateColor(colorId, colorData, expectedVersion);
     // 返回更新后的完整颜色信息
