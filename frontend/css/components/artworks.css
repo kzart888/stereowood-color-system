@@ -7,7 +7,7 @@
 /* === 作品卡片容器 === */
 .artwork-bar {
     background: var(--sw-bg-white);
-    margin: var(--sw-gap-md) var(--sw-gap-md) var(--sw-gap-lg) var(--sw-gap-md);
+    margin: 6px;
     border-radius: var(--sw-radius-md);
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     transition: box-shadow var(--sw-transition-base);
@@ -25,7 +25,7 @@
 
 /* === 作品头部 === */
 .artwork-header {
-    padding: 12px 12px 8px;
+    padding: 8px;
     border-bottom: 1px solid var(--sw-border-light);
     display: flex;
     align-items: center;
@@ -42,7 +42,7 @@
 
 /* === 配色方案条 === */
 .scheme-bar {
-    padding: 6px 6px 8px;
+    padding: 6px;
     border-bottom: 1px solid #f0f0f0;
     transition: background-color var(--sw-transition-base);
 }
@@ -152,53 +152,266 @@
     margin-bottom: 4px;
 }
 
-/* 层单元格 */
+/* 层单元格 - 修改为横向布局 */
 .layer-cell {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 4px;
+    white-space: nowrap;
 }
 
-/* 重复标记 */
+/* 层号输入框样式 */
+.layer-cell .el-input-number {
+    width: 60px;
+}
+
+.layer-cell .el-input-number .el-input__wrapper {
+    width: 60px;
+    padding-left: 6px;
+    padding-right: 36px;
+}
+
+/* 重复标记 - 改为内联显示 */
 .dup-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 16px;
     height: 16px;
-    line-height: 16px;
-    text-align: center;
     border-radius: 50%;
     color: white;
     font-size: 10px;
     font-weight: bold;
+    flex-shrink: 0;
 }
 
-/* === 配方显示 === */
-.formula-lines {
-    display: table;
+/* 方案名称输入框样式 */
+.scheme-name-input {
+    width: 200px !important;
+    display: inline-block;
+}
+
+.scheme-name-input .el-input__wrapper {
+    width: 200px;
+    margin: 0 6px;
+}
+
+.scheme-bracket-end {
+    margin-left: 20px;
+}
+
+/* 颜色代码单元格样式 */
+.color-code-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: auto;
+    min-width: 200px;
+}
+
+/* 颜色选项内容样式 */
+.color-option-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 自定义选择器包装器 */
+.custom-select-wrapper {
+    position: relative;
     width: 100%;
+}
+
+/* 已选中颜色显示 */
+.selected-color-display {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.custom-select-wrapper .el-input__inner {
+    padding-left: 40px;
+}
+
+/* 颜色预览方块 */
+.color-preview-square {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--sw-border-light);
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.color-preview-square.no-image {
+    background-color: var(--sw-bg-light);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--sw-text-muted);
+    vertical-align: middle;
+}
+
+.color-preview-square.no-image::after {
+    content: '无';
+}
+
+/* 配方显示容器 */
+.mapping-formula-display {
+    margin-top: 2px;
+}
+
+.formula-line-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mf-chip {
+    display: block;
     font-size: 11px;
-    line-height: 1.4;
-    table-layout: auto;
-}
-
-.fl {
-    display: table-row;
-}
-
-.fl-name {
-    display: table-cell;
-    padding-right: 8px;
+    color: var(--sw-text-secondary);
     white-space: nowrap;
+}
+
+/* 操作按钮容器 */
+.operation-buttons {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    align-items: center;
+    padding: 4px 0;
+}
+
+/* 表格单元格三列布局 */
+.table-cell-layout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    min-height: 30px;
+}
+
+.cell-left {
+    flex: 0 0 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.cell-center {
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 0 8px;
+}
+
+.cell-center strong {
+    font-size: 13px;
+    color: var(--sw-text-primary);
+}
+
+.cell-right {
+    flex: 0 0 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+/* 空单元格 - 居中显示 */
+.empty-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 30px;
+}
+
+.empty-cell strong {
+    font-size: 13px;
     color: var(--sw-text-secondary);
 }
 
-.fl-amount {
-    display: table-cell;
-    text-align: right;
+/* 表格专用计算按钮 - 不使用绝对定位 */
+.table-calc-btn {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background: var(--sw-primary);
+    color: white;
+    border: none;
+    border-radius: var(--sw-radius-xs);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--sw-transition-fast);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: static !important; /* 强制覆盖其他定位 */
+}
+
+.table-calc-btn:hover {
+    background: var(--sw-primary-hover);
+    transform: scale(1.05);
+}
+
+.table-calc-btn:active {
+    background: var(--sw-primary-active);
+    transform: scale(0.98);
+}
+
+/* 旧的颜色显示类 - 保留以兼容其他可能使用的地方 */
+.color-display-with-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    gap: 8px;
+    width: 100%;
+}
+
+
+/* === 配方显示 === */
+.artworks-page .formula-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+    line-height: 1.4;
+    align-items: center;
+}
+
+.fl {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+}
+
+.fl-name {
     white-space: nowrap;
-    font-weight: 600;
+    color: var(--sw-text-secondary);
+    text-align: right;
+    min-width: 60px;
+}
+
+.fl-amt {
+    white-space: nowrap;
+    font-weight: 700;
     color: var(--sw-text-primary);
+    text-align: left;
+    min-width: 50px;
 }
 
 /* === 应用层显示 === */
@@ -219,25 +432,7 @@
     color: var(--sw-text-secondary);
 }
 
-/* === 快速计算按钮 === */
-.calc-mini-btn {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    padding: 2px 6px;
-    background: var(--sw-primary);
-    color: white;
-    border: none;
-    border-radius: var(--sw-radius-xs);
-    font-size: 11px;
-    cursor: pointer;
-    transition: all var(--sw-transition-fast);
-}
-
-.calc-mini-btn:hover {
-    background: var(--sw-primary-hover);
-    transform: scale(1.1);
-}
+/* === 快速计算按钮 - 保留以兼容其他位置 === */
 
 /* === 操作按钮组 === */
 .color-actions {

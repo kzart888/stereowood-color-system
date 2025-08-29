@@ -94,7 +94,7 @@ const MontMarteComponent = {
 
                     <!-- 新增：供应商（可输入+创建+下拉） -->
                     <el-form-item label="供应商">
-                        <div style="display:flex; gap:8px; align-items:center; width:100%;">
+                        <div style="display:flex; gap:8px; align-items:center;">
                             <el-select
                                 ref="supplierSelect"
                                 v-model="form.supplier_id"
@@ -104,7 +104,7 @@ const MontMarteComponent = {
                                 default-first-option
                                 automatic-dropdown
                                 placeholder="选择或输入供应商"
-                                style="flex:1;"
+                                style="width: 360px;"
                                 @change="onSupplierChange"
                             >
                                 <el-option
@@ -133,7 +133,7 @@ const MontMarteComponent = {
 
                     <!-- 新增：线上采购地址 -->
                     <el-form-item label="线上采购地址">
-                        <div style="display:flex; gap:8px; align-items:center; width:100%;">
+                        <div style="display:flex; gap:8px; align-items:center;">
                             <el-select
                                 ref="purchaseSelect"
                                 v-model="form.purchase_link_id"
@@ -143,7 +143,7 @@ const MontMarteComponent = {
                                 default-first-option
                                 automatic-dropdown
                                 placeholder="选择或输入采购地址"
-                                style="flex:1;"
+                                style="width: 360px;"
                                 @change="onPurchaseChange"
                             >
                                 <el-option
@@ -171,17 +171,39 @@ const MontMarteComponent = {
                     </el-form-item>
 
                     <el-form-item label="颜色样图">
-                        <el-upload
-                            :auto-upload="false"
-                            :show-file-list="false"
-                            :on-change="onImageChange"
-                            accept="image/*"
-                        >
-                            <el-button><el-icon><Upload /></el-icon> 选择图片</el-button>
-                        </el-upload>
-                        <div v-if="form.imagePreview" style="margin-top: 8px;">
-                            <div class="scheme-thumbnail" @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)">
-                                <img :src="form.imagePreview" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <!-- 缩略图预览区域 -->
+                            <div class="scheme-thumbnail" 
+                                 :class="{ 'no-image': !form.imagePreview }" 
+                                 style="width: 80px; height: 80px; flex-shrink: 0;"
+                                 @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)">
+                                <template v-if="!form.imagePreview">未上传图片</template>
+                                <img v-else :src="form.imagePreview" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                            </div>
+                            
+                            <!-- 操作按钮区域 -->
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <el-upload
+                                    :auto-upload="false"
+                                    :show-file-list="false"
+                                    :on-change="onImageChange"
+                                    accept="image/*"
+                                >
+                                    <el-button size="small" type="primary">
+                                        <el-icon><Upload /></el-icon>
+                                        选择图片
+                                    </el-button>
+                                </el-upload>
+                                
+                                <el-button 
+                                    v-if="form.imagePreview" 
+                                    size="small" 
+                                    type="danger" 
+                                    @click="clearImage"
+                                >
+                                    <el-icon><Delete /></el-icon>
+                                    清除图片
+                                </el-button>
                             </div>
                         </div>
                     </el-form-item>
@@ -503,6 +525,11 @@ const MontMarteComponent = {
             const reader = new FileReader();
             reader.onload = () => { this.form.imagePreview = reader.result; };
             reader.readAsDataURL(raw);
+        },
+        
+        clearImage() {
+            this.form.imageFile = null;
+            this.form.imagePreview = null;
         },
 
         async saveColor() {

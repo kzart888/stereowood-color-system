@@ -29,6 +29,46 @@
 @import './utilities/animations.css';     /* 动画效果 */
 
 /* === 5. 覆盖第三方组件库样式 === */
+/* Element Plus 对话框全局样式 */
+.el-dialog__header {
+    margin: 0;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--sw-border-light);
+}
+
+.el-dialog__body {
+    padding: 16px;
+}
+
+.el-dialog__headerbtn {
+    top: 8px;
+    right: 16px;
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+}
+
+/* Element Plus 表单样式优化 */
+.el-form-item {
+    margin-bottom: 8px;
+}
+
+.el-form-item__content {
+    line-height: 22px;
+}
+
+.el-form-item__error {
+    display: inline-block;
+    margin-left: 8px;
+    position: static;
+    color: var(--el-color-danger);
+    font-size: 12px;
+}
+
+.el-dialog__headerbtn .el-dialog__close {
+    color: var(--sw-text-secondary);
+}
+
 /* Element Plus 自定义主题覆盖 */
 .el-button--primary {
     --el-button-bg-color: var(--sw-primary);

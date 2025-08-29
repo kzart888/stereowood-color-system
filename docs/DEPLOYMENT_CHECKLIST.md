@@ -1,10 +1,10 @@
-# Deployment Checklist for Factory
+# Deployment Checklist for Factory v0.8.0
 
 ## 🚀 Quick Deploy (First Time)
 
 ### 1. Prerequisites
 - [ ] Node.js installed (version 14+)
-- [ ] Port 3000 available
+- [ ] Port 9099 available
 - [ ] Write permissions for database
 
 ### 2. Installation
@@ -20,7 +20,7 @@ npm start
 ```
 
 ### 3. Verify Installation
-- [ ] Open browser: http://localhost:3000
+- [ ] Open browser: http://localhost:9099
 - [ ] Can see three tabs: 自配色, 作品配色, 颜色原料
 - [ ] Can create a test color
 - [ ] Can upload an image
@@ -29,18 +29,18 @@ npm start
 
 ### Windows
 1. Double-click `start.bat`
-2. Wait for "Server running" message
-3. Open browser to http://localhost:3000
+2. Wait for "Server running on port 9099" message
+3. Open browser to http://localhost:9099
 
 ### Mac/Linux
 1. Run `./start.sh` or `npm start`
-2. Wait for "Server running" message
-3. Open browser to http://localhost:3000
+2. Wait for "Server running on port 9099" message
+3. Open browser to http://localhost:9099
 
 ## 🔧 Common Issues
 
-### "Port 3000 already in use"
-- Another program is using port 3000
+### "Port 9099 already in use"
+- Another program is using port 9099
 - Solution: Close other program or restart computer
 
 ### "Cannot find module"
@@ -61,7 +61,7 @@ npm start
 
 ### System Configuration
 - [ ] Set up automatic startup (optional)
-- [ ] Create desktop shortcut to http://localhost:3000
+- [ ] Create desktop shortcut to http://localhost:9099
 - [ ] Test backup script: `npm run backup`
 - [ ] Train users on basic operations
 
@@ -100,7 +100,7 @@ npm start
 - Firefox also works well
 
 ### Browser Settings
-1. Bookmark http://localhost:3000
+1. Bookmark http://localhost:9099
 2. Allow popups from localhost
 3. Set as homepage (optional)
 4. Zoom level: 100% (adjust for screen size)

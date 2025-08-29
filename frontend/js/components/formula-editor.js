@@ -8,10 +8,10 @@ const FormulaEditorComponent = {
             <table class="formula-table">
                 <thead>
                     <tr>
-                        <th width="30">排序</th>
-                        <th>颜色原料</th>
+                        <th width="45">排序</th>
+                        <th width="160">颜色原料</th>
                         <th width="100">用量</th>
-                        <th width="80">单位</th>
+                        <th width="70">单位</th>
                         <th width="45">操作</th>
                     </tr>
                 </thead>
@@ -76,9 +76,9 @@ const FormulaEditorComponent = {
                                 size="small" 
                                 circle 
                                 @click="removeItem(index)"
-                                style="width: 24px; height: 24px; font-size: 14px; padding: 0;"
+                                style="width: 22px; height: 22px; padding: 0;"
                             >
-                                -
+                                <el-icon><Minus /></el-icon>
                             </el-button>
                         </td>
                     </tr>
@@ -90,16 +90,16 @@ const FormulaEditorComponent = {
                 </tbody>
             </table>
             
-            <div class="add-button-container">
+            <div class="add-button-container" style="margin-top: 6px;">
                 <el-button 
                     type="primary" 
                     circle 
                     @click="addItem"
-                    style="width: 32px; height: 32px; padding: 0; font-size: 18px;"
+                    style="width: 22px; height: 22px; padding: 0;"
                 >
-                    +
+                    <el-icon><Plus /></el-icon>
                 </el-button>
-                <span class="add-hint">添加颜色原料</span>
+                <span class="add-hint" style="margin-left: 6px;">添加颜色原料</span>
             </div>
         </div>
     `,

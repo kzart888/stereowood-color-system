@@ -67,3 +67,19 @@ temp/
 # Scripts not needed in container
 start.bat
 start.sh
+
+# Backup files
+*.bak
+*.backup
+*backup*
+backup/
+
+# Cache files
+.npm/
+.cache/
+.nyc_output/
+
+# IDE files
+*.swp
+*.swo
+*~

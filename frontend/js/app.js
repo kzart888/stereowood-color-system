@@ -44,7 +44,7 @@ const app = createApp({
                 suppliers: Vue.computed(()=>this.suppliers),
                 purchaseLinks: Vue.computed(()=>this.purchaseLinks),
                 loadCategories: ()=>this.loadCategories(),
-                loadCustomColors: ()=>this.loadCustomColors(),
+                loadCustomColors: (bypassCache)=>this.loadCustomColors(bypassCache),
                 loadArtworks: ()=>this.loadArtworks(),
                 loadMontMarteColors: ()=>this.loadMontMarteColors(),
                 loadSuppliers: ()=>this.loadSuppliers(),
@@ -116,9 +116,9 @@ const app = createApp({
         async loadCategories() {
             try { const res = await api.categories.getAll(); this.categories = res.data; } catch(e){ console.error('加载颜色分类失败',e); }
         },
-        async loadCustomColors() {
+        async loadCustomColors(bypassCache = false) {
             try {
-                const res = await api.customColors.getAll();
+                const res = await api.customColors.getAll({ bypassCache });
                 this.customColors = res.data;
                 this.registerDataset('customColors', this.customColors.map(c=>({ id:c.id, code:c.color_code||c.code||'', name:c.name||'' })));
                 // 若已存在旧索引，执行 diff 同步；否则首次建立
@@ -260,6 +260,14 @@ if (typeof ConflictResolver !== 'undefined') {
 } else {
     console.error('ConflictResolver 未定义');
 }
+
+// 添加通用操作按钮组件注册 - 暂时禁用
+// if (typeof ActionButtonComponent !== 'undefined') {
+//     app.component('action-button', ActionButtonComponent);
+//     console.log('操作按钮组件已注册');
+// } else {
+//     console.error('ActionButtonComponent 未定义');
+// }
 
 
 // ===== 挂载应用 =====

@@ -202,28 +202,39 @@
       position(){
         if(!this.triggerEl || !this.$refs.panel) return;
         const rect = this.triggerEl.getBoundingClientRect();
-        const scrollX = window.pageXOffset || document.documentElement.scrollLeft || 0;
-        const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
         const panel = this.$refs.panel;
         const vw = window.innerWidth, vh = window.innerHeight;
-        let left = rect.left + scrollX;
-        let top = rect.bottom + 6 + scrollY; // 默认下方展开
+        
+        // Calculate position for fixed positioning (relative to viewport)
+        let left = rect.left;
+        let top = rect.bottom + 6; // Default: open below
         const width = panel.offsetWidth || 380;
+        const height = panel.offsetHeight || 200;
+        
+        // Horizontal positioning
         if (rect.left < vw/2) {
           this.direction = 'right';
-          if (left + width > scrollX + vw - 8) left = scrollX + vw - width - 8;
+          if (left + width > vw - 8) left = vw - width - 8;
         } else {
           this.direction = 'left';
-          left = rect.right + scrollX - width;
-          if (left < scrollX + 8) left = scrollX + 8;
+          left = rect.right - width;
+          if (left < 8) left = 8;
         }
-        // 垂直溢出处理
-        if (rect.bottom + panel.offsetHeight > vh - 8) {
-          const altTop = rect.top + scrollY - panel.offsetHeight - 6;
-          if (altTop >= scrollY + 8) top = altTop;
+        
+        // Vertical overflow handling
+        if (top + height > vh - 8) {
+          const altTop = rect.top - height - 6;
+          if (altTop >= 8) {
+            top = altTop;
+          } else {
+            top = vh - height - 8;
+          }
         }
-        if (top < scrollY + 8) top = scrollY + 8;
-        this.panelStyle = { left: Math.round(left)+'px', top: Math.round(top)+'px' };
+        if (top < 8) top = 8;
+        
+        const finalStyle = { left: Math.round(left)+'px', top: Math.round(top)+'px' };
+        
+        this.panelStyle = finalStyle;
       },
       onInputTarget(i, val){
         if(!this.state) return;
@@ -414,18 +425,19 @@
         this._outside = e=>{
           if(!this.$refs.panel) return;
           if(this.$refs.panel.contains(e.target)) return;
+          if(this.triggerEl && this.triggerEl.contains(e.target)) return;
           this.close('outside');
         };
         this._keydown = e=> this.onKeydown(e);
         window.addEventListener('keydown', this._esc);
         window.addEventListener('resize', this._resize);
-        document.addEventListener('mousedown', this._outside, true);
+        document.addEventListener('mousedown', this._outside, false);
         document.addEventListener('keydown', this._keydown, true);
       },
       unbindGlobal(){
         window.removeEventListener('keydown', this._esc);
         window.removeEventListener('resize', this._resize);
-        document.removeEventListener('mousedown', this._outside, true);
+        document.removeEventListener('mousedown', this._outside, false);
         document.removeEventListener('keydown', this._keydown, true);
       },
       _wrapState(raw){
@@ -584,11 +596,13 @@
     _vm: null,
     ensureInstance(rootApp){
       if (this._vm) return this._vm;
-      // 在 root #app 容器末尾挂载一个 div
+      // Create mount point directly on body for proper fixed positioning
       let mountPoint = document.getElementById('sw-calc-overlay-root');
       if (!mountPoint) {
         mountPoint = document.createElement('div');
         mountPoint.id = 'sw-calc-overlay-root';
+        // Ensure mount point doesn't interfere with positioning
+        mountPoint.style.cssText = 'position: absolute; top: 0; left: 0; width: 0; height: 0; pointer-events: none; z-index: 2400;';
         document.body.appendChild(mountPoint);
       }
       const compApp = Vue.createApp(FormulaCalculatorOverlay);

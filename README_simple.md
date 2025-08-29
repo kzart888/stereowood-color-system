@@ -71,11 +71,12 @@ npm run restore    # Restore from backup
 
 ## 🎨 Version History
 
-- **v0.8.0** - Phase 6: Simplified for small team (current)
-- **v0.7.5** - Phase 4: Component optimization
-- **v0.7.0** - Phase 3: Frontend modularization
-- **v0.6.0** - Phase 2: CSS modularization
-- **v0.5.0** - Phase 1: Backend refactoring
+- **v0.8.0** - System optimization: Real-time updates, image processing simplified (current)
+- **v0.7.6** - Backend modularization completed
+- **v0.7.5** - Component optimization and formula calculator
+- **v0.7.0** - Frontend architecture improvements
+- **v0.6.0** - CSS modularization
+- **v0.5.0** - Backend refactoring
 - **v0.1.0** - Initial working version
 
 ## 📝 Important Notes

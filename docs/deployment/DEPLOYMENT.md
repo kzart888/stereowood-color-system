@@ -1,4 +1,4 @@
-# Deployment Guide
+# Deployment Guide v0.8.0
 
 ## 🚀 Deployment Options
 
@@ -11,7 +11,7 @@
 ### 2. Local Development
 - **Windows**: Run `start.bat`
 - **Mac/Linux**: Run `npm start`
-- **Port**: 9099
+- **Port**: 9099 (updated from 3000 in v0.8.0)
 - **Best for**: Development and testing
 
 ### 3. Quick Reference

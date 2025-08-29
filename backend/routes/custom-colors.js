@@ -11,7 +11,6 @@
 const express = require('express');
 const router = express.Router();
 const ColorService = require('../services/ColorService');
-const ImageService = require('../services/ImageService');
 const multer = require('multer');
 const path = require('path');
 
@@ -40,22 +39,10 @@ router.post('/custom-colors', upload.single('image'), async (req, res) => {
     const { category_id, color_code, formula, applicable_layers } = req.body;
     let imagePath = null;
 
-    // 处理图片上传
+    // 处理图片上传（保存原图）
     if (req.file) {
-      try {
-        const processResult = await ImageService.processUploadedImage(
-          req.file.path,
-          path.basename(req.file.filename, path.extname(req.file.filename))
-        );
-        
-        // 使用缩略图作为存储路径
-        imagePath = processResult.files.thumbnail;
-        console.log('图片处理完成:', processResult);
-      } catch (imageError) {
-        console.error('图片处理失败:', imageError);
-        // 图片处理失败时保留原图
-        imagePath = req.file.filename;
-      }
+      imagePath = req.file.filename;
+      console.log('图片上传成功:', imagePath);
     }
 
     const colorData = {
@@ -109,26 +96,19 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
     const expectedVersion = version ? parseInt(version) : null;
     let imagePath = existingImagePath || null;
 
-    // 处理新上传的图片
+    // 处理新上传的图片（保存原图）
     if (req.file) {
-      try {
-        const processResult = await ImageService.processUploadedImage(
-          req.file.path,
-          path.basename(req.file.filename, path.extname(req.file.filename))
-        );
-        
-        // 使用缩略图作为存储路径
-        imagePath = processResult.files.thumbnail;
-        console.log('编辑图片处理完成:', processResult);
+      imagePath = req.file.filename;
+      console.log('编辑图片上传成功:', imagePath);
 
-        // 删除旧图片（如果存在）
-        if (existingImagePath) {
-          await ImageService.deleteImageFiles('uploads/', existingImagePath);
-        }
-      } catch (imageError) {
-        console.error('图片处理失败:', imageError);
-        // 图片处理失败时保留原图
-        imagePath = req.file.filename;
+      // 删除旧图片（如果存在）
+      if (existingImagePath) {
+        const fs = require('fs');
+        const oldImagePath = path.join(__dirname, '..', 'uploads', existingImagePath);
+        fs.unlink(oldImagePath, (err) => {
+          if (err) console.log('删除旧图片失败:', err.message);
+          else console.log('删除旧图片成功:', existingImagePath);
+        });
       }
     }
 

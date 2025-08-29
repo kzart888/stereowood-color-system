@@ -12,7 +12,7 @@ const ArtworksComponent = {
   },
   emits: ['view-mode-changed'],
   template: `
-    <div>
+    <div class="artworks-page">
       <div v-if="loading" class="loading">
         <el-icon class="is-loading"><Loading /></el-icon> 加载中...
       </div>
@@ -82,11 +82,28 @@ const ArtworksComponent = {
                   </thead>
                   <tbody>
                     <tr>
-                      <td v-for="m in normalizedMappings(scheme)" :key="'c'+m.layer" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightLayers.includes(m.layer) && (!highlightColorCode || m.colorCode===highlightColorCode)}" style="position:relative;">
-                        <strong>{{ m.colorCode ? m.colorCode : '（未指定）' }}</strong>
-                        <template v-if="m.colorCode && colorByCode(m.colorCode) && colorByCode(m.colorCode).formula">
-                          <button class="calc-mini-btn" @click.stop="$calc && $calc.open(m.colorCode, colorByCode(m.colorCode).formula||'', $event.currentTarget)" title="快速计算">算</button>
-                        </template>
+                      <td v-for="m in normalizedMappings(scheme)" :key="'c'+m.layer" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightLayers.includes(m.layer) && (!highlightColorCode || m.colorCode===highlightColorCode)}">
+                        <div v-if="!m.colorCode" class="empty-cell">
+                          <strong>（未指定）</strong>
+                        </div>
+                        <div v-else class="table-cell-layout">
+                          <div class="cell-left">
+                            <span v-if="colorByCode(m.colorCode)" 
+                                 class="color-preview-square" 
+                                 :class="{ 'no-image': !colorByCode(m.colorCode).image_path }"
+                                 :style="colorByCode(m.colorCode).image_path ? { backgroundImage: 'url(' + $helpers.buildUploadURL(baseURL, colorByCode(m.colorCode).image_path) + ')' } : {}">
+                            </span>
+                          </div>
+                          <div class="cell-center">
+                            <strong>{{ m.colorCode }}</strong>
+                          </div>
+                          <div class="cell-right">
+                            <button v-if="colorByCode(m.colorCode) && colorByCode(m.colorCode).formula" 
+                                    class="table-calc-btn" 
+                                    @click.stop="$calc && $calc.open(m.colorCode, colorByCode(m.colorCode).formula||'', $event.currentTarget)" 
+                                    title="快速计算">算</button>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                     <tr>
@@ -116,11 +133,28 @@ const ArtworksComponent = {
     <table class="layer-table bycolor-table">
                   <thead>
                     <tr>
-          <th v-for="g in groupedByColorWithFlags(scheme)" :key="'hc'+g.code" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}" style="position:relative;">
-            {{ g.code ? g.code : (g.isEmptyGroup ? '(未指定)' : '-') }}
-            <template v-if="g.code && colorByCode(g.code) && colorByCode(g.code).formula">
-              <button class="calc-mini-btn" @click.stop="$calc && $calc.open(g.code, colorByCode(g.code).formula||'', $event.currentTarget)" title="快速计算" style="position:absolute; top:2px; right:4px;">算</button>
-            </template>
+          <th v-for="g in groupedByColorWithFlags(scheme)" :key="'hc'+g.code" :class="{'highlight-pulse': highlightSchemeId===scheme.id && highlightColorCode && g.code===highlightColorCode}">
+            <div v-if="!g.code || g.isEmptyGroup" class="empty-cell">
+              <strong>{{ g.isEmptyGroup ? '(未指定)' : '-' }}</strong>
+            </div>
+            <div v-else class="table-cell-layout">
+              <div class="cell-left">
+                <span v-if="colorByCode(g.code)" 
+                     class="color-preview-square" 
+                     :class="{ 'no-image': !colorByCode(g.code).image_path }"
+                     :style="colorByCode(g.code).image_path ? { backgroundImage: 'url(' + $helpers.buildUploadURL(baseURL, colorByCode(g.code).image_path) + ')' } : {}">
+                </span>
+              </div>
+              <div class="cell-center">
+                <strong>{{ g.code }}</strong>
+              </div>
+              <div class="cell-right">
+                <button v-if="colorByCode(g.code) && colorByCode(g.code).formula" 
+                        class="table-calc-btn" 
+                        @click.stop="$calc && $calc.open(g.code, colorByCode(g.code).formula||'', $event.currentTarget)" 
+                        title="快速计算">算</button>
+              </div>
+            </div>
           </th>
                     </tr>
                   </thead>
@@ -217,36 +251,50 @@ const ArtworksComponent = {
           <el-form-item label="方案名称" prop="name" required>
             <div class="inline-scheme-name dup-inline-row">
               <span class="inline-art-title">{{ editingArtTitle }}</span>
-              <span class="scheme-sep"> - [</span>
+              <span class="scheme-sep"> - [ </span>
               <el-input v-model.trim="schemeForm.name" placeholder="例如：金黄" class="scheme-name-input" :maxlength="10" />
-              <span class="scheme-bracket-end">]</span>
+              <span class="scheme-bracket-end"> ]</span>
               <span v-if="schemeNameDuplicate" class="dup-msg">名称重复</span> <!-- 统一查重：仅内联显示，不再弹出 Toast -->
             </div>
           </el-form-item>
 
           <el-form-item label="缩略图">
-            <div style="display:flex; align-items:center; gap:12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <!-- 缩略图预览区域 -->
               <div class="scheme-thumbnail"
                 :style="{
                   backgroundImage: schemeForm.thumbnailPreview ? 'url(' + schemeForm.thumbnailPreview + ')' : 'none',
                   backgroundColor: schemeForm.thumbnailPreview ? 'transparent' : '#f0f0f0'
                 }"
                 :class="{ 'no-image': !schemeForm.thumbnailPreview }"
+                style="width: 80px; height: 80px; flex-shrink: 0;"
                 @click="schemeForm.thumbnailPreview && $thumbPreview && $thumbPreview.show($event, schemeForm.thumbnailPreview)"
               >
                 <template v-if="!schemeForm.thumbnailPreview">未上传图片</template>
               </div>
-              <div style="display:flex; gap:8px;">
+              
+              <!-- 操作按钮区域 -->
+              <div style="display: flex; flex-direction: column; gap: 8px;">
                 <el-upload
                   :auto-upload="false"
                   :show-file-list="false"
                   :on-change="onThumbChange"
                   accept="image/*"
                 >
-                  <el-button><el-icon><Upload /></el-icon> 选择图片</el-button>
+                  <el-button size="small" type="primary">
+                    <el-icon><Upload /></el-icon>
+                    选择图片
+                  </el-button>
                 </el-upload>
-                <el-button type="warning" :disabled="!schemeForm.thumbnailPreview" @click="clearThumb">
-                  <el-icon><Delete /></el-icon> 移除
+                
+                <el-button 
+                  v-if="schemeForm.thumbnailPreview" 
+                  size="small" 
+                  type="danger" 
+                  @click="clearThumb"
+                >
+                  <el-icon><Delete /></el-icon>
+                  清除图片
                 </el-button>
               </div>
             </div>
@@ -257,53 +305,106 @@ const ArtworksComponent = {
               <table class="layer-table mapping-table">
                 <thead>
                   <tr>
-                    <th style="width:80px;">层号</th>
-                    <th style="width:260px;">自配色号</th>
-                    <th style="width:110px;">操作</th>
+                    <th style="width:60px;">层号</th>
+                    <th style="min-width:300px;">自配色号</th>
+                    <th style="width:120px;">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(m, idx) in schemeForm.mappings" :key="idx">
                     <td>
-                      <span class="layer-cell">
-                        <span class="badge-slot">
-                          <template v-if="formDupCounts[m.layer] > 1">
-                            <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + formDupCounts[m.layer] + '次颜色'" placement="top">
-                              <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(m.layer) }">!</span>
-                            </el-tooltip>
-                          </template>
-                        </span>
-                        <el-input-number v-model="m.layer" :min="1" :max="200" controls-position="right" />
-                      </span>
-                    </td>
-                    <td>
-                      <el-select v-model="m.colorCode" filterable clearable placeholder="选择自配色号">
-                        <el-option
-                          v-for="c in customColors"
-                          :key="c.id"
-                          :label="c.color_code"
-                          :value="c.color_code"
-                        />
-                      </el-select>
-                      <div v-if="m.colorCode && colorByCode(m.colorCode)" class="mapping-formula-chips">
-                        <template v-if="parseFormulaLines(colorByCode(m.colorCode).formula).length">
-                          <template v-for="(line,i) in parseFormulaLines(colorByCode(m.colorCode).formula)" :key="'mf'+idx+'-'+i">
-                            <span class="mf-chip">{{ line }}</span>
-                          </template>
+                      <div class="layer-cell">
+                        <template v-if="formDupCounts[m.layer] > 1">
+                          <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + formDupCounts[m.layer] + '次颜色'" placement="top">
+                            <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(m.layer) }">!</span>
+                          </el-tooltip>
                         </template>
-                        <span v-else class="meta-text">（无配方）</span>
+                        <el-input-number v-model="m.layer" :min="1" :max="200" controls-position="right" size="small" />
                       </div>
                     </td>
                     <td>
-                      <el-button size="small" @click="duplicateRow(idx)"><el-icon><CopyDocument /></el-icon></el-button>
-                      <el-button size="small" type="danger" @click="removeRow(idx)"><el-icon><Delete /></el-icon></el-button>
+                      <div class="color-code-cell">
+                        <div class="custom-select-wrapper">
+                          <div v-if="m.colorCode && colorByCode(m.colorCode)" class="selected-color-display">
+                            <div class="color-preview-square" 
+                                 :class="{ 'no-image': !colorByCode(m.colorCode).image_path }"
+                                 :style="colorByCode(m.colorCode).image_path ? { backgroundImage: 'url(' + $helpers.buildUploadURL(baseURL, colorByCode(m.colorCode).image_path) + ')' } : {}">
+                            </div>
+                          </div>
+                          <el-select 
+                            v-model="m.colorCode" 
+                            filterable 
+                            clearable 
+                            placeholder="选择自配色号"
+                            style="width: 100%;"
+                          >
+                            <el-option
+                              v-for="c in customColors"
+                              :key="c.id"
+                              :label="c.color_code"
+                              :value="c.color_code"
+                            >
+                              <div class="color-option-content">
+                                <div class="color-preview-square" 
+                                     :class="{ 'no-image': !c.image_path }"
+                                     :style="c.image_path ? { backgroundImage: 'url(' + $helpers.buildUploadURL(baseURL, c.image_path) + ')' } : {}">
+                                </div>
+                                <span class="color-code-text">{{ c.color_code }}</span>
+                              </div>
+                            </el-option>
+                          </el-select>
+                        </div>
+                        
+                        <div v-if="m.colorCode && colorByCode(m.colorCode)" class="mapping-formula-display">
+                          <template v-if="parseFormulaLines(colorByCode(m.colorCode).formula).length">
+                            <div class="mapping-formula-chips" style="display:inline-flex; flex-wrap:wrap; gap:4px;">
+                              <el-tooltip v-for="(line,i) in parseFormulaLines(colorByCode(m.colorCode).formula)" :key="'mf'+idx+'-'+i" :content="line" placement="top">
+                                <span class="mf-chip" style="display:inline-block; padding:2px 6px; background:#f0f0f0; border-radius:3px; font-size:11px;">{{ line }}</span>
+                              </el-tooltip>
+                            </div>
+                          </template>
+                          <span v-else class="meta-text">（无配方）</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="operation-buttons">
+                        <el-button 
+                          size="small" 
+                          type="primary" 
+                          @click="duplicateRow(idx)" 
+                          circle 
+                          style="width: 22px; height: 22px; padding: 0;"
+                          title="复制行"
+                        >
+                          <el-icon><Plus /></el-icon>
+                        </el-button>
+                        <el-button 
+                          size="small" 
+                          type="danger" 
+                          @click="removeRow(idx)" 
+                          circle 
+                          style="width: 22px; height: 22px; padding: 0;"
+                          title="删除行"
+                        >
+                          <el-icon><Minus /></el-icon>
+                        </el-button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
               </table>
-              <div class="add-button-container">
-                <el-button size="small" @click="addRow"><el-icon><Plus /></el-icon> 添加一行</el-button>
-                <span class="add-hint">按层号顺序填写；保存时会按层号排序（允许相同层号）</span>
+              <div class="add-button-container" style="margin-top: 6px;">
+                <el-button 
+                  size="small" 
+                  type="primary" 
+                  @click="addRow" 
+                  circle 
+                  style="width: 22px; height: 22px; padding: 0;"
+                >
+                  <el-icon><Plus /></el-icon>
+                </el-button>
+                <span class="add-hint" style="margin-left: 6px;">按层号顺序填写；保存时会按层号排序；允许相同层号，即同层多色，但会触发提醒图标</span>
               </div>
             </div>
           </el-form-item>

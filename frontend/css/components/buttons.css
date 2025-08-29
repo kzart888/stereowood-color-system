@@ -132,7 +132,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 8px 0;
+    padding: 4px 0;
 }
 
 .category-switch,
@@ -140,7 +140,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 5px 12px;
+    padding: 4px 14px;
     height: 30px;
     font-size: 13px;
     font-weight: 500;
@@ -221,7 +221,7 @@
 /* === 操作按钮 === */
 .el-button--small {
     height: 28px;
-    padding: 5px 12px;
+    padding: 4px 14px;
     font-size: 13px;
 }
 

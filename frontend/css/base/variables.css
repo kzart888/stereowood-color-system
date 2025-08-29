@@ -21,9 +21,9 @@
     
     /* === 布局系统 === */
     --sw-card-padding: 4px 6px 8px;
-    --sw-header-padding: 6px 6px 4px;
+    --sw-header-padding: 6px 6px 6px;
     --sw-chip-gap: 4px;
-    --sw-thumb-size: 80px;
+    --sw-thumb-size: 88px;
     --sw-thumb-preview-size: 320px; /* 预览图尺寸 */
     
     /* === 颜色系统 === */

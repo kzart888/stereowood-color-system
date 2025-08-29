@@ -2,8 +2,10 @@
 
 ## Base URL
 ```
-http://localhost:3000/api
+http://localhost:9099/api
 ```
+
+> **Note**: This API is designed for internal factory use (2-3 users). All endpoints return JSON and support CORS for local development.
 
 ## 📦 Categories (颜色分类)
 

@@ -7,7 +7,7 @@ const CustomColorsComponent = {
             sortMode: { type: String, default: 'time' } // time | name
         },
         template: `
-                <div>
+                <div class="custom-colors-page">
                                                 <div class="category-switch-group" role="tablist" aria-label="颜色分类筛选">
                                                         <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
                                                         <button 
@@ -24,7 +24,7 @@ const CustomColorsComponent = {
                         <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
                         <div v-else>
                             <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角“新自配色”添加</div>
-                            <div v-for="color in filteredColors" :key="color.id" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code}">
+                            <div v-for="color in filteredColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code}">
                                 <div class="artwork-header">
                                     <div class="artwork-title">{{ color.color_code }}</div>
                                     <div class="color-actions">
@@ -41,20 +41,19 @@ const CustomColorsComponent = {
                                         <el-button v-else size="small" type="danger" @click="deleteColor(color)"><el-icon><Delete /></el-icon> 删除</el-button>
                                     </div>
                                 </div>
-                                                <div style="display:flex; gap:12px; padding:6px 4px 4px;">
+                                                <div style="display:flex; gap:12px; padding:8px; align-items:stretch;">
                                                     <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, color.image_path))">
                                                         <template v-if="!color.image_path">未上传图片</template>
                                                         <img v-else :src="$helpers.buildUploadURL(baseURL, color.image_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                                                     </div>
-                                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
+                                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; position:relative;">
                                         <div class="meta-text" v-if="!color.formula">（未指定配方）</div>
-                                        <div class="meta-text" v-else>
-                                            <div class="mapping-formula-chips">
-                                                <el-tooltip v-for="(seg,i) in formulaSegments(color.formula)" :key="'ccf'+color.id+'-'+i" :content="seg" placement="top">
-                                                    <span class="mf-chip">{{ seg }}</span>
-                                                </el-tooltip>
-                                            </div>
+                                        <div class="meta-text" v-else>配方：
+                                            <span class="usage-chips">
+                                                <span v-for="(seg,i) in formulaSegments(color.formula)" :key="'ccf'+color.id+'-'+i" class="mf-chip">{{ seg }}</span>
+                                            </span>
                                         </div>
+                                        <button v-if="color.formula" class="calc-mini-btn" @click.stop="$calc && $calc.open(color.color_code, color.formula||'', $event.currentTarget)" title="快速计算" style="position:absolute; top:0; right:0;">算</button>
                                         <div class="meta-text">分类：{{ categoryName(color) }}</div>
                                         <div class="meta-text" v-if="color.updated_at">更新：{{ $helpers.formatDate(color.updated_at) }}</div>
                                         <div class="meta-text">适用层：
@@ -111,16 +110,40 @@ const CustomColorsComponent = {
                     </el-form-item>
                     <!-- 适用画层改为自动统计，不再手动输入 -->
                     <el-form-item label="颜色样本">
-                        <el-upload
-                            :auto-upload="false"
-                            :show-file-list="false"
-                            :on-change="handleImageChange"
-                            accept="image/*"
-                        >
-                            <el-button>选择图片</el-button>
-                        </el-upload>
-                        <div v-if="form.imagePreview" style="margin-top: 10px;">
-                            <div class="scheme-thumbnail" :style="{ backgroundImage: 'url(' + form.imagePreview + ')', backgroundColor: 'transparent' }" @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)"></div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <!-- 缩略图预览区域 -->
+                            <div class="scheme-thumbnail" 
+                                 :class="{ 'no-image': !form.imagePreview }" 
+                                 style="width: 80px; height: 80px; flex-shrink: 0;"
+                                 @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)">
+                                <template v-if="!form.imagePreview">未上传图片</template>
+                                <img v-else :src="form.imagePreview" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                            </div>
+                            
+                            <!-- 操作按钮区域 -->
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <el-upload
+                                    :auto-upload="false"
+                                    :show-file-list="false"
+                                    :on-change="handleImageChange"
+                                    accept="image/*"
+                                >
+                                    <el-button size="small" type="primary">
+                                        <el-icon><Upload /></el-icon>
+                                        选择图片
+                                    </el-button>
+                                </el-upload>
+                                
+                                <el-button 
+                                    v-if="form.imagePreview" 
+                                    size="small" 
+                                    type="danger" 
+                                    @click="clearImage"
+                                >
+                                    <el-icon><Delete /></el-icon>
+                                    清除图片
+                                </el-button>
+                            </div>
                         </div>
                     </el-form-item>
                 </el-form>
@@ -251,6 +274,7 @@ const CustomColorsComponent = {
             editingColor: null,
             _colorItemRefs: new Map(),
             highlightCode: null,
+            refreshKey: 0, // Force re-render when data updates
             // 查重
             showDuplicateDialog: false,
             duplicateGroups: [],
@@ -635,6 +659,15 @@ const CustomColorsComponent = {
             this.form.imagePreview = URL.createObjectURL(file.raw);
         },
         
+        // 清除图片
+        clearImage() {
+            this.form.imageFile = null;
+            if (this.form.imagePreview) {
+                URL.revokeObjectURL(this.form.imagePreview);
+                this.form.imagePreview = null;
+            }
+        },
+        
         // 保存颜色（新增或修改）
         async saveColor() {
             const valid = await this.$refs.formRef.validate().catch(() => false);
@@ -685,6 +718,8 @@ const CustomColorsComponent = {
                 // 先刷新自配色，再刷新作品（同步更新作品方案中引用的自配色编号）
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadArtworks();
+                // Force component refresh to show updated data immediately
+                this.refreshKey++;
                 // 保存后自动比例查重
                 if (window.duplicateDetector) {
                     const saved = (this.globalData.customColors?.value||[]).find(c=> c.color_code === this.form.color_code);
@@ -1116,6 +1151,9 @@ const CustomColorsComponent = {
             const colorCount = (this.globalData.customColors?.value || []).length;
             const groupCount = this.paletteGroups.length;
             
+            // 确保baseURL存在
+            const baseURL = this.baseURL || window.location.origin;
+            
             let html = `
 <!DOCTYPE html>
 <html>
@@ -1144,44 +1182,56 @@ const CustomColorsComponent = {
             font-size: 14px;
             color: #666;
         }
-        .print-group {
-            margin-bottom: 20px;
+        .print-main {
             display: flex;
-            align-items: flex-start;
-            gap: 15px;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .print-group {
+            display: grid;
+            grid-template-columns: 30px 1fr;
+            gap: 12px;
+            margin: 0;
+        }
+        .print-group.group-spacing {
+            margin-top: 8px;
         }
         .print-group-label {
-            writing-mode: vertical-lr;
+            writing-mode: vertical-rl;
             text-orientation: mixed;
-            font-size: 16px;
-            font-weight: bold;
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            padding: 8px 4px;
-            min-height: 60px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
+            background: #f8f9fa;
+            padding: 8px 4px;
+            border-radius: 4px;
+            min-height: 100px;
         }
         .print-colors {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(10, 80px);
             gap: 8px;
-            flex: 1;
+            padding: 0;
         }
         .print-color-item {
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 4px;
         }
         .print-color-block {
-            width: 50px;
-            height: 50px;
-            border-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-            margin-bottom: 4px;
+            width: 80px;
+            height: 80px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
         }
         .print-color-image {
             width: 100%;
@@ -1189,20 +1239,23 @@ const CustomColorsComponent = {
             object-fit: cover;
         }
         .print-no-image {
-            width: 100%;
-            height: 100%;
-            background: #f5f5f5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 8px;
+            color: #999;
+            font-size: 10px;
             text-align: center;
-            padding: 2px;
+            padding: 4px;
         }
         .print-color-name {
-            font-size: 10px;
-            font-weight: bold;
+            font-size: 11px;
+            font-weight: 500;
             text-align: center;
+            max-width: 80px;
+            word-wrap: break-word;
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 10px;
+            }
         }
     </style>
 </head>
@@ -1211,19 +1264,20 @@ const CustomColorsComponent = {
         <div class="print-title">自配色列表</div>
         <div class="print-stats">共${colorCount}个颜色，${groupCount}个分类</div>
     </div>
-    <div class="print-content">`;
+    <div class="print-main">`;
 
             // 添加每个分组的内容
-            this.paletteGroups.forEach(group => {
+            this.paletteGroups.forEach((group, groupIndex) => {
                 html += `
-        <div class="print-group">
+        <div class="print-group${groupIndex > 0 ? ' group-spacing' : ''}">
             <div class="print-group-label">${group.categoryName}</div>
             <div class="print-colors">`;
                 
                 group.colors.forEach(color => {
-                    const imageHtml = color.image_path 
-                        ? `<img src="${this.$helpers.buildUploadURL(this.baseURL, color.image_path)}" class="print-color-image" />`
-                        : `<div class="print-no-image">未上传图片</div>`;
+                    const imageUrl = color.image_path ? `${baseURL}/uploads/${color.image_path}` : null;
+                    const imageHtml = imageUrl 
+                        ? `<img src="${imageUrl}" class="print-color-image" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'print-no-image\\'>图片加载失败</div>'" />`
+                        : `<div class="print-no-image">未上传<br/>图片</div>`;
                     
                     html += `
                 <div class="print-color-item">

@@ -5,36 +5,15 @@
 // 后端服务器地址配置
 const API_BASE_URL = window.location.origin + '/api';
 
-// Simple cache for small team use (3-5 users)
-// No need for complex caching strategies
-const simpleCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Simple cached GET for small deployment
-function cachedGet(url, options = {}) {
-    const key = url + JSON.stringify(options.params || {});
-    const cached = simpleCache.get(key);
-    
-    // Check if cache is still valid
-    if (cached && Date.now() - cached.time < CACHE_TTL) {
-        console.log('[Cache HIT]', url);
-        return Promise.resolve(cached.data);
-    }
-    
-    // Make request and cache result
-    console.log('[Cache MISS]', url);
-    return axios.get(url, options).then(response => {
-        simpleCache.set(key, { data: response, time: Date.now() });
-        return response;
-    });
-}
+// Real-time data fetching for small team deployment
+// No caching for immediate UI updates
 
 // API接口封装对象
 const api = {
     // 颜色分类相关API
     categories: {
         // 获取所有分类
-        getAll: () => cachedGet(`${API_BASE_URL}/categories`, { cacheTTL: 10 * 60 * 1000 }),
+        getAll: () => axios.get(`${API_BASE_URL}/categories`),
         
         // 创建新分类
         create: (data) => axios.post(`${API_BASE_URL}/categories`, data),
@@ -49,12 +28,10 @@ const api = {
     // 自配颜色相关API
     customColors: {
         // 获取所有自配颜色
-        getAll: () => cachedGet(`${API_BASE_URL}/custom-colors`, { cacheTTL: 3 * 60 * 1000 }),
+        getAll: () => axios.get(`${API_BASE_URL}/custom-colors`),
         
         // 创建新颜色（带图片上传）
         create: (formData) => {
-            // Clear cache when data changes
-            simpleCache.clear();
             return axios.post(`${API_BASE_URL}/custom-colors`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
@@ -77,7 +54,7 @@ const api = {
     // 作品相关API
     artworks: {
         // 获取所有作品
-        getAll: () => cachedGet(`${API_BASE_URL}/artworks`, { cacheTTL: 3 * 60 * 1000 }),
+        getAll: () => axios.get(`${API_BASE_URL}/artworks`),
         
         // 获取单个作品详情
         get: (id) => axios.get(`${API_BASE_URL}/artworks/${id}`),
@@ -95,7 +72,7 @@ const api = {
     // 蒙马特颜色（颜色原料库）相关API
     montMarteColors: {
         // 获取所有颜色原料
-        getAll: () => cachedGet(`${API_BASE_URL}/mont-marte-colors`, { cacheTTL: 10 * 60 * 1000 }),
+        getAll: () => axios.get(`${API_BASE_URL}/mont-marte-colors`),
         
         // 创建新颜色原料（带图片上传）
         create: (formData) => axios.post(`${API_BASE_URL}/mont-marte-colors`, formData, {

@@ -32,6 +32,7 @@
 ```
 backend/
 ├── db/
+
 │   ├── index.js         # 数据库连接和初始化
 │   ├── migrations.js    # 数据迁移
 │   └── queries/         # SQL查询模块

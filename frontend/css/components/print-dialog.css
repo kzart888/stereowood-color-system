@@ -9,15 +9,20 @@
     --dialog-padding: 16px;
 }
 
+.color-palette-dialog .el-dialog {
+    width: fit-content !important;
+    max-width: 90vw;
+    margin: 20px auto;
+}
+
 .color-palette-dialog .el-dialog__header {
-    padding: 12px var(--dialog-padding);
-    border-bottom: 1px solid var(--sw-border-base);
-    background: var(--sw-bg-white);
+    padding: 8px 16px;
+    margin: 0;
 }
 
 .color-palette-dialog .el-dialog__body {
-    padding: var(--dialog-padding);
-    max-height: 70vh;
+    padding: 16px;
+    max-height: 80vh;
     overflow-y: auto;
 }
 
@@ -26,86 +31,103 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    height: 100%;
 }
 
 .color-palette-dialog .palette-title {
     font-size: 16px;
     font-weight: 600;
     color: var(--sw-text-primary);
+    line-height: 1;
 }
 
 .color-palette-dialog .palette-header-right {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 统计信息 */
+.palette-stats {
+    padding: 6px;
+    margin: 0;
+    border: none;
+    font-size: 13px;
+    color: var(--sw-text-secondary);
+    display: flex;
+    align-items: center;
 }
 
 /* 调色板内容 */
 .color-palette-content {
-    padding: 8px 0;
+    padding: 0;
 }
 
-.palette-stats {
+.empty-palette {
+    text-align: center;
+    padding: 40px;
+    color: var(--sw-text-muted);
+}
+
+.palette-main {
     display: flex;
-    gap: 16px;
-    padding: 8px 0;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--sw-border-light);
-    font-size: 13px;
-    color: var(--sw-text-secondary);
+    flex-direction: column;
+    gap: 8px;
 }
 
-.stat-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.stat-label {
-    font-weight: 500;
-}
-
-.stat-value {
-    color: var(--sw-primary);
-    font-weight: 600;
-}
-
-/* 颜色分组 */
+/* 颜色分组 - 使用Grid布局实现垂直标签 */
 .palette-group {
-    margin-bottom: 20px;
-    page-break-inside: avoid;
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 12px;
+    margin: 0;
 }
 
-.group-header {
-    display: flex;
-    align-items: center;
-    padding: 6px 0;
-    margin-bottom: 8px;
-    border-bottom: 1px solid var(--sw-border-light);
+.palette-group.group-spacing {
+    margin-top: 8px;
+}
+
+/* 组标签 - 垂直文字 */
+.group-layout {
+    display: contents;
 }
 
 .group-label {
-    font-size: 14px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 13px;
     font-weight: 600;
     color: var(--sw-text-primary);
-}
-
-.group-count {
-    margin-left: 8px;
-    padding: 2px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: var(--sw-bg-light);
-    border-radius: 10px;
-    font-size: 12px;
-    color: var(--sw-text-secondary);
+    padding: 8px 4px;
+    border-radius: var(--sw-radius-sm);
+    min-height: 100px;
 }
 
-/* 颜色网格 */
+/* 颜色网格 - 紧凑布局 */
 .group-colors {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 12px;
-    padding: 8px 0;
+    grid-template-columns: repeat(10, 80px);
+    gap: 8px;
+    padding: 0;
 }
 
+@media (max-width: 1200px) {
+    .group-colors {
+        grid-template-columns: repeat(8, 80px);
+    }
+}
+
+@media (max-width: 900px) {
+    .group-colors {
+        grid-template-columns: repeat(6, 80px);
+    }
+}
+
+/* 颜色项 */
 .color-item {
     display: flex;
     flex-direction: column;
@@ -119,6 +141,7 @@
     transform: translateY(-2px);
 }
 
+/* 颜色块 */
 .color-block {
     width: 80px;
     height: 80px;
@@ -129,9 +152,10 @@
     align-items: center;
     justify-content: center;
     background: var(--sw-bg-light);
+    position: relative;
 }
 
-.color-block img {
+.color-preview-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -144,13 +168,15 @@
     padding: 4px;
 }
 
+/* 颜色名称 */
 .color-name {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: var(--sw-text-primary);
     text-align: center;
     max-width: 80px;
     word-break: break-all;
+    line-height: 1.2;
 }
 
 /* === 查重对话框 === */
@@ -159,18 +185,18 @@
 }
 
 .dup-groups-dialog .el-dialog__header {
-    padding: 12px var(--dialog-padding);
-    border-bottom: 1px solid var(--sw-border-base);
+    padding: 8px 16px;
+    margin: 0;
 }
 
 .dup-groups-dialog .el-dialog__body {
-    padding: var(--dialog-padding);
+    padding: 16px;
     max-height: 70vh;
     overflow-y: auto;
 }
 
 .dup-group {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding: 12px;
     background: var(--sw-bg-light);
     border-radius: var(--sw-radius-md);
@@ -267,7 +293,7 @@
     }
     
     .group-colors {
-        grid-template-columns: repeat(8, 1fr);
+        grid-template-columns: repeat(10, 1fr);
     }
     
     .color-block {

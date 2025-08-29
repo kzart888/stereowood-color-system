@@ -1,7 +1,10 @@
 // 性能监控工具
 // frontend/js/utils/performance-monitor.js
 
-export class PerformanceMonitor {
+(function() {
+    'use strict';
+    
+    class PerformanceMonitor {
     constructor(options = {}) {
         this.enabled = options.enabled !== false;
         this.logLevel = options.logLevel || 'warn'; // debug, info, warn, error
@@ -345,15 +348,22 @@ export class PerformanceMonitor {
     }
 }
 
-// 创建默认实例
-export const performanceMonitor = new PerformanceMonitor({
-    enabled: true,
-    logLevel: 'warn'
-});
+    // 创建默认实例 - 调整为生产环境设置
+    const performanceMonitor = new PerformanceMonitor({
+        enabled: false,  // 禁用性能监控以避免控制台警告
+        logLevel: 'error'  // 仅显示错误级别日志
+    });
 
-// 导出便捷方法
-export const startTimer = (name) => performanceMonitor.startTimer(name);
-export const endTimer = (name, threshold) => performanceMonitor.endTimer(name, threshold);
-export const measure = (name, fn) => performanceMonitor.measure(name, fn);
+    // 导出便捷方法
+    const startTimer = (name) => performanceMonitor.startTimer(name);
+    const endTimer = (name, threshold) => performanceMonitor.endTimer(name, threshold);
+    const measure = (name, fn) => performanceMonitor.measure(name, fn);
 
-export default performanceMonitor;
+    // Make available globally
+    if (typeof window !== 'undefined') {
+        window.performanceMonitor = performanceMonitor;
+        window.startTimer = startTimer;
+        window.endTimer = endTimer;
+        window.measure = measure;
+    }
+})();

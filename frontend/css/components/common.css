@@ -254,3 +254,20 @@
     cursor: not-allowed;
     opacity: 0.5;
 }
+
+/* === 操作按钮组 === */
+.color-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sw-actions-gap);
+    flex-shrink: 0;
+}
+
+.color-actions .el-button + .el-button {
+    margin-left: 0 !important;
+}
+
+/* 确保删除按钮对齐 */
+.color-actions .el-button--danger {
+    min-width: 70px;
+}

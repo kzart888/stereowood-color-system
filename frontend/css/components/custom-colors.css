@@ -85,20 +85,7 @@
     line-height: 1.6;
 }
 
-.formula-lines {
-    display: table;
-    width: 100%;
-}
-
-.formula-line {
-    display: table-row;
-}
-
-.formula-name,
-.formula-amount {
-    display: table-cell;
-    padding: 2px 4px;
-}
+/* Formula lines removed - now using usage-chips class for consistency */
 
 .formula-name {
     color: var(--sw-text-primary);
@@ -113,9 +100,9 @@
 
 /* === 配方编辑器 === */
 .formula-editor {
-    padding: 12px;
+    padding: 4px 0;
     background: var(--sw-bg-white);
-    border: 1px solid var(--sw-border-light);
+    border: none;
     border-radius: var(--sw-radius-md);
 }
 
