@@ -453,7 +453,7 @@ const MontMarteComponent = {
                 this.$nextTick(() => this.$refs.supplierSelect?.blur?.());
             } catch (e) {
                 console.error('创建供应商失败', e);
-                ElementPlus.ElMessage.error('创建供应商失败');
+                msg.error('创建供应商失败');
                 this.form.supplier_id = null;
             } finally {
                 this.supplierBusy = false;
@@ -468,15 +468,15 @@ const MontMarteComponent = {
         async deleteSupplierOption(opt) {
             try {
                 await axios.delete(`${window.location.origin}/api/suppliers/${opt.id}`);
-                ElementPlus.ElMessage.success('已删除供应商');
+                msg.success('已删除供应商');
                 // 如果当前选中的是被删项，清空
                 if (this.form.supplier_id === opt.id) this.form.supplier_id = null;
                 await this.globalData.loadSuppliers();
             } catch (e) {
                 if (e.response && e.response.status === 409) {
-                    ElementPlus.ElMessage.warning(e.response.data?.error || '有引用，无法删除');
+                    msg.warning(e.response.data?.error || '有引用，无法删除');
                 } else {
-                    ElementPlus.ElMessage.error('删除失败');
+                    msg.error('删除失败');
                 }
             }
         },
@@ -495,7 +495,7 @@ const MontMarteComponent = {
                 this.$nextTick(() => this.$refs.purchaseSelect?.blur?.());
             } catch (e) {
                 console.error('创建采购地址失败', e);
-                ElementPlus.ElMessage.error('创建采购地址失败');
+                msg.error('创建采购地址失败');
                 this.form.purchase_link_id = null;
             } finally {
                 this.purchaseBusy = false;
@@ -509,14 +509,14 @@ const MontMarteComponent = {
         async deletePurchaseOption(opt) {
             try {
                 await axios.delete(`${window.location.origin}/api/purchase-links/${opt.id}`);
-                ElementPlus.ElMessage.success('已删除采购地址');
+                msg.success('已删除采购地址');
                 if (this.form.purchase_link_id === opt.id) this.form.purchase_link_id = null;
                 await this.globalData.loadPurchaseLinks();
             } catch (e) {
                 if (e.response && e.response.status === 409) {
-                    ElementPlus.ElMessage.warning(e.response.data?.error || '有引用，无法删除');
+                    msg.warning(e.response.data?.error || '有引用，无法删除');
                 } else {
-                    ElementPlus.ElMessage.error('删除失败');
+                    msg.error('删除失败');
                 }
             }
         },
@@ -564,10 +564,10 @@ const MontMarteComponent = {
                 if (this.editing) {
                     const res = await axios.put(`${window.location.origin}/api/mont-marte-colors/${this.form.id}`, fd);
                     const n = res?.data?.updatedReferences || 0;
-                    ElementPlus.ElMessage.success(n>0 ? `已保存并同步更新 ${n} 处配方引用` : '已保存修改');
+                    msg.success(n>0 ? `已保存并同步更新 ${n} 处配方引用` : '已保存修改');
                 } else {
                     await axios.post(`${window.location.origin}/api/mont-marte-colors`, fd);
-                    ElementPlus.ElMessage.success('已新增颜色原料');
+                    msg.success('已新增颜色原料');
                 }
                 await Promise.all([
                     this.globalData.loadMontMarteColors(),
@@ -576,7 +576,7 @@ const MontMarteComponent = {
                 this.showDialog = false;
             } catch(e) {
                 console.error('保存失败(网络/服务器)', e);
-                ElementPlus.ElMessage.error('保存失败');
+                msg.error('保存失败');
             } finally { this.saving = false; }
         },
         
@@ -595,13 +595,13 @@ const MontMarteComponent = {
             if (!ok) return;
             try {
                 await api.montMarteColors.delete(color.id);
-                ElementPlus.ElMessage.success('删除成功');
+                msg.success('删除成功');
                 await this.globalData.loadMontMarteColors();
                 // 同步刷新自配色，避免引用残留提示（若后端允许删除未引用的）
                 await this.globalData.loadCustomColors();
             } catch (error) {
                 const msg = error?.response?.data?.error || '删除失败';
-                ElementPlus.ElMessage.error(msg);
+                msg.error(msg);
             }
         },
         

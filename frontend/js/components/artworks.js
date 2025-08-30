@@ -112,9 +112,9 @@ const ArtworksComponent = {
                           -
                         </template>
                         <template v-else-if="colorByCode(m.colorCode)">
-                          <template v-if="structuredFormula(colorByCode(m.colorCode).formula).lines.length">
-                            <div class="formula-lines" :style="{ '--max-name-ch': structuredFormula(colorByCode(m.colorCode).formula).maxNameChars }">
-                              <div class="fl" v-for="(p,i) in structuredFormula(colorByCode(m.colorCode).formula).lines" :key="'pfl'+i">
+                          <template v-if="formulaUtils.structured(colorByCode(m.colorCode).formula).lines.length">
+                            <div class="formula-lines" :style="{ '--max-name-ch': formulaUtils.structured(colorByCode(m.colorCode).formula).maxNameChars }">
+                              <div class="fl" v-for="(p,i) in formulaUtils.structured(colorByCode(m.colorCode).formula).lines" :key="'pfl'+i">
                                 <span class="fl-name">{{ p.name }}</span>
                                 <span class="fl-amt" v-if="p.amount">{{ p.amount }}{{ p.unit }}</span>
                               </div>
@@ -165,9 +165,9 @@ const ArtworksComponent = {
                           -
                         </template>
                         <template v-else-if="colorByCode(g.code)">
-                          <template v-if="structuredFormula(colorByCode(g.code).formula).lines.length">
-                            <div class="formula-lines" :style="{ '--max-name-ch': structuredFormula(colorByCode(g.code).formula).maxNameChars }">
-                              <div class="fl" v-for="(p,i) in structuredFormula(colorByCode(g.code).formula).lines" :key="'bcfl'+g.code+'-'+i">
+                          <template v-if="formulaUtils.structured(colorByCode(g.code).formula).lines.length">
+                            <div class="formula-lines" :style="{ '--max-name-ch': formulaUtils.structured(colorByCode(g.code).formula).maxNameChars }">
+                              <div class="fl" v-for="(p,i) in formulaUtils.structured(colorByCode(g.code).formula).lines" :key="'bcfl'+g.code+'-'+i">
                                 <span class="fl-name">{{ p.name }}</span>
                                 <span class="fl-amt" v-if="p.amount">{{ p.amount }}{{ p.unit }}</span>
                               </div>
@@ -459,6 +459,8 @@ const ArtworksComponent = {
     };
   },
   computed: {
+  // Expose formulaUtils to template
+  formulaUtils() { return window.formulaUtils; },
   baseURL() { return window.location.origin; },
     // 回退：直接使用注入的 artworks 原始数组并按 sortMode 排序（暂不做搜索过滤）
     artworks() {
@@ -598,34 +600,7 @@ const ArtworksComponent = {
       if (buffer) lines.push(buffer);
       return lines;
     },
-    // 结构化配方：返回 { lines: [{name,amount,unit}], maxNameChars }
-    structuredFormula(formula) {
-      if (!this._formulaCache) this._formulaCache = new Map();
-      const key = formula || '';
-      if (this._formulaCache.has(key)) return this._formulaCache.get(key);
-      const str = (key).trim();
-      if (!str) { const empty = { lines: [], maxNameChars: 0 }; this._formulaCache.set(key, empty); return empty; }
-      const parts = str.split(/\s+/);
-      const lines = [];
-      let current = null;
-      for (const token of parts) {
-        const m = token.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/);
-        if (m && current) {
-          lines.push({ name: current, amount: m[1], unit: m[2] });
-          current = null;
-        } else {
-          if (current) { // 上一个没有匹配到数量
-            lines.push({ name: current, amount: '', unit: '' });
-          }
-            current = token;
-        }
-      }
-      if (current) lines.push({ name: current, amount: '', unit: '' });
-      const maxNameChars = lines.reduce((m, l) => Math.max(m, l.name.length), 0);
-      const result = { lines, maxNameChars };
-      this._formulaCache.set(key, result);
-      return result;
-    },
+    // Formula structure method removed - using shared formulaUtils.structured instead
     normalizedMappings(scheme) {
       // scheme.layers: [{layer, colorCode}] or { [layer]: colorCode }
       let rows = [];
@@ -796,12 +771,12 @@ const ArtworksComponent = {
   const { code, name } = parsed;
       try {
   await axios.post(`${window.location.origin}/api/artworks`, { code, name });
-        ElementPlus.ElMessage.success('已创建新作品');
+        msg.success('已创建新作品');
         await this.refreshAll();
         this.showArtworkDialog = false;
       } catch(e) {
         console.error(e);
-        ElementPlus.ElMessage.error('创建失败');
+        msg.error('创建失败');
       }
     },
     onArtworkTitleInput() {
@@ -862,7 +837,7 @@ const ArtworksComponent = {
     },
 
     showHistory() {
-      ElementPlus.ElMessage.info('历史功能暂未实现');
+      msg.info('历史功能暂未实现');
     },
 
     onOpenDialog() {
@@ -1028,7 +1003,7 @@ const ArtworksComponent = {
           } else {
             await axios.put(`${window.location.origin}/api/artworks/${artId}/schemes/${this.schemeForm.id}`, fd);
           }
-          ElementPlus.ElMessage.success('已保存方案修改');
+          msg.success('已保存方案修改');
         } else {
           // 新增方案
           if (window.api?.artworks?.addScheme) {
@@ -1036,13 +1011,13 @@ const ArtworksComponent = {
           } else {
             await axios.post(`${window.location.origin}/api/artworks/${artId}/schemes`, fd);
           }
-          ElementPlus.ElMessage.success('已新增配色方案');
+          msg.success('已新增配色方案');
         }
         await this.refreshAll();
         this.showSchemeDialog = false;
       } catch (e) {
         console.error(e);
-        ElementPlus.ElMessage.error('保存失败');
+        msg.error('保存失败');
       } finally {
         this.saving = false;
       }
@@ -1057,22 +1032,22 @@ const ArtworksComponent = {
       try {
   const url = `${window.location.origin}/api/artworks/${art.id}/schemes/${scheme.id}`;
         await axios.delete(url);
-        ElementPlus.ElMessage.success('已删除配色方案');
+        msg.success('已删除配色方案');
         await this.refreshAll();
       } catch(e) {
         console.error('删除配色方案失败', e);
         const status = e?.response?.status;
         const msg = e?.response?.data?.error || '';
         if (status === 404) {
-          ElementPlus.ElMessage.warning(msg || '配色方案不存在或已被删除');
+          msg.warning(msg || '配色方案不存在或已被删除');
           // 前端刷新一次，清掉缓存中的 phantom 方案
           await this.refreshAll();
         } else if (status === 400) {
-          ElementPlus.ElMessage.warning(msg || '无法删除该配色方案');
+          msg.warning(msg || '无法删除该配色方案');
         } else if (status === 409) {
-          ElementPlus.ElMessage.warning(msg || '该配色方案存在引用，无法删除');
+          msg.warning(msg || '该配色方案存在引用，无法删除');
         } else {
-          ElementPlus.ElMessage.error(msg || '删除失败');
+          msg.error(msg || '删除失败');
         }
       }
     }
@@ -1087,21 +1062,21 @@ const ArtworksComponent = {
       try {
   const url = `${window.location.origin}/api/artworks/${art.id}`;
         await axios.delete(url);
-        ElementPlus.ElMessage.success('已删除作品');
+        msg.success('已删除作品');
         await this.refreshAll();
       } catch(e) {
         console.error('删除作品失败', e);
         const status = e?.response?.status;
         const msg = e?.response?.data?.error || '';
         if (status === 404) {
-          ElementPlus.ElMessage.warning(msg || '作品不存在或已被删除');
+          msg.warning(msg || '作品不存在或已被删除');
           await this.refreshAll();
         } else if (status === 400) {
-          ElementPlus.ElMessage.warning(msg || '无法删除该作品');
+          msg.warning(msg || '无法删除该作品');
         } else if (status === 409) {
-          ElementPlus.ElMessage.warning(msg || '该作品存在引用，无法删除');
+          msg.warning(msg || '该作品存在引用，无法删除');
         } else {
-          ElementPlus.ElMessage.error(msg || '删除失败');
+          msg.error(msg || '删除失败');
         }
       }
   }

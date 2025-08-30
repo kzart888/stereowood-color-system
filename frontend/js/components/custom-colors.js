@@ -50,7 +50,7 @@ const CustomColorsComponent = {
                                         <div class="meta-text" v-if="!color.formula">（未指定配方）</div>
                                         <div class="meta-text" v-else>配方：
                                             <span class="usage-chips">
-                                                <span v-for="(seg,i) in formulaSegments(color.formula)" :key="'ccf'+color.id+'-'+i" class="mf-chip">{{ seg }}</span>
+                                                <span v-for="(seg,i) in formulaUtils.segments(color.formula)" :key="'ccf'+color.id+'-'+i" class="mf-chip">{{ seg }}</span>
                                             </span>
                                         </div>
                                         <button v-if="color.formula" class="calc-mini-btn" @click.stop="$calc && $calc.open(color.color_code, color.formula||'', $event.currentTarget)" title="快速计算" style="position:absolute; top:0; right:0;">算</button>
@@ -310,6 +310,10 @@ const CustomColorsComponent = {
     },
     
     computed: {
+        // Expose formulaUtils to template
+        formulaUtils() {
+            return window.formulaUtils;
+        },
         // 从注入的全局数据获取基础URL
         baseURL() {
             return this.globalData.baseURL;
@@ -478,25 +482,7 @@ const CustomColorsComponent = {
             const byPrefix = this.categories.find(c => c.code === prefix);
             return byPrefix ? byPrefix.name : '其他';
         },
-        formulaSegments(formula) {
-            const str = (formula || '').trim();
-            if (!str) return [];
-            const parts = str.split(/\s+/);
-            const segs = [];
-            let pending = null;
-            for (const t of parts) {
-                const m = t.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/);
-                if (m && pending) {
-                    segs.push(pending + ' ' + m[1] + m[2]);
-                    pending = null;
-                } else {
-                    if (pending) segs.push(pending);
-                    pending = t;
-                }
-            }
-            if (pending) segs.push(pending);
-            return segs;
-        },
+        // Formula segments method removed - using shared formulaUtils.segments instead
     // 打开添加对话框
         openAddDialog() {
             // 重置编辑状态
@@ -593,7 +579,7 @@ const CustomColorsComponent = {
             if (sjId && sjTriggers.includes(firstChar)) {
                 if (this.form.category_id !== sjId) {
                     this.form.category_id = sjId;
-                    ElementPlus.ElMessage.info('已自动识别为 色精');
+                    msg.info('已自动识别为 色精');
                 }
                 return; // 不再继续字母前缀匹配
             }
@@ -604,12 +590,12 @@ const CustomColorsComponent = {
                 if (matchedCategory) {
                     if (this.form.category_id !== matchedCategory.id) {
                         this.form.category_id = matchedCategory.id;
-                        ElementPlus.ElMessage.info(`已自动切换到 ${matchedCategory.name}`);
+                        msg.info(`已自动切换到 ${matchedCategory.name}`);
                     }
                 } else {
                     if (this.form.category_id !== 'other') {
                         this.form.category_id = 'other';
-                        ElementPlus.ElMessage.warning('无法识别的前缀，已切换到"其他"');
+                        msg.warning('无法识别的前缀，已切换到"其他"');
                     }
                 }
             }
@@ -714,10 +700,10 @@ const CustomColorsComponent = {
                         formData.append('version', this.editingColor.version);
                     }
                     await api.customColors.update(this.editingColor.id, formData);
-                    ElementPlus.ElMessage.success('修改成功');
+                    msg.success('修改成功');
                 } else {
                     await api.customColors.create(formData);
-                    ElementPlus.ElMessage.success('添加成功');
+                    msg.success('添加成功');
                 }
                 
                 this.showAddDialog = false;
@@ -733,7 +719,7 @@ const CustomColorsComponent = {
                     if (saved) {
                         const grp = window.duplicateDetector.detectOnSave(saved, this.globalData.customColors.value);
                         if (grp) {
-                            ElementPlus.ElMessage.warning('发现重复配方（比例等价）');
+                            msg.warning('发现重复配方（比例等价）');
                             // 直接打开对话框
                             this.runDuplicateCheck(grp.signature, saved.id);
                         }
@@ -744,7 +730,7 @@ const CustomColorsComponent = {
                     // 处理版本冲突
                     this.handleVersionConflict(error.response.data, formData);
                 } else {
-                    ElementPlus.ElMessage.error('操作失败');
+                    msg.error('操作失败');
                 }
             }
         },
@@ -777,23 +763,23 @@ const CustomColorsComponent = {
             if (!ok) return;
             try {
                 await api.customColors.delete(color.id);
-                ElementPlus.ElMessage.success('删除成功');
+                msg.success('删除成功');
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadArtworks();
             } catch (error) {
                 const raw = error?.response?.data?.error || '';
                 if (raw.includes('配色方案使用')) {
-                    ElementPlus.ElMessage.warning('该自配色已被引用，无法删除');
+                    msg.warning('该自配色已被引用，无法删除');
                 } else if (raw.includes('不存在')) {
-                    ElementPlus.ElMessage.error('该自配色不存在');
+                    msg.error('该自配色不存在');
                 } else if (raw) {
-                    ElementPlus.ElMessage.error(raw);
+                    msg.error(raw);
                 } else if (error?.response?.status === 404) {
-                    ElementPlus.ElMessage.error('删除功能暂不可用');
+                    msg.error('删除功能暂不可用');
                 } else if (error?.request) {
-                    ElementPlus.ElMessage.error('网络异常，删除失败');
+                    msg.error('网络异常，删除失败');
                 } else {
-                    ElementPlus.ElMessage.error('删除失败');
+                    msg.error('删除失败');
                 }
             }
         },
@@ -814,7 +800,7 @@ const CustomColorsComponent = {
         
         // 查看历史（待实现）
         viewHistory(color) {
-            ElementPlus.ElMessage.info('历史功能待实现');
+            msg.info('历史功能待实现');
         },
         
         // 重置表单
@@ -870,11 +856,11 @@ const CustomColorsComponent = {
             return tags;
         },
         runDuplicateCheck(focusSignature=null, preferredKeepId=null){
-            if(!window.duplicateDetector){ ElementPlus.ElMessage.info('查重模块未加载'); return; }
+            if(!window.duplicateDetector){ msg.info('查重模块未加载'); return; }
             const list = this.globalData.customColors?.value || [];
             const map = window.duplicateDetector.groupByRatioSignature(list);
             const sigs = Object.keys(map);
-            if(!sigs.length){ ElementPlus.ElMessage.success('未发现重复配方'); this.showDuplicateDialog=false; return; }
+            if(!sigs.length){ msg.success('未发现重复配方'); this.showDuplicateDialog=false; return; }
             // 构造组数据
             this.duplicateGroups = sigs.map(sig=>{
                 const recs = map[sig].slice().sort((a,b)=> new Date(b.updated_at||b.created_at||0)-new Date(a.updated_at||a.created_at||0));
@@ -891,11 +877,11 @@ const CustomColorsComponent = {
                 }
             });
             this.showDuplicateDialog=true;
-            ElementPlus.ElMessage.warning(`发现 ${sigs.length} 组重复配方`);
+            msg.warning(`发现 ${sigs.length} 组重复配方`);
         },
         keepAllDuplicates(){
             this.showDuplicateDialog=false;
-            ElementPlus.ElMessage.info('已保留全部重复记录');
+            msg.info('已保留全部重复记录');
         },
         async performDuplicateDeletion(){
             if(this.deletionPending) return;
@@ -905,7 +891,7 @@ const CustomColorsComponent = {
                 if(!keepId) return;
                 g.records.forEach(r=>{ if(r.id!==keepId && !this.isColorReferenced(r)) toDelete.push(r); });
             });
-            if(!toDelete.length){ ElementPlus.ElMessage.info('没有可删除的记录'); return; }
+            if(!toDelete.length){ msg.info('没有可删除的记录'); return; }
             try { await ElementPlus.ElMessageBox.confirm(`将删除 ${toDelete.length} 条记录，确认继续？`, '删除确认', { type:'warning', confirmButtonText:'确认删除', cancelButtonText:'取消' }); } catch(e){ return; }
             this.deletionPending=true;
             let ok=0, fail=0;
@@ -916,19 +902,19 @@ const CustomColorsComponent = {
             this.deletionPending=false;
             await this.globalData.loadCustomColors();
             await this.globalData.loadArtworks();
-            ElementPlus.ElMessage.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
+            msg.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
             // 重新检测
             this.runDuplicateCheck();
         },
         async confirmForceMerge(){
             if(this.mergingPending || this.deletionPending) return;
             const candidates = this.duplicateGroups.filter(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
-            if(!candidates.length){ ElementPlus.ElMessage.info('请选择要保留的记录'); return; }
+            if(!candidates.length){ msg.info('请选择要保留的记录'); return; }
             const g = candidates[0];
             const keepId = this.duplicateSelections[g.signature];
-            if(!keepId){ ElementPlus.ElMessage.info('请先选择要保留的记录'); return; }
+            if(!keepId){ msg.info('请先选择要保留的记录'); return; }
             const removeIds = g.records.filter(r=> r.id!==keepId).map(r=> r.id);
-            if(!removeIds.length){ ElementPlus.ElMessage.info('该组没有其它记录'); return; }
+            if(!removeIds.length){ msg.info('该组没有其它记录'); return; }
             let referenced=0; g.records.forEach(r=>{ if(r.id!==keepId && this.isColorReferenced(r)) referenced++; });
             const msg = `将合并该组：保留 1 条，删除 ${removeIds.length} 条；其中 ${referenced} 条被引用，其引用将更新到保留记录。确认继续？`;
             try { await ElementPlus.ElMessageBox.confirm(msg, '强制合并确认', { type:'warning', confirmButtonText:'执行合并', cancelButtonText:'取消' }); } catch(e){ return; }
@@ -941,16 +927,16 @@ const CustomColorsComponent = {
                 const resp = await api.customColors.forceMerge(payload);
                 const updated = resp?.updatedLayers ?? resp?.data?.updatedLayers ?? 0;
                 const deleted = resp?.deleted ?? resp?.data?.deleted ?? payload.removeIds.length;
-                ElementPlus.ElMessage.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
+                msg.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadArtworks();
                 this.runDuplicateCheck();
                 if(!this.duplicateGroups.length){ this.showDuplicateDialog=false; }
             } catch(err){
                 const raw = err?.response?.data?.error || '';
-                if(raw){ ElementPlus.ElMessage.error('合并失败: '+raw); }
-                else if(err?.request){ ElementPlus.ElMessage.error('网络错误，合并失败'); }
-                else { ElementPlus.ElMessage.error('合并失败'); }
+                if(raw){ msg.error('合并失败: '+raw); }
+                else if(err?.request){ msg.error('网络错误，合并失败'); }
+                else { msg.error('合并失败'); }
             } finally {
                 this.mergingPending = false;
             }
@@ -995,7 +981,7 @@ const CustomColorsComponent = {
                         break;
                 }
             } catch (error) {
-                ElementPlus.ElMessage.error('冲突处理失败');
+                msg.error('冲突处理失败');
             }
 
             // 清理状态
@@ -1011,13 +997,13 @@ const CustomColorsComponent = {
                 this.pendingFormData.delete('version');
                 await api.customColors.update(this.editingColor.id, this.pendingFormData);
                 
-                ElementPlus.ElMessage.success('强制覆盖成功');
+                msg.success('强制覆盖成功');
                 this.showAddDialog = false;
                 this.resetForm();
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadArtworks();
             } catch (error) {
-                ElementPlus.ElMessage.error('强制覆盖失败');
+                msg.error('强制覆盖失败');
             }
         },
 
@@ -1040,14 +1026,14 @@ const CustomColorsComponent = {
             // 更新编辑状态为最新版本
             this.editingColor = { ...this.editingColor, ...latest };
             
-            ElementPlus.ElMessage.info('已用最新数据填充表单，请检查后重新保存');
+            msg.info('已用最新数据填充表单，请检查后重新保存');
         },
 
         async refreshColorData() {
             await this.globalData.loadCustomColors();
             this.showAddDialog = false;
             this.resetForm();
-            ElementPlus.ElMessage.info('已刷新到最新数据');
+            msg.info('已刷新到最新数据');
         },
 
         // 显示色彩列表对话框
@@ -1118,14 +1104,14 @@ const CustomColorsComponent = {
                 this.showColorPaletteDialog = true;
             } catch (error) {
                 console.error('加载色彩数据失败:', error);
-                ElementPlus.ElMessage.error('加载数据失败，请重试');
+                msg.error('加载数据失败，请重试');
             }
         },
 
         // 打印色彩列表
         printColorPalette() {
             // 添加打印提示
-            ElementPlus.ElMessage.info('正在准备打印，请稍候...');
+            msg.info('正在准备打印，请稍候...');
             
             this.$nextTick(() => {
                 setTimeout(() => {
