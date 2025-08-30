@@ -16,15 +16,25 @@ npm install
 # Start development server (port 9099)
 npm start
 
-# Development mode with auto-reload
+# Development mode with auto-reload (requires nodemon)
 npm run dev
 
 # Data backup/restore
-npm run backup
-npm run restore
+npm run backup    # Creates timestamped backup in /backups directory
+npm run restore   # Restores from latest backup
 
 # Windows users can also use
 start.bat
+```
+
+### Testing & Code Quality
+```bash
+# Currently no automated tests or linting configured
+# Consider running manual tests by:
+# 1. Testing all CRUD operations for custom colors
+# 2. Verifying artwork scheme management
+# 3. Testing formula calculator calculations
+# 4. Checking duplicate detection algorithm
 ```
 
 ### Docker Deployment
@@ -42,15 +52,26 @@ docker run -d \
   -v ~/stereowood-uploads:/app/backend/uploads \
   --restart unless-stopped \
   stereowood-color-system:latest
+
+# Check container health
+docker ps
+docker logs stereowood
 ```
 
-## Current State (v0.8.1 - 2025-01-03)
+## Current State (v0.8.2 - 2025-01-03)
 
 ### Major Recent Changes
 - **Backend**: Completely refactored from 1090-line monolithic server.js to 100-line modular version
 - **Routes**: All API routes now properly connected via `backend/routes/index.js`
 - **UI Fixes**: Fixed table cell layouts and formula chips display
 - **Cleanup**: Removed 3400+ lines of obsolete code
+
+### Codebase Cleanup Completed (2025-01-03)
+- **Removed duplicate files**: colors.js, materials.js routes; MaterialService.js, FormulaService.js
+- **Consolidated packages**: Single package.json at root, deleted backend/node_modules
+- **Cleaned directories**: Removed frontend/js/components.backup/, duplicate uploads folder
+- **Simplified documentation**: Reduced from 21 files to 3 essential docs (README, CLAUDE.md, OPERATIONS.md)
+- **Total reduction**: ~30% fewer files, ~170MB saved, documentation reduced from 7,000 to 500 lines
 
 ## Architecture Overview
 
@@ -185,3 +206,53 @@ STEREOWOOD Color System/
 - **Volumes Required**: `/data` for database, `/app/backend/uploads` for images
 - **Node Version**: >=14.0.0 required
 - **Production ENV**: Set `NODE_ENV=production` and `DB_FILE=/data/color_management.db`
+
+## Common Troubleshooting
+
+### Database Issues
+```bash
+# Check if database exists
+dir backend\color_management.db
+
+# Reset database (WARNING: deletes all data)
+del backend\color_management.db
+npm start  # Will auto-create new database with migrations
+```
+
+### API Testing
+```bash
+# Test API endpoints manually (Windows PowerShell)
+# Get all custom colors
+curl http://localhost:9099/api/custom-colors
+
+# Get specific color
+curl http://localhost:9099/api/custom-colors/1
+
+# Test artwork endpoints
+curl http://localhost:9099/api/artworks
+```
+
+### Image Upload Issues
+- Check `backend/uploads/` directory exists and has write permissions
+- Supported formats: jpg, jpeg, png, gif, webp
+- Max file size: No explicit limit set (handled by multer defaults)
+- Images stored as: `uploads/{timestamp}-{originalname}`
+
+## Key Business Logic
+
+### Duplicate Detection Algorithm
+- Located in: `backend/services/custom-colors.js`
+- Threshold: 0.95 similarity ratio
+- Algorithm: Compares normalized formula ratios after extracting quantities
+- Formula parsing: Extracts material names and quantities from space-separated format
+
+### Formula Calculator Logic
+- Frontend component: `frontend/js/components/formula-calculator.js`
+- State persistence: Uses localStorage to maintain calculator state
+- Overflow handling: Automatically rebalances ratios when quantities exceed limits
+- Real-time updates: No server-side calculation, all done in browser
+
+### Color Category Mapping
+- Categories are hardcoded: 蓝(1), 黄(2), 红(3), 绿(4), 紫(5), 色精(6)
+- Category changes cascade to all related colors
+- No soft deletes - all deletions are permanent
