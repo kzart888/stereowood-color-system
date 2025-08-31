@@ -91,3 +91,4 @@ const api = {
 
 // 导出给其他文件使用
 // 在浏览器环境中，这会创建一个全局变量 api
+window.api = api;
