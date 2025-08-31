@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Functions</title>
+</head>
+<body>
+    <h1>Function Registration Test</h1>
+    <button onclick="testDuplicate()">Test 查重</button>
+    <button onclick="testPalette()">Test 自配色列表</button>
+    <div id="results"></div>
+    
+    <script>
+        function testDuplicate() {
+            const customColorsRef = document.querySelector('#app').__vue__.$refs.customColorsRef;
+            if (customColorsRef) {
+                if (customColorsRef.runDuplicateCheck) {
+                    document.getElementById('results').innerHTML += '<p>✅ runDuplicateCheck exists</p>';
+                    customColorsRef.runDuplicateCheck();
+                } else {
+                    document.getElementById('results').innerHTML += '<p>❌ runDuplicateCheck not found</p>';
+                }
+            } else {
+                document.getElementById('results').innerHTML += '<p>❌ customColorsRef not found</p>';
+            }
+        }
+        
+        function testPalette() {
+            const customColorsRef = document.querySelector('#app').__vue__.$refs.customColorsRef;
+            if (customColorsRef) {
+                if (customColorsRef.showColorPalette) {
+                    document.getElementById('results').innerHTML += '<p>✅ showColorPalette exists</p>';
+                    customColorsRef.showColorPalette();
+                } else {
+                    document.getElementById('results').innerHTML += '<p>❌ showColorPalette not found</p>';
+                }
+            } else {
+                document.getElementById('results').innerHTML += '<p>❌ customColorsRef not found</p>';
+            }
+        }
+        
+        // Check on load
+        window.onload = function() {
+            setTimeout(() => {
+                const app = document.querySelector('#app');
+                if (app && app.__vue__) {
+                    document.getElementById('results').innerHTML = '<p>✅ Vue app found</p>';
+                    
+                    const customColorsRef = app.__vue__.$refs.customColorsRef;
+                    if (customColorsRef) {
+                        document.getElementById('results').innerHTML += '<p>✅ customColorsRef found</p>';
+                        
+                        // List all methods
+                        const methods = Object.getOwnPropertyNames(customColorsRef).filter(prop => typeof customColorsRef[prop] === 'function');
+                        document.getElementById('results').innerHTML += `<p>Methods found: ${methods.length}</p>`;
+                        
+                        if (customColorsRef.runDuplicateCheck) {
+                            document.getElementById('results').innerHTML += '<p>✅ runDuplicateCheck registered</p>';
+                        } else {
+                            document.getElementById('results').innerHTML += '<p>❌ runDuplicateCheck NOT registered</p>';
+                        }
+                        
+                        if (customColorsRef.showColorPalette) {
+                            document.getElementById('results').innerHTML += '<p>✅ showColorPalette registered</p>';
+                        } else {
+                            document.getElementById('results').innerHTML += '<p>❌ showColorPalette NOT registered</p>';
+                        }
+                    } else {
+                        document.getElementById('results').innerHTML += '<p>❌ customColorsRef NOT found</p>';
+                    }
+                } else {
+                    document.getElementById('results').innerHTML = '<p>❌ Vue app NOT found</p>';
+                }
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

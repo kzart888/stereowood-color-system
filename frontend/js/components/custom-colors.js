@@ -327,9 +327,13 @@ const CustomColorsComponent = {
                     </div>
                 </div>
                 <template #footer>
-                    <el-button type="primary" @click="performDuplicateDeletion">合并</el-button>
-                    <el-button type="danger" @click="confirmForceMerge">强制合并</el-button>
-                    <el-button @click="showDuplicateDialog = false">关闭</el-button>
+                    <el-button @click="keepAllDuplicates" :disabled="deletionPending">全部保留</el-button>
+                    <el-button type="primary" :disabled="!canDeleteAny || deletionPending" @click="performDuplicateDeletion">保留所选并删除其它</el-button>
+                    <el-tooltip content="更新引用到保留记录后删除其它（包括已被引用的记录）" placement="top">
+                        <span>
+                            <el-button type="danger" :disabled="!canForceMerge || deletionPending || mergingPending" :loading="mergingPending" @click="confirmForceMerge">强制合并（更新引用）</el-button>
+                        </span>
+                    </el-tooltip>
                 </template>
             </el-dialog>
             
@@ -528,6 +532,22 @@ const CustomColorsComponent = {
             return this.orderedCategoriesWithOther.map(c=>c);
         },
         
+        // Computed properties for duplicate checking
+        canDeleteAny() {
+            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
+            for(const g of this.duplicateGroups){
+                const keepId = this.duplicateSelections[g.signature];
+                if(!keepId) continue;
+                if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
+            }
+            return false;
+        },
+        
+        canForceMerge() {
+            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
+            return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
+        },
+        
         sjCategoryId() {
             const sj = this.categories.find(c=>c.code==='SJ');
             return sj ? sj.id : null;
@@ -660,6 +680,11 @@ const CustomColorsComponent = {
     },
     
     methods: {
+        // Helper to get message service
+        getMsg() {
+            return ElementPlus.ElMessage;
+        },
+        
         setColorItemRef(color) {
             return (el) => {
                 if (el) this._colorItemRefs.set(color.color_code, el); 
@@ -723,6 +748,7 @@ const CustomColorsComponent = {
         },
         
         async extractColorFromImage() {
+            const msg = this.getMsg();
             let imageToProcess = null;
             
             if (this.form.imageFile) {
@@ -763,6 +789,7 @@ const CustomColorsComponent = {
         },
         
         clearColorValues() {
+            const msg = this.getMsg();
             this.form.rgb_r = null;
             this.form.rgb_g = null;
             this.form.rgb_b = null;
@@ -777,6 +804,7 @@ const CustomColorsComponent = {
         },
         
         async findPantoneMatch() {
+            const msg = this.getMsg();
             if (this.form.rgb_r === null || this.form.rgb_g === null || this.form.rgb_b === null) {
                 msg.warning('请先输入或提取 RGB 颜色值');
                 return;
@@ -890,6 +918,7 @@ const CustomColorsComponent = {
         },
         
         async saveColor() {
+            const msg = this.getMsg();
             const valid = await this.$refs.formRef.validate().catch(() => false);
             if (!valid) return;
             if (this.colorCodeDuplicate) return;
@@ -1039,6 +1068,7 @@ const CustomColorsComponent = {
         },
         
         onColorCodeInput(value) {
+            const msg = this.getMsg();
             if (this.editingColor) return;
             const sjId = this.sjCategoryId;
             if (this.form.category_id === 'other' || (sjId && this.form.category_id === sjId)) return;
@@ -1095,6 +1125,7 @@ const CustomColorsComponent = {
         },
         
         async deleteColor(color) {
+            const msg = this.getMsg();
             const ok = await this.$helpers.doubleDangerConfirm({
                 firstMessage: `确定删除 ${color.color_code} 吗？`,
                 firstConfirmText: '确定',
@@ -1137,6 +1168,7 @@ const CustomColorsComponent = {
         },
         
         viewHistory(color) {
+            const msg = this.getMsg();
             msg.info('历史功能待实现');
         },
         
@@ -1193,6 +1225,7 @@ const CustomColorsComponent = {
         
         // Duplicate check method
         runDuplicateCheck(focusSignature=null, preferredKeepId=null) {
+            const msg = this.getMsg();
             if(!window.duplicateDetector) { 
                 msg.info('查重模块未加载'); 
                 return; 
@@ -1229,6 +1262,7 @@ const CustomColorsComponent = {
         
         // Show color palette method
         async showColorPalette() {
+            const msg = this.getMsg();
             try {
                 // Refresh data before opening dialog
                 await this.globalData.loadCustomColors();
@@ -1299,106 +1333,73 @@ const CustomColorsComponent = {
             }
         },
         
-        // Perform duplicate deletion (merge)
-        async performDuplicateDeletion() {
-            const msg = ElementPlus.ElMessage;
-            
-            try {
-                // Collect items to delete
-                const deleteIds = [];
-                this.duplicateGroups.forEach(group => {
-                    const keepId = this.duplicateSelections[group.signature];
-                    group.records.forEach(rec => {
-                        if (rec.id !== keepId) {
-                            deleteIds.push(rec.id);
-                        }
-                    });
-                });
-                
-                if (deleteIds.length === 0) {
-                    msg.warning('没有需要删除的重复项');
-                    return;
-                }
-                
-                // Confirm deletion
-                await ElementPlus.ElMessageBox.confirm(
-                    `将删除 ${deleteIds.length} 个重复配方，是否继续？`,
-                    '确认合并',
-                    {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        type: 'warning'
-                    }
-                );
-                
-                // Delete duplicates
-                for (const id of deleteIds) {
-                    await api.deleteCustomColor(id);
-                }
-                
-                msg.success(`成功删除 ${deleteIds.length} 个重复配方`);
-                this.showDuplicateDialog = false;
-                
-                // Refresh data
-                await this.globalData.loadCustomColors();
-                
-            } catch (error) {
-                if (error !== 'cancel') {
-                    console.error('删除重复项失败:', error);
-                    msg.error('删除失败，请重试');
-                }
-            }
+        // Keep all duplicates
+        keepAllDuplicates(){
+            this.showDuplicateDialog=false;
+            ElementPlus.ElMessage.info('已保留全部重复记录');
         },
         
-        // Confirm force merge (ignore references)
-        async confirmForceMerge() {
-            const msg = ElementPlus.ElMessage;
-            
+        // Perform duplicate deletion - original from v0.5.6
+        async performDuplicateDeletion(){
+            if(this.deletionPending) return;
+            const toDelete=[];
+            this.duplicateGroups.forEach(g=>{
+                const keepId = this.duplicateSelections[g.signature];
+                if(!keepId) return;
+                g.records.forEach(r=>{ if(r.id!==keepId && !this.isColorReferenced(r)) toDelete.push(r); });
+            });
+            if(!toDelete.length){ ElementPlus.ElMessage.info('没有可删除的记录'); return; }
+            try { await ElementPlus.ElMessageBox.confirm(`将删除 ${toDelete.length} 条记录，确认继续？`, '删除确认', { type:'warning', confirmButtonText:'确认删除', cancelButtonText:'取消' }); } catch(e){ return; }
+            this.deletionPending=true;
+            let ok=0, fail=0;
+            for(const rec of toDelete){
+                try { await api.customColors.delete(rec.id); ok++; }
+                catch(e){ fail++; break; }
+            }
+            this.deletionPending=false;
+            await this.globalData.loadCustomColors();
+            await this.globalData.loadArtworks();
+            ElementPlus.ElMessage.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
+            // 重新检测
+            this.runDuplicateCheck();
+        },
+        
+        // Confirm force merge - original from v0.5.6
+        async confirmForceMerge(){
+            if(this.mergingPending || this.deletionPending) return;
+            const candidates = this.duplicateGroups.filter(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
+            if(!candidates.length){ ElementPlus.ElMessage.info('请选择要保留的记录'); return; }
+            const g = candidates[0];
+            const keepId = this.duplicateSelections[g.signature];
+            if(!keepId){ ElementPlus.ElMessage.info('请先选择要保留的记录'); return; }
+            const removeIds = g.records.filter(r=> r.id!==keepId).map(r=> r.id);
+            if(!removeIds.length){ ElementPlus.ElMessage.info('该组没有其它记录'); return; }
+            let referenced=0; g.records.forEach(r=>{ if(r.id!==keepId && this.isColorReferenced(r)) referenced++; });
+            const msg = `将合并该组：保留 1 条，删除 ${removeIds.length} 条；其中 ${referenced} 条被引用，其引用将更新到保留记录。确认继续？`;
+            try { await ElementPlus.ElMessageBox.confirm(msg, '强制合并确认', { type:'warning', confirmButtonText:'执行合并', cancelButtonText:'取消' }); } catch(e){ return; }
+            this.executeForceMerge({ keepId, removeIds, signature: g.signature });
+        },
+        
+        // Execute force merge - original from v0.5.6
+        async executeForceMerge(payload){
+            if(this.mergingPending) return;
+            this.mergingPending = true;
             try {
-                // Collect all items to delete (including referenced ones)
-                const deleteIds = [];
-                this.duplicateGroups.forEach(group => {
-                    const keepId = this.duplicateSelections[group.signature];
-                    group.records.forEach(rec => {
-                        if (rec.id !== keepId) {
-                            deleteIds.push(rec.id);
-                        }
-                    });
-                });
-                
-                if (deleteIds.length === 0) {
-                    msg.warning('没有需要删除的重复项');
-                    return;
-                }
-                
-                // Strong confirmation for force merge
-                await ElementPlus.ElMessageBox.confirm(
-                    `强制合并将删除 ${deleteIds.length} 个配方，包括被引用的配方。这可能会影响相关作品的配色方案。是否继续？`,
-                    '强制合并警告',
-                    {
-                        confirmButtonText: '强制合并',
-                        cancelButtonText: '取消',
-                        type: 'error',
-                        dangerouslyUseHTMLString: true
-                    }
-                );
-                
-                // Force delete all duplicates
-                for (const id of deleteIds) {
-                    await api.deleteCustomColor(id);
-                }
-                
-                msg.success(`强制删除 ${deleteIds.length} 个重复配方`);
-                this.showDuplicateDialog = false;
-                
-                // Refresh data
+                const resp = await api.customColors.forceMerge(payload);
+                const updated = resp?.updatedLayers ?? resp?.data?.updatedLayers ?? 0;
+                const deleted = resp?.deleted ?? resp?.data?.deleted ?? payload.removeIds.length;
+                ElementPlus.ElMessage.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
                 await this.globalData.loadCustomColors();
-                
-            } catch (error) {
-                if (error !== 'cancel') {
-                    console.error('强制删除失败:', error);
-                    msg.error('强制删除失败，请重试');
-                }
+                await this.globalData.loadArtworks();
+                this.runDuplicateCheck();
+                if(!this.duplicateGroups.length){ this.showDuplicateDialog=false; }
+            } catch(err){
+                const raw = err?.response?.data?.error || '';
+                if(raw){ ElementPlus.ElMessage.error('合并失败: '+raw); }
+                else if(err?.request){ ElementPlus.ElMessage.error('网络错误，合并失败'); }
+                else { ElementPlus.ElMessage.error('合并失败'); }
+            } finally {
+                this.mergingPending = false;
             }
         },
         
