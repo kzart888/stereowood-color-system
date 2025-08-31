@@ -208,6 +208,86 @@ async function runMigrations() {
       console.log('[迁移] mont_marte_colors 版本字段添加完成');
     }
 
+    // Phase 1: Add color information columns (v0.8.4)
+    // RGB columns
+    if (!(await columnExists('custom_colors', 'rgb_r'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN rgb_r INTEGER`);
+      console.log('[迁移] custom_colors.rgb_r 字段添加完成');
+    }
+    if (!(await columnExists('custom_colors', 'rgb_g'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN rgb_g INTEGER`);
+      console.log('[迁移] custom_colors.rgb_g 字段添加完成');
+    }
+    if (!(await columnExists('custom_colors', 'rgb_b'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN rgb_b INTEGER`);
+      console.log('[迁移] custom_colors.rgb_b 字段添加完成');
+    }
+    
+    // CMYK columns
+    if (!(await columnExists('custom_colors', 'cmyk_c'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN cmyk_c REAL`);
+      console.log('[迁移] custom_colors.cmyk_c 字段添加完成');
+    }
+    if (!(await columnExists('custom_colors', 'cmyk_m'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN cmyk_m REAL`);
+      console.log('[迁移] custom_colors.cmyk_m 字段添加完成');
+    }
+    if (!(await columnExists('custom_colors', 'cmyk_y'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN cmyk_y REAL`);
+      console.log('[迁移] custom_colors.cmyk_y 字段添加完成');
+    }
+    if (!(await columnExists('custom_colors', 'cmyk_k'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN cmyk_k REAL`);
+      console.log('[迁移] custom_colors.cmyk_k 字段添加完成');
+    }
+    
+    // HEX and Pantone columns
+    if (!(await columnExists('custom_colors', 'hex_color'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN hex_color TEXT`);
+      console.log('[迁移] custom_colors.hex_color 字段添加完成');
+    }
+    if (!(await columnExists('custom_colors', 'pantone_coated'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN pantone_coated TEXT`);
+      console.log('[迁移] custom_colors.pantone_coated 字段添加完成');
+    }
+    if (!(await columnExists('custom_colors', 'pantone_uncoated'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN pantone_uncoated TEXT`);
+      console.log('[迁移] custom_colors.pantone_uncoated 字段添加完成');
+    }
+    
+    // Add same columns to custom_colors_history table
+    if (!(await columnExists('custom_colors_history', 'rgb_r'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN rgb_r INTEGER`);
+    }
+    if (!(await columnExists('custom_colors_history', 'rgb_g'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN rgb_g INTEGER`);
+    }
+    if (!(await columnExists('custom_colors_history', 'rgb_b'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN rgb_b INTEGER`);
+    }
+    if (!(await columnExists('custom_colors_history', 'cmyk_c'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN cmyk_c REAL`);
+    }
+    if (!(await columnExists('custom_colors_history', 'cmyk_m'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN cmyk_m REAL`);
+    }
+    if (!(await columnExists('custom_colors_history', 'cmyk_y'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN cmyk_y REAL`);
+    }
+    if (!(await columnExists('custom_colors_history', 'cmyk_k'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN cmyk_k REAL`);
+    }
+    if (!(await columnExists('custom_colors_history', 'hex_color'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN hex_color TEXT`);
+    }
+    if (!(await columnExists('custom_colors_history', 'pantone_coated'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pantone_coated TEXT`);
+    }
+    if (!(await columnExists('custom_colors_history', 'pantone_uncoated'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pantone_uncoated TEXT`);
+    }
+    console.log('[迁移] custom_colors_history 颜色字段添加完成');
+
     console.log('数据库迁移完成 (db/migrations.js)');
   } catch (e) {
     console.error('数据库迁移失败:', e);

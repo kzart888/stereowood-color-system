@@ -69,13 +69,28 @@ function getColorByCode(colorCode) {
  * @returns {Promise<number>} 新创建的颜色ID
  */
 function createColor(colorData) {
-    const { category_id, color_code, image_path, formula, applicable_layers } = colorData;
+    const { 
+        category_id, color_code, image_path, formula, applicable_layers,
+        rgb_r, rgb_g, rgb_b,
+        cmyk_c, cmyk_m, cmyk_y, cmyk_k,
+        hex_color, pantone_coated, pantone_uncoated
+    } = colorData;
     
     return new Promise((resolve, reject) => {
         db.run(`
-            INSERT INTO custom_colors (category_id, color_code, image_path, formula, applicable_layers)
-            VALUES (?, ?, ?, ?, ?)
-        `, [category_id, color_code, image_path, formula, applicable_layers], function(err) {
+            INSERT INTO custom_colors (
+                category_id, color_code, image_path, formula, applicable_layers,
+                rgb_r, rgb_g, rgb_b,
+                cmyk_c, cmyk_m, cmyk_y, cmyk_k,
+                hex_color, pantone_coated, pantone_uncoated
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            category_id, color_code, image_path, formula, applicable_layers,
+            rgb_r, rgb_g, rgb_b,
+            cmyk_c, cmyk_m, cmyk_y, cmyk_k,
+            hex_color, pantone_coated, pantone_uncoated
+        ], function(err) {
             if (err) reject(err);
             else resolve(this.lastID);
         });
@@ -113,6 +128,48 @@ function updateColor(id, colorData) {
         if (colorData.applicable_layers !== undefined) {
             updates.push('applicable_layers = ?');
             values.push(colorData.applicable_layers);
+        }
+        
+        // New color fields
+        if (colorData.rgb_r !== undefined) {
+            updates.push('rgb_r = ?');
+            values.push(colorData.rgb_r);
+        }
+        if (colorData.rgb_g !== undefined) {
+            updates.push('rgb_g = ?');
+            values.push(colorData.rgb_g);
+        }
+        if (colorData.rgb_b !== undefined) {
+            updates.push('rgb_b = ?');
+            values.push(colorData.rgb_b);
+        }
+        if (colorData.cmyk_c !== undefined) {
+            updates.push('cmyk_c = ?');
+            values.push(colorData.cmyk_c);
+        }
+        if (colorData.cmyk_m !== undefined) {
+            updates.push('cmyk_m = ?');
+            values.push(colorData.cmyk_m);
+        }
+        if (colorData.cmyk_y !== undefined) {
+            updates.push('cmyk_y = ?');
+            values.push(colorData.cmyk_y);
+        }
+        if (colorData.cmyk_k !== undefined) {
+            updates.push('cmyk_k = ?');
+            values.push(colorData.cmyk_k);
+        }
+        if (colorData.hex_color !== undefined) {
+            updates.push('hex_color = ?');
+            values.push(colorData.hex_color);
+        }
+        if (colorData.pantone_coated !== undefined) {
+            updates.push('pantone_coated = ?');
+            values.push(colorData.pantone_coated);
+        }
+        if (colorData.pantone_uncoated !== undefined) {
+            updates.push('pantone_uncoated = ?');
+            values.push(colorData.pantone_uncoated);
         }
         
         // 总是更新updated_at

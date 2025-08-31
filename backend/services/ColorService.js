@@ -11,6 +11,78 @@ const path = require('path');
 
 class ColorService {
     /**
+     * 验证RGB值
+     */
+    validateRGB(r, g, b) {
+        if (r !== null && r !== undefined) {
+            if (!Number.isInteger(r) || r < 0 || r > 255) {
+                throw new Error(`RGB R值必须在0-255之间: ${r}`);
+            }
+        }
+        if (g !== null && g !== undefined) {
+            if (!Number.isInteger(g) || g < 0 || g > 255) {
+                throw new Error(`RGB G值必须在0-255之间: ${g}`);
+            }
+        }
+        if (b !== null && b !== undefined) {
+            if (!Number.isInteger(b) || b < 0 || b > 255) {
+                throw new Error(`RGB B值必须在0-255之间: ${b}`);
+            }
+        }
+    }
+
+    /**
+     * 验证CMYK值
+     */
+    validateCMYK(c, m, y, k) {
+        const validateValue = (value, name) => {
+            if (value !== null && value !== undefined) {
+                if (typeof value !== 'number' || value < 0 || value > 100) {
+                    throw new Error(`CMYK ${name}值必须在0-100之间: ${value}`);
+                }
+            }
+        };
+        validateValue(c, 'C');
+        validateValue(m, 'M');
+        validateValue(y, 'Y');
+        validateValue(k, 'K');
+    }
+
+    /**
+     * 验证HEX颜色格式
+     */
+    validateHEX(hex) {
+        if (hex !== null && hex !== undefined && hex !== '') {
+            const hexPattern = /^#?[0-9A-Fa-f]{6}$/;
+            if (!hexPattern.test(hex)) {
+                throw new Error(`HEX颜色格式不正确: ${hex}`);
+            }
+        }
+    }
+
+    /**
+     * 验证颜色数据
+     */
+    validateColorData(colorData) {
+        // 验证RGB
+        if ('rgb_r' in colorData || 'rgb_g' in colorData || 'rgb_b' in colorData) {
+            this.validateRGB(colorData.rgb_r, colorData.rgb_g, colorData.rgb_b);
+        }
+        
+        // 验证CMYK
+        if ('cmyk_c' in colorData || 'cmyk_m' in colorData || 
+            'cmyk_y' in colorData || 'cmyk_k' in colorData) {
+            this.validateCMYK(colorData.cmyk_c, colorData.cmyk_m, 
+                            colorData.cmyk_y, colorData.cmyk_k);
+        }
+        
+        // 验证HEX
+        if ('hex_color' in colorData) {
+            this.validateHEX(colorData.hex_color);
+        }
+    }
+
+    /**
      * 获取所有颜色
      */
     async getAllColors() {
@@ -41,6 +113,9 @@ class ColorService {
      */
     async createColor(colorData) {
         try {
+            // 验证颜色数据
+            this.validateColorData(colorData);
+            
             // 检查颜色编码是否已存在
             const existing = await colorQueries.getColorByCode(colorData.color_code);
             if (existing) {
@@ -60,6 +135,9 @@ class ColorService {
      */
     async updateColor(id, colorData) {
         try {
+            // 验证颜色数据
+            this.validateColorData(colorData);
+            
             // 检查颜色是否存在
             const existing = await colorQueries.getColorById(id);
             if (!existing) {

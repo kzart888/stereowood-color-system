@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Color Utilities Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        .color-box { width: 50px; height: 50px; display: inline-block; margin-right: 10px; border: 1px solid #000; }
+        .result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+        .success { color: green; }
+        .error { color: red; }
+        input { margin: 5px; padding: 5px; }
+        button { margin: 5px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>Color Utilities Test Page</h1>
+    
+    <div class="test-section">
+        <h2>RGB to HEX Conversion</h2>
+        R: <input type="number" id="rgb-r" value="255" min="0" max="255">
+        G: <input type="number" id="rgb-g" value="100" min="0" max="255">
+        B: <input type="number" id="rgb-b" value="50" min="0" max="255">
+        <button onclick="testRGBtoHEX()">Convert to HEX</button>
+        <div id="hex-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>RGB to CMYK Conversion</h2>
+        <button onclick="testRGBtoCMYK()">Convert to CMYK</button>
+        <div id="cmyk-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Find Closest Pantone</h2>
+        <button onclick="testPantoneMatch()">Find Pantone Match</button>
+        <div id="pantone-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Image Color Extraction</h2>
+        <input type="file" id="image-input" accept="image/*">
+        <button onclick="testImageExtraction()">Extract Color</button>
+        <div id="extraction-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>All Tests</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <div id="all-tests-result" class="result"></div>
+    </div>
+
+    <!-- Load utilities -->
+    <script src="js/utils/color-converter.js"></script>
+    <script src="js/data/pantone-colors.js"></script>
+    
+    <script>
+        function testRGBtoHEX() {
+            const r = parseInt(document.getElementById('rgb-r').value);
+            const g = parseInt(document.getElementById('rgb-g').value);
+            const b = parseInt(document.getElementById('rgb-b').value);
+            
+            const hex = ColorConverter.rgbToHex(r, g, b);
+            const resultDiv = document.getElementById('hex-result');
+            
+            if (hex) {
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Conversion successful!</div>
+                    RGB(${r}, ${g}, ${b}) → HEX: ${hex}
+                    <div class="color-box" style="background: ${hex}"></div>
+                `;
+            } else {
+                resultDiv.innerHTML = '<div class="error">✗ Invalid RGB values</div>';
+            }
+        }
+        
+        function testRGBtoCMYK() {
+            const r = parseInt(document.getElementById('rgb-r').value);
+            const g = parseInt(document.getElementById('rgb-g').value);
+            const b = parseInt(document.getElementById('rgb-b').value);
+            
+            const cmyk = ColorConverter.rgbToCmyk(r, g, b);
+            const resultDiv = document.getElementById('cmyk-result');
+            
+            if (cmyk) {
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Conversion successful!</div>
+                    RGB(${r}, ${g}, ${b}) → CMYK(${cmyk.c}, ${cmyk.m}, ${cmyk.y}, ${cmyk.k})
+                `;
+            } else {
+                resultDiv.innerHTML = '<div class="error">✗ Invalid RGB values</div>';
+            }
+        }
+        
+        function testPantoneMatch() {
+            const r = parseInt(document.getElementById('rgb-r').value);
+            const g = parseInt(document.getElementById('rgb-g').value);
+            const b = parseInt(document.getElementById('rgb-b').value);
+            
+            const matches = ColorConverter.findClosestPantones({r, g, b}, PANTONE_COLORS, 3);
+            const resultDiv = document.getElementById('pantone-result');
+            
+            if (matches && matches.length > 0) {
+                let html = '<div class="success">✓ Found Pantone matches!</div>';
+                html += '<div>Top 3 matches:</div>';
+                matches.forEach(match => {
+                    html += `
+                        <div style="margin: 5px 0;">
+                            ${match.name} (Distance: ${match.distance})
+                            <div class="color-box" style="background: ${match.hex}"></div>
+                        </div>
+                    `;
+                });
+                resultDiv.innerHTML = html;
+            } else {
+                resultDiv.innerHTML = '<div class="error">✗ No Pantone matches found</div>';
+            }
+        }
+        
+        async function testImageExtraction() {
+            const fileInput = document.getElementById('image-input');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                document.getElementById('extraction-result').innerHTML = 
+                    '<div class="error">✗ Please select an image</div>';
+                return;
+            }
+            
+            try {
+                const color = await ColorConverter.extractColorFromImage(file);
+                const resultDiv = document.getElementById('extraction-result');
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Color extracted successfully!</div>
+                    RGB: ${color.r}, ${color.g}, ${color.b}<br>
+                    HEX: ${color.hex}<br>
+                    CMYK: ${color.cmyk.c}, ${color.cmyk.m}, ${color.cmyk.y}, ${color.cmyk.k}
+                    <div class="color-box" style="background: ${color.hex}"></div>
+                `;
+            } catch (error) {
+                document.getElementById('extraction-result').innerHTML = 
+                    `<div class="error">✗ Error: ${error.message}</div>`;
+            }
+        }
+        
+        function runAllTests() {
+            const results = [];
+            const resultDiv = document.getElementById('all-tests-result');
+            
+            // Test 1: RGB to HEX
+            const hex = ColorConverter.rgbToHex(255, 100, 50);
+            results.push(`RGB→HEX: ${hex === '#FF6432' ? '✓' : '✗'}`);
+            
+            // Test 2: RGB to CMYK
+            const cmyk = ColorConverter.rgbToCmyk(255, 100, 50);
+            results.push(`RGB→CMYK: ${cmyk && cmyk.c === 0 ? '✓' : '✗'}`);
+            
+            // Test 3: HEX to RGB
+            const rgb = ColorConverter.hexToRgb('#FF6432');
+            results.push(`HEX→RGB: ${rgb && rgb.r === 255 ? '✓' : '✗'}`);
+            
+            // Test 4: CMYK to RGB
+            const rgbFromCmyk = ColorConverter.cmykToRgb(0, 60, 80, 0);
+            results.push(`CMYK→RGB: ${rgbFromCmyk ? '✓' : '✗'}`);
+            
+            // Test 5: Pantone database loaded
+            results.push(`Pantone DB: ${PANTONE_COLORS && PANTONE_COLORS.length > 0 ? '✓' : '✗'}`);
+            
+            // Test 6: Find Pantone match
+            const match = ColorConverter.findClosestPantone({r: 255, g: 100, b: 50}, PANTONE_COLORS);
+            results.push(`Pantone Match: ${match ? '✓' : '✗'}`);
+            
+            // Test 7: Validation functions
+            const validRGB = ColorConverter.isValidRGB(255, 100, 50);
+            results.push(`RGB Validation: ${validRGB ? '✓' : '✗'}`);
+            
+            const validHex = ColorConverter.isValidHex('#FF6432');
+            results.push(`HEX Validation: ${validHex ? '✓' : '✗'}`);
+            
+            resultDiv.innerHTML = '<h3>Test Results:</h3>' + results.join('<br>');
+        }
+        
+        // Run tests on load
+        window.onload = function() {
+            console.log('ColorConverter loaded:', typeof ColorConverter !== 'undefined');
+            console.log('Pantone colors loaded:', typeof PANTONE_COLORS !== 'undefined' ? PANTONE_COLORS.length + ' colors' : 'Not loaded');
+        };
+    </script>
+</body>
+</html>

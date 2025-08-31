@@ -1103,3 +1103,6 @@ const ArtworksComponent = {
     }
   }
 };
+
+// Expose to global scope for app.js to access
+window.ArtworksComponent = ArtworksComponent;

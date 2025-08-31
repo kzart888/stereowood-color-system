@@ -36,7 +36,12 @@ router.get('/custom-colors', async (req, res) => {
 // POST /api/custom-colors
 router.post('/custom-colors', upload.single('image'), async (req, res) => {
   try {
-    const { category_id, color_code, formula, applicable_layers } = req.body;
+    const { 
+      category_id, color_code, formula, applicable_layers,
+      rgb_r, rgb_g, rgb_b,
+      cmyk_c, cmyk_m, cmyk_y, cmyk_k,
+      hex_color, pantone_coated, pantone_uncoated
+    } = req.body;
     let imagePath = null;
 
     // 处理图片上传（保存原图）
@@ -50,7 +55,18 @@ router.post('/custom-colors', upload.single('image'), async (req, res) => {
       color_code,
       image_path: imagePath,
       formula,
-      applicable_layers
+      applicable_layers,
+      // New color fields - convert to proper types
+      rgb_r: rgb_r ? parseInt(rgb_r) : null,
+      rgb_g: rgb_g ? parseInt(rgb_g) : null,
+      rgb_b: rgb_b ? parseInt(rgb_b) : null,
+      cmyk_c: cmyk_c ? parseFloat(cmyk_c) : null,
+      cmyk_m: cmyk_m ? parseFloat(cmyk_m) : null,
+      cmyk_y: cmyk_y ? parseFloat(cmyk_y) : null,
+      cmyk_k: cmyk_k ? parseFloat(cmyk_k) : null,
+      hex_color: hex_color || null,
+      pantone_coated: pantone_coated || null,
+      pantone_uncoated: pantone_uncoated || null
     };
 
     const result = await ColorService.createColor(colorData);
@@ -92,7 +108,12 @@ router.delete('/custom-colors/:id', async (req, res) => {
 router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
   try {
     const colorId = req.params.id;
-    const { category_id, color_code, formula, applicable_layers, existingImagePath, version } = req.body;
+    const { 
+      category_id, color_code, formula, applicable_layers, existingImagePath, version,
+      rgb_r, rgb_g, rgb_b,
+      cmyk_c, cmyk_m, cmyk_y, cmyk_k,
+      hex_color, pantone_coated, pantone_uncoated
+    } = req.body;
     const expectedVersion = version ? parseInt(version) : null;
     
     // 处理图片：只有在有新上传或明确提供existingImagePath时才更新
@@ -124,8 +145,26 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
       category_id,
       color_code,
       formula,
-      applicable_layers
+      applicable_layers,
+      // New color fields - convert to proper types
+      rgb_r: rgb_r !== undefined ? (rgb_r ? parseInt(rgb_r) : null) : undefined,
+      rgb_g: rgb_g !== undefined ? (rgb_g ? parseInt(rgb_g) : null) : undefined,
+      rgb_b: rgb_b !== undefined ? (rgb_b ? parseInt(rgb_b) : null) : undefined,
+      cmyk_c: cmyk_c !== undefined ? (cmyk_c ? parseFloat(cmyk_c) : null) : undefined,
+      cmyk_m: cmyk_m !== undefined ? (cmyk_m ? parseFloat(cmyk_m) : null) : undefined,
+      cmyk_y: cmyk_y !== undefined ? (cmyk_y ? parseFloat(cmyk_y) : null) : undefined,
+      cmyk_k: cmyk_k !== undefined ? (cmyk_k ? parseFloat(cmyk_k) : null) : undefined,
+      hex_color: hex_color !== undefined ? (hex_color || null) : undefined,
+      pantone_coated: pantone_coated !== undefined ? (pantone_coated || null) : undefined,
+      pantone_uncoated: pantone_uncoated !== undefined ? (pantone_uncoated || null) : undefined
     };
+    
+    // Remove undefined fields to avoid updating them
+    Object.keys(colorData).forEach(key => {
+      if (colorData[key] === undefined) {
+        delete colorData[key];
+      }
+    });
     
     // 只有在需要更新图片时才添加image_path字段
     if (shouldUpdateImage) {

@@ -252,3 +252,119 @@
     font-size: 11px;
     font-weight: 600;
 }
+
+/* === Color Information Display === */
+.color-info-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+/* === Inline Color Swatches === */
+.color-swatch-inline {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.color-value-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.color-label-inline {
+    color: var(--sw-text-secondary);
+    font-weight: 500;
+    margin-right: 4px;
+}
+
+.color-value-empty {
+    color: var(--sw-text-muted);
+    font-style: italic;
+}
+
+.color-info-label {
+    min-width: 80px;
+    color: var(--sw-text-secondary);
+}
+
+.color-info-value {
+    flex: 1;
+    color: var(--sw-text-primary);
+    font-family: monospace;
+}
+
+.color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.color-swatch-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+}
+
+.swatch-empty-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    color: #999;
+    pointer-events: none;
+    font-weight: normal;
+}
+
+/* === Color Input Fields === */
+.color-info-header .el-form-item__content {
+    justify-content: flex-start;
+}
+
+.color-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-input-small {
+    width: 50px !important;
+}
+
+.color-input-small .el-input__inner {
+    text-align: center;
+    font-family: inherit;
+}
+
+.color-input-hex {
+    width: 120px !important;
+}
+
+.color-input-hex .el-input__inner {
+    font-family: inherit;  /* Changed from monospace to inherit */
+}
+
+.color-input-pantone {
+    width: 120px !important;
+}
+
+.color-input-pantone .el-input__inner {
+    font-family: inherit;
+}
+
+.color-action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Component Loading Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Component Loading Test</h1>
+    <div id="test-results"></div>
+
+    <!-- Load dependencies in correct order -->
+    <script src="frontend/js/utils/helpers.js"></script>
+    <script src="frontend/js/utils/validators.js"></script>
+    <script src="frontend/js/utils/formula-parser.js"></script>
+    <script src="frontend/js/utils/formula-utils.js"></script>
+    <script src="frontend/js/utils/message.js"></script>
+    <script src="frontend/js/utils/color-converter.js"></script>
+    <script src="frontend/js/data/pantone-colors.js"></script>
+    <script src="frontend/js/modules/calc-store.js"></script>
+    <script src="frontend/js/modules/duplicate-detector.js"></script>
+    <script src="frontend/js/api/api.js"></script>
+    
+    <!-- Vue and Element Plus -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.14/index.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.14/index.full.min.js"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue@2.1.0/dist/index.iife.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    
+    <!-- Load components -->
+    <script src="frontend/js/components/app-header-bar.js"></script>
+    <script src="frontend/js/components/formula-editor.js"></script>
+    <script src="frontend/js/components/common/ConflictResolver.js"></script>
+    <script src="frontend/js/components/custom-colors.js"></script>
+    <script src="frontend/js/components/artworks.js"></script>
+    <script src="frontend/js/components/mont-marte.js"></script>
+    <script src="frontend/js/components/formula-calculator.js"></script>
+    
+    <script>
+        const resultsDiv = document.getElementById('test-results');
+        let results = [];
+        
+        // Test 1: Check if CustomColorsComponent is defined
+        try {
+            if (typeof CustomColorsComponent !== 'undefined') {
+                results.push('<div class="success">✅ CustomColorsComponent is defined</div>');
+                
+                // Check component structure
+                if (CustomColorsComponent.template) {
+                    results.push('<div class="success">✅ Component has template</div>');
+                }
+                if (CustomColorsComponent.data && typeof CustomColorsComponent.data === 'function') {
+                    results.push('<div class="success">✅ Component has data function</div>');
+                }
+                if (CustomColorsComponent.methods) {
+                    results.push('<div class="success">✅ Component has methods</div>');
+                }
+                if (CustomColorsComponent.computed) {
+                    results.push('<div class="success">✅ Component has computed properties</div>');
+                }
+            } else {
+                results.push('<div class="error">❌ CustomColorsComponent is not defined</div>');
+            }
+        } catch (error) {
+            results.push(`<div class="error">❌ Error checking component: ${error.message}</div>`);
+        }
+        
+        // Test 2: Check dependencies
+        const dependencies = [
+            'helpers',
+            'validators', 
+            'ColorConverter',
+            'PANTONE_COLORS',
+            'api',
+            'Vue',
+            'ElementPlus',
+            'axios'
+        ];
+        
+        results.push('<br><strong>Dependencies:</strong>');
+        dependencies.forEach(dep => {
+            const exists = typeof window[dep] !== 'undefined';
+            results.push(`<div class="${exists ? 'success' : 'error'}">${exists ? '✅' : '❌'} ${dep}</div>`);
+        });
+        
+        // Test 3: Check for syntax errors in console
+        results.push('<br><strong>Console Errors:</strong>');
+        const originalError = console.error;
+        let errorCount = 0;
+        console.error = function() {
+            errorCount++;
+            originalError.apply(console, arguments);
+            results.push(`<div class="error">❌ Console error: ${arguments[0]}</div>`);
+        };
+        
+        setTimeout(() => {
+            if (errorCount === 0) {
+                results.push('<div class="success">✅ No console errors detected</div>');
+            }
+            console.error = originalError;
+            
+            // Display results
+            resultsDiv.innerHTML = results.join('');
+        }, 1000);
+    </script>
+</body>
+</html>

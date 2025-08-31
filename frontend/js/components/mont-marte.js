@@ -620,3 +620,6 @@ const MontMarteComponent = {
         }
     }
 };
+
+// Expose to global scope for app.js to access
+window.MontMarteComponent = MontMarteComponent;
