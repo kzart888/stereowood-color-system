@@ -55224,12 +55224,37 @@
         return results.slice(0, 20); // Return top 20 matches
     }
     
+    // Helper function to get color by name
+    function getColorByName(name) {
+        if (!name) return null;
+        
+        // Handle various formats: "498C", "498 C", "PANTONE 498 C", etc.
+        const cleanName = name.replace(/^PANTONE\s+/i, '').trim();
+        
+        // Try to find exact match first
+        let match = PANTONE_COLORS_FULL.find(p => {
+            const pClean = p.name.replace(/^PANTONE\s+/i, '').trim();
+            // Handle both "498C" and "498 C" formats
+            const pCompact = pClean.replace(/\s+/g, '');
+            const nameCompact = cleanName.replace(/\s+/g, '');
+            
+            return p.name === name || 
+                   pClean === cleanName ||
+                   pCompact === nameCompact ||
+                   p.name === `PANTONE ${cleanName}` ||
+                   p.name === `PANTONE ${nameCompact}`;
+        });
+        
+        return match;
+    }
+    
     // Export to global scope
     window.PANTONE_COLORS_FULL = PANTONE_COLORS_FULL;
     window.PantoneHelper = {
         findByCode: findPantoneByCode,
         findClosest: findClosestPantone,
         search: searchPantone,
+        getColorByName: getColorByName,
         getAll: () => PANTONE_COLORS_FULL,
         getCoated: () => PANTONE_COLORS_FULL.filter(p => p.type === 'coated'),
         getUncoated: () => PANTONE_COLORS_FULL.filter(p => p.type === 'uncoated'),

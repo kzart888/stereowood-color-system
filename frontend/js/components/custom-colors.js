@@ -641,17 +641,18 @@ const CustomColorsComponent = {
             try {
                 const color = await ColorConverter.extractColorFromImage(imageToProcess);
                 
-                this.form.rgb_r = color.rgb.r;
-                this.form.rgb_g = color.rgb.g;
-                this.form.rgb_b = color.rgb.b;
+                // ColorConverter returns {r, g, b} directly
+                this.form.rgb_r = color.r;
+                this.form.rgb_g = color.g;
+                this.form.rgb_b = color.b;
                 
-                const cmyk = ColorConverter.rgbToCmyk(color.rgb.r, color.rgb.g, color.rgb.b);
+                const cmyk = ColorConverter.rgbToCmyk(color.r, color.g, color.b);
                 this.form.cmyk_c = cmyk.c;
                 this.form.cmyk_m = cmyk.m;
                 this.form.cmyk_y = cmyk.y;
                 this.form.cmyk_k = cmyk.k;
                 
-                this.form.hex_color = ColorConverter.rgbToHex(color.rgb.r, color.rgb.g, color.rgb.b);
+                this.form.hex_color = ColorConverter.rgbToHex(color.r, color.g, color.b);
                 
                 msg.success('已提取颜色值');
             } catch (error) {
@@ -704,13 +705,19 @@ const CustomColorsComponent = {
                 }
                 
                 if (coatedMatch) {
-                    this.form.pantone_coated = coatedMatch.name;
+                    // Format: Remove "PANTONE" prefix and keep only number + C
+                    const cleanName = coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C');
+                    this.form.pantone_coated = cleanName;
                 }
                 if (uncoatedMatch) {
-                    this.form.pantone_uncoated = uncoatedMatch.name;
+                    // Format: Remove "PANTONE" prefix and keep only number + U
+                    const cleanName = uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U');
+                    this.form.pantone_uncoated = cleanName;
                 }
                 
-                msg.success(`已匹配潘通色号: ${coatedMatch?.name || '无'} / ${uncoatedMatch?.name || '无'}`);
+                const coatedDisplay = coatedMatch ? coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C') : '无';
+                const uncoatedDisplay = uncoatedMatch ? uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U') : '无';
+                msg.success(`已匹配潘通色号: ${coatedDisplay} / ${uncoatedDisplay}`);
             } catch (error) {
                 console.error('Error finding Pantone match:', error);
                 msg.error('匹配潘通色号失败');
