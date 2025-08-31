@@ -39,7 +39,7 @@ const ArtworksComponent = {
 
           <!-- 子bar：方案 -->
           <div v-if="(art.schemes && art.schemes.length) > 0">
-            <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id" :ref="setSchemeRef(scheme)" :class="{ 'highlight-pulse': art._swFocusSingle }">
+            <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id" :ref="setSchemeRef(scheme)" :class="{ 'highlight-pulse': highlightSchemeId === scheme.id }">
               <div class="scheme-header">
                 <div class="scheme-thumbnail" :class="{ 'no-image': !scheme.thumbnail_path }" @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, scheme.thumbnail_path))">
                   <template v-if="!scheme.thumbnail_path">未上传图片</template>
