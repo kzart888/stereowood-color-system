@@ -351,12 +351,8 @@ const MontMarteComponent = {
         
         // Handle color chip click to navigate to custom colors
         handleColorChipClick(colorCode) {
-            console.log('[Mont-Marte] Chip clicked, color code:', colorCode);
             if (this.$root && this.$root.focusCustomColor) {
-                console.log('[Mont-Marte] Calling $root.focusCustomColor');
                 this.$root.focusCustomColor(colorCode);
-            } else {
-                console.error('[Mont-Marte] Cannot access focusCustomColor on $root');
             }
         },
         

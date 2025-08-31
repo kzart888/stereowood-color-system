@@ -138,7 +138,6 @@ const app = createApp({
         setArtworksViewMode(mode){ if(mode!==this.artworksViewMode && (mode==='byLayer'||mode==='byColor')) { this.artworksViewMode=mode; const comp=this.$refs.artworksRef; if(comp) comp.viewMode=mode; } },
         setSortMode(section, mode){ if(!(mode==='time'||mode==='name')) return; if(section==='customColors') this.customColorsSortMode=mode; else if(section==='artworks') this.artworksSortMode=mode; else if(section==='montMarte') this.montMarteSortMode=mode; },
         focusCustomColor(code){ 
-            console.log('[App] focusCustomColor called with code:', code);
             if(!code) return; 
             this.setActiveTabPersist('custom-colors'); 
             this._suppressNextRestore=true; 
@@ -147,14 +146,10 @@ const app = createApp({
             let tries=0; 
             const attempt=()=>{ 
                 const comp=this.$refs.customColorsRef; 
-                console.log('[App] Attempt', tries, 'comp exists:', !!comp, 'method exists:', !!(comp&&comp.focusCustomColor));
                 if(comp&&comp.focusCustomColor){ 
-                    console.log('[App] Calling comp.focusCustomColor with:', String(code));
                     comp.focusCustomColor(String(code)); 
                 } else if(tries++<TRY_MAX) {
                     setTimeout(attempt,120); 
-                } else {
-                    console.error('[App] Failed to access customColorsRef after', TRY_MAX, 'attempts');
                 }
             }; 
             // Add small initial delay to ensure tab switch completes
