@@ -1187,21 +1187,31 @@ const CustomColorsComponent = {
         },
         
         focusCustomColor(code) {
+            console.log('[CustomColors] focusCustomColor called with code:', code);
+            console.log('[CustomColors] Current category:', this.activeCategory);
             if (this.activeCategory !== 'all') this.activeCategory = 'all';
             this.$nextTick(() => {
+                console.log('[CustomColors] Looking for element with code:', code);
+                console.log('[CustomColors] _colorItemRefs size:', this._colorItemRefs.size);
                 const el = this._colorItemRefs.get(code);
+                console.log('[CustomColors] Element found:', !!el);
                 if (el && el.scrollIntoView) {
                     try {
                         const rect = el.getBoundingClientRect();
                         const vh = window.innerHeight || document.documentElement.clientHeight;
                         const current = window.pageYOffset || document.documentElement.scrollTop;
                         const targetScroll = current + rect.top - (vh/2 - rect.height/2);
+                        console.log('[CustomColors] Scrolling to position:', targetScroll);
                         window.scrollTo(0, Math.max(0, targetScroll));
                     } catch(e) { 
+                        console.error('[CustomColors] Scroll error, falling back:', e);
                         el.scrollIntoView(); 
                     }
                     this.highlightCode = code;
+                    console.log('[CustomColors] Highlight set for code:', code);
                     setTimeout(()=>{ this.highlightCode = null; }, 2000);
+                } else {
+                    console.error('[CustomColors] Element not found for code:', code);
                 }
             });
         },
@@ -1592,32 +1602,6 @@ const CustomColorsComponent = {
 </body>
 </html>`;
             return html;
-        },
-        
-        // Helper method to check if color is referenced
-        isColorReferenced(color) {
-            // Check if this color is used in any artwork schemes
-            // This would need actual implementation based on your data structure
-            // For now, returning false as placeholder
-            return false;
-        },
-        
-        // Helper method to focus on a specific color
-        focusCustomColor(colorCode) {
-            // Close dialog and scroll to the color
-            this.showDuplicateDialog = false;
-            
-            // Find and focus the color in the list
-            this.$nextTick(() => {
-                const colorElement = document.querySelector(`[data-color-code="${colorCode}"]`);
-                if (colorElement) {
-                    colorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    colorElement.classList.add('highlight-pulse');
-                    setTimeout(() => {
-                        colorElement.classList.remove('highlight-pulse');
-                    }, 2000);
-                }
-            });
         }
     }
 };

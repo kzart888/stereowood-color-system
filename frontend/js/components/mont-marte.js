@@ -51,7 +51,7 @@ const MontMarteComponent = {
                                             <div class="meta-text">适用色：
                                                 <template v-if="rawUsageCodes(color).length">
                                                     <span class="usage-chips">
-                                                        <span v-for="c in rawUsageCodes(color)" :key="c" class="mf-chip usage-chip" @click="$root && $root.focusCustomColor && $root.focusCustomColor(c)" style="cursor:pointer;">{{ c }}</span>
+                                                        <span v-for="c in rawUsageCodes(color)" :key="c" class="mf-chip usage-chip" @click="handleColorChipClick(c)" style="cursor:pointer;">{{ c }}</span>
                                                     </span>
                                                 </template>
                                                 <template v-else>（未使用）</template>
@@ -348,6 +348,18 @@ const MontMarteComponent = {
             });
             return Array.from(set).sort((a,b)=>a.localeCompare(b));
         },
+        
+        // Handle color chip click to navigate to custom colors
+        handleColorChipClick(colorCode) {
+            console.log('[Mont-Marte] Chip clicked, color code:', colorCode);
+            if (this.$root && this.$root.focusCustomColor) {
+                console.log('[Mont-Marte] Calling $root.focusCustomColor');
+                this.$root.focusCustomColor(colorCode);
+            } else {
+                console.error('[Mont-Marte] Cannot access focusCustomColor on $root');
+            }
+        },
+        
         onThumbError(e) {
             // 若加载失败，移除背景以显示占位文本
             const el = e.currentTarget;
