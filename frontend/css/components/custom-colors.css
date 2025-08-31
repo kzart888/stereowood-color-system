@@ -253,26 +253,11 @@
     font-weight: 600;
 }
 
-/* === Header Layout === */
-.artwork-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-}
-
-.artwork-header .artwork-title {
-    width: 120px; /* Fixed width to align with thumbnail below */
-    flex-shrink: 0;
-}
-
 /* === Header Meta Group === */
 .header-meta-group {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex: 1;
-    padding-left: 0; /* Align with detail content */
 }
 
 .header-meta {
