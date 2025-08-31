@@ -27,8 +27,8 @@ const CustomColorsComponent = {
             <div v-else>
                 <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角"新自配色"添加</div>
                 <div v-for="color in filteredColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code}">
-                    <div style="display:flex; gap:12px; padding:8px; align-items:center;">
-                        <div style="width:88px; flex-shrink:0; font-weight:600;">
+                    <div class="artwork-header" style="display:flex; gap:12px; padding:8px; align-items:center;">
+                        <div class="artwork-title" style="width:88px; flex-shrink:0;">
                             {{ color.color_code }}
                         </div>
                         <div style="flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between;">
@@ -293,7 +293,97 @@ const CustomColorsComponent = {
                 </template>
             </el-dialog>
             
-            <!-- Other dialogs remain the same... -->
+            <!-- Duplicate Check Dialog -->
+            <el-dialog
+                v-model="showDuplicateDialog"
+                class="dup-groups-dialog"
+                title="重复配方处理(比例等价)"
+                width="760px"
+                :close-on-click-modal="false"
+                :close-on-press-escape="false"
+            >
+                <div v-if="!duplicateGroups.length" class="meta-text">暂无重复组</div>
+                <div v-else class="dup-groups-wrapper">
+                    <div class="dup-group-block" v-for="grp in duplicateGroups" :key="grp.signature">
+                        <div class="dup-group-head">
+                            <span class="dup-group-badge">{{ grp.records.length }} 条</span>
+                            <span class="dup-group-formula">
+                                <el-tag v-for="it in grp.parsed.items" :key="it.name+'-'+it.unit" size="small" disable-transitions>
+                                    {{ it.name }} {{ it.ratio }}
+                                </el-tag>
+                            </span>
+                        </div>
+                        <div class="dup-records">
+                            <div class="dup-record-row" v-for="rec in grp.records" :key="rec.id" :class="{ 'is-referenced': isColorReferenced(rec) }">
+                                <label class="keep-radio">
+                                    <input type="radio" :name="'keep-'+grp.signature" :value="rec.id" v-model="duplicateSelections[grp.signature]" />
+                                    <span>保留</span>
+                                </label>
+                                <span class="code" @click="focusCustomColor(rec.color_code)">{{ rec.color_code }}</span>
+                                <span class="meta" v-if="rec.updated_at">{{ $helpers.formatDate(rec.updated_at) }}</span>
+                                <span class="ref-flag" v-if="isColorReferenced(rec)">被引用</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <template #footer>
+                    <el-button type="primary" @click="performDuplicateDeletion">合并</el-button>
+                    <el-button type="danger" @click="confirmForceMerge">强制合并</el-button>
+                    <el-button @click="showDuplicateDialog = false">关闭</el-button>
+                </template>
+            </el-dialog>
+            
+            <!-- Color Palette Dialog -->
+            <el-dialog
+                v-model="showColorPaletteDialog"
+                width="95%"
+                :close-on-click-modal="false"
+                class="color-palette-dialog"
+                :show-close="false"
+            >
+                <template #header>
+                    <div class="custom-dialog-header">
+                        <div class="palette-title">自配色列表</div>
+                        <div class="palette-header-right">
+                            <span class="palette-stats">共{{ (globalData.customColors && globalData.customColors.value) ? globalData.customColors.value.length : 0 }}个颜色，{{ paletteGroups.length }}个分类</span>
+                            <el-button size="small" type="primary" @click="printColorPalette">
+                                <el-icon><Printer /></el-icon>
+                                打印
+                            </el-button>
+                            <el-button size="small" @click="showColorPaletteDialog = false" class="close-btn">
+                                <el-icon><Close /></el-icon>
+                            </el-button>
+                        </div>
+                    </div>
+                </template>
+                
+                <div class="color-palette-content">
+                    <div v-if="paletteGroups.length === 0" class="empty-palette">
+                        暂无自配色数据
+                    </div>
+                    <div v-else class="palette-main">
+                        <div v-for="(group, groupIndex) in paletteGroups" :key="group.categoryCode" class="palette-group" :class="{ 'group-spacing': groupIndex > 0 }">
+                            <div class="group-layout">
+                                <div class="group-label">{{ group.categoryName }}</div>
+                                <div class="group-colors">
+                                    <div v-for="color in group.colors" :key="color.id" class="color-item">
+                                        <div class="color-block">
+                                            <img 
+                                                v-if="color.image_path" 
+                                                :src="$helpers.buildUploadURL(baseURL, color.image_path)" 
+                                                class="color-preview-image"
+                                                @error="$event.target.style.display='none'"
+                                            />
+                                            <div v-if="!color.image_path" class="no-image-placeholder">未上传图片</div>
+                                        </div>
+                                        <div class="color-name">{{ color.color_code }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </el-dialog>
         </div>
     `,
     
@@ -1099,6 +1189,368 @@ const CustomColorsComponent = {
                 };
             }
             return { background: '#f5f5f5', border: '1px dashed #ccc' };
+        },
+        
+        // Duplicate check method
+        runDuplicateCheck(focusSignature=null, preferredKeepId=null) {
+            if(!window.duplicateDetector) { 
+                msg.info('查重模块未加载'); 
+                return; 
+            }
+            const list = this.globalData.customColors?.value || [];
+            const map = window.duplicateDetector.groupByRatioSignature(list);
+            const sigs = Object.keys(map);
+            if(!sigs.length) { 
+                msg.success('未发现重复配方'); 
+                this.showDuplicateDialog = false; 
+                return; 
+            }
+            
+            // Construct group data
+            this.duplicateGroups = sigs.map(sig => {
+                const recs = map[sig].slice().sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
+                const parsed = window.duplicateDetector.parseRatio(sig);
+                return { signature: sig, records: recs, parsed };
+            });
+            
+            this.duplicateSelections = {};
+            // Default selection
+            this.duplicateGroups.forEach(g => {
+                if (focusSignature && g.signature === focusSignature && preferredKeepId) {
+                    this.duplicateSelections[g.signature] = preferredKeepId;
+                } else if(g.records.length) {
+                    this.duplicateSelections[g.signature] = g.records[0].id;
+                }
+            });
+            
+            this.showDuplicateDialog = true;
+            msg.warning(`发现 ${sigs.length} 组重复配方`);
+        },
+        
+        // Show color palette method
+        async showColorPalette() {
+            try {
+                // Refresh data before opening dialog
+                await this.globalData.loadCustomColors();
+                await this.globalData.loadCategories();
+                
+                // Create groups using real data
+                const categories = this.globalData.categories?.value || [];
+                const customColors = this.globalData.customColors?.value || [];
+                const groups = [];
+                
+                if (customColors.length === 0) {
+                    this.paletteGroups = [];
+                    this.showColorPaletteDialog = true;
+                    return;
+                }
+                
+                if (categories.length === 0) {
+                    // No categories, create a default group
+                    groups.push({
+                        categoryName: '所有自配色',
+                        categoryCode: 'ALL',
+                        colors: customColors
+                    });
+                } else {
+                    // Group by category
+                    const colorsByCategory = {};
+                    const unCategorized = [];
+                    
+                    customColors.forEach(color => {
+                        if (!color.category_id) {
+                            unCategorized.push(color);
+                        } else {
+                            if (!colorsByCategory[color.category_id]) {
+                                colorsByCategory[color.category_id] = [];
+                            }
+                            colorsByCategory[color.category_id].push(color);
+                        }
+                    });
+                    
+                    // Create groups by category
+                    categories.forEach(category => {
+                        const categoryColors = colorsByCategory[category.id] || [];
+                        if (categoryColors.length > 0) {
+                            groups.push({
+                                categoryName: category.name,
+                                categoryCode: category.code || category.id,
+                                colors: categoryColors
+                            });
+                        }
+                    });
+                    
+                    // Add uncategorized if any
+                    if (unCategorized.length > 0) {
+                        groups.push({
+                            categoryName: '其他',
+                            categoryCode: 'OTHER',
+                            colors: unCategorized
+                        });
+                    }
+                }
+                
+                this.paletteGroups = groups;
+                this.showColorPaletteDialog = true;
+                
+            } catch (error) {
+                console.error('加载色彩数据失败:', error);
+                msg.error('加载数据失败，请重试');
+            }
+        },
+        
+        // Perform duplicate deletion (merge)
+        async performDuplicateDeletion() {
+            const msg = ElementPlus.ElMessage;
+            
+            try {
+                // Collect items to delete
+                const deleteIds = [];
+                this.duplicateGroups.forEach(group => {
+                    const keepId = this.duplicateSelections[group.signature];
+                    group.records.forEach(rec => {
+                        if (rec.id !== keepId) {
+                            deleteIds.push(rec.id);
+                        }
+                    });
+                });
+                
+                if (deleteIds.length === 0) {
+                    msg.warning('没有需要删除的重复项');
+                    return;
+                }
+                
+                // Confirm deletion
+                await ElementPlus.ElMessageBox.confirm(
+                    `将删除 ${deleteIds.length} 个重复配方，是否继续？`,
+                    '确认合并',
+                    {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }
+                );
+                
+                // Delete duplicates
+                for (const id of deleteIds) {
+                    await api.deleteCustomColor(id);
+                }
+                
+                msg.success(`成功删除 ${deleteIds.length} 个重复配方`);
+                this.showDuplicateDialog = false;
+                
+                // Refresh data
+                await this.globalData.loadCustomColors();
+                
+            } catch (error) {
+                if (error !== 'cancel') {
+                    console.error('删除重复项失败:', error);
+                    msg.error('删除失败，请重试');
+                }
+            }
+        },
+        
+        // Confirm force merge (ignore references)
+        async confirmForceMerge() {
+            const msg = ElementPlus.ElMessage;
+            
+            try {
+                // Collect all items to delete (including referenced ones)
+                const deleteIds = [];
+                this.duplicateGroups.forEach(group => {
+                    const keepId = this.duplicateSelections[group.signature];
+                    group.records.forEach(rec => {
+                        if (rec.id !== keepId) {
+                            deleteIds.push(rec.id);
+                        }
+                    });
+                });
+                
+                if (deleteIds.length === 0) {
+                    msg.warning('没有需要删除的重复项');
+                    return;
+                }
+                
+                // Strong confirmation for force merge
+                await ElementPlus.ElMessageBox.confirm(
+                    `强制合并将删除 ${deleteIds.length} 个配方，包括被引用的配方。这可能会影响相关作品的配色方案。是否继续？`,
+                    '强制合并警告',
+                    {
+                        confirmButtonText: '强制合并',
+                        cancelButtonText: '取消',
+                        type: 'error',
+                        dangerouslyUseHTMLString: true
+                    }
+                );
+                
+                // Force delete all duplicates
+                for (const id of deleteIds) {
+                    await api.deleteCustomColor(id);
+                }
+                
+                msg.success(`强制删除 ${deleteIds.length} 个重复配方`);
+                this.showDuplicateDialog = false;
+                
+                // Refresh data
+                await this.globalData.loadCustomColors();
+                
+            } catch (error) {
+                if (error !== 'cancel') {
+                    console.error('强制删除失败:', error);
+                    msg.error('强制删除失败，请重试');
+                }
+            }
+        },
+        
+        // Print color palette
+        printColorPalette() {
+            const printWindow = window.open('', '_blank');
+            
+            // Build HTML content for printing
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>自配色列表 - 打印</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h1 { text-align: center; margin-bottom: 20px; font-size: 24px; }
+                        .print-info { text-align: center; margin-bottom: 20px; color: #666; font-size: 12px; }
+                        .category-section { margin-bottom: 30px; page-break-inside: avoid; }
+                        .category-title { 
+                            font-size: 18px; 
+                            font-weight: bold; 
+                            margin-bottom: 10px; 
+                            padding: 5px 10px; 
+                            background: #f0f0f0; 
+                            border-left: 4px solid #333;
+                        }
+                        .colors-grid { 
+                            display: grid; 
+                            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
+                            gap: 10px; 
+                            margin-bottom: 20px;
+                        }
+                        .color-item { 
+                            text-align: center; 
+                            padding: 5px;
+                            border: 1px solid #ddd;
+                            page-break-inside: avoid;
+                        }
+                        .color-preview { 
+                            width: 80px; 
+                            height: 80px; 
+                            margin: 0 auto 5px; 
+                            border: 1px solid #ccc;
+                            background: #f9f9f9;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 10px;
+                            color: #999;
+                        }
+                        .color-preview img { 
+                            width: 100%; 
+                            height: 100%; 
+                            object-fit: cover; 
+                        }
+                        .color-code { 
+                            font-weight: bold; 
+                            font-size: 12px;
+                            margin-bottom: 2px;
+                        }
+                        .color-name { 
+                            font-size: 10px; 
+                            color: #666;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        }
+                        @media print {
+                            .category-section { page-break-inside: avoid; }
+                            body { padding: 10px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>STEREOWOOD 自配色列表</h1>
+                    <div class="print-info">
+                        打印时间：${new Date().toLocaleString('zh-CN')} | 
+                        共 ${this.globalData.customColors?.value?.length || 0} 个颜色，${this.paletteGroups.length} 个分类
+                    </div>
+            `;
+            
+            let categoriesHtml = '';
+            this.paletteGroups.forEach(group => {
+                categoriesHtml += `
+                    <div class="category-section">
+                        <div class="category-title">${group.categoryName} (${group.colors.length}个)</div>
+                        <div class="colors-grid">
+                `;
+                
+                group.colors.forEach(color => {
+                    const imageUrl = color.image_path ? 
+                        `${this.baseURL}/uploads/${color.image_path}` : '';
+                    
+                    categoriesHtml += `
+                        <div class="color-item">
+                            <div class="color-preview">
+                                ${imageUrl ? 
+                                    `<img src="${imageUrl}" alt="${color.color_code}" />` : 
+                                    '无图片'
+                                }
+                            </div>
+                            <div class="color-code">${color.color_code}</div>
+                            ${color.name ? `<div class="color-name">${color.name}</div>` : ''}
+                        </div>
+                    `;
+                });
+                
+                categoriesHtml += `
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const finalHtml = htmlContent + categoriesHtml + '</body></html>';
+            
+            // Write to print window and print
+            printWindow.document.write(finalHtml);
+            printWindow.document.close();
+            
+            // Wait for images to load before printing
+            printWindow.onload = function() {
+                setTimeout(() => {
+                    printWindow.print();
+                }, 500);
+            };
+        },
+        
+        // Helper method to check if color is referenced
+        isColorReferenced(color) {
+            // Check if this color is used in any artwork schemes
+            // This would need actual implementation based on your data structure
+            // For now, returning false as placeholder
+            return false;
+        },
+        
+        // Helper method to focus on a specific color
+        focusCustomColor(colorCode) {
+            // Close dialog and scroll to the color
+            this.showDuplicateDialog = false;
+            
+            // Find and focus the color in the list
+            this.$nextTick(() => {
+                const colorElement = document.querySelector(`[data-color-code="${colorCode}"]`);
+                if (colorElement) {
+                    colorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    colorElement.classList.add('highlight-pulse');
+                    setTimeout(() => {
+                        colorElement.classList.remove('highlight-pulse');
+                    }, 2000);
+                }
+            });
         }
     }
 };
