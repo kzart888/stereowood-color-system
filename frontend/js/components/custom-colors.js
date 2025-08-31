@@ -693,22 +693,36 @@ const CustomColorsComponent = {
         },
         
         usageGroups(color) {
-            const artworks = this.globalData.artworks?.value || [];
+            if (!color) return [];
+            const code = color.color_code;
+            if (!code) return [];
+            const artworks = (this.globalData.artworks?.value) || [];
             const groups = [];
-            for (const artwork of artworks) {
-                for (const scheme of (artwork.schemes || [])) {
-                    for (const layer of (scheme.layers || [])) {
-                        if (layer.colorCode === color.color_code) {
-                            groups.push({
-                                artworkId: artwork.id,
-                                schemeId: scheme.id,
-                                display: `${artwork.code}/${scheme.name}`
-                            });
-                            break;
+            artworks.forEach(a => {
+                (a.schemes || []).forEach(s => {
+                    const layers = [];
+                    (s.layers || []).forEach(l => {
+                        if (l.colorCode === code) {
+                            const num = Number(l.layer);
+                            if (Number.isFinite(num)) layers.push(num);
                         }
+                    });
+                    if (layers.length) {
+                        layers.sort((x,y)=>x-y);
+                        const schemeName = s.name || s.scheme_name || '-';
+                        const header = `${this.$helpers.formatArtworkTitle(a)}-[${schemeName}]`;
+                        const suffix = layers.map(n=>`(${n})`).join('');
+                        groups.push({
+                            display: header + suffix,
+                            artworkId: a.id,
+                            schemeId: s.id,
+                            layers: layers.slice(),
+                            colorCode: code,
+                            schemeName
+                        });
                     }
-                }
-            }
+                });
+            });
             return groups;
         },
         
