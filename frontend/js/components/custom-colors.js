@@ -1419,127 +1419,179 @@ const CustomColorsComponent = {
         
         // Print color palette
         printColorPalette() {
-            const printWindow = window.open('', '_blank');
+            const msg = this.getMsg();
+            msg.info('正在准备打印，请稍候...');
             
-            // Build HTML content for printing
-            const htmlContent = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>自配色列表 - 打印</title>
-                    <style>
-                        * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body { font-family: Arial, sans-serif; padding: 20px; }
-                        h1 { text-align: center; margin-bottom: 20px; font-size: 24px; }
-                        .print-info { text-align: center; margin-bottom: 20px; color: #666; font-size: 12px; }
-                        .category-section { margin-bottom: 30px; page-break-inside: avoid; }
-                        .category-title { 
-                            font-size: 18px; 
-                            font-weight: bold; 
-                            margin-bottom: 10px; 
-                            padding: 5px 10px; 
-                            background: #f0f0f0; 
-                            border-left: 4px solid #333;
-                        }
-                        .colors-grid { 
-                            display: grid; 
-                            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
-                            gap: 10px; 
-                            margin-bottom: 20px;
-                        }
-                        .color-item { 
-                            text-align: center; 
-                            padding: 5px;
-                            border: 1px solid #ddd;
-                            page-break-inside: avoid;
-                        }
-                        .color-preview { 
-                            width: 80px; 
-                            height: 80px; 
-                            margin: 0 auto 5px; 
-                            border: 1px solid #ccc;
-                            background: #f9f9f9;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 10px;
-                            color: #999;
-                        }
-                        .color-preview img { 
-                            width: 100%; 
-                            height: 100%; 
-                            object-fit: cover; 
-                        }
-                        .color-code { 
-                            font-weight: bold; 
-                            font-size: 12px;
-                            margin-bottom: 2px;
-                        }
-                        .color-name { 
-                            font-size: 10px; 
-                            color: #666;
-                            white-space: nowrap;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                        }
-                        @media print {
-                            .category-section { page-break-inside: avoid; }
-                            body { padding: 10px; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1>STEREOWOOD 自配色列表</h1>
-                    <div class="print-info">
-                        打印时间：${new Date().toLocaleString('zh-CN')} | 
-                        共 ${this.globalData.customColors?.value?.length || 0} 个颜色，${this.paletteGroups.length} 个分类
-                    </div>
-            `;
-            
-            let categoriesHtml = '';
-            this.paletteGroups.forEach(group => {
-                categoriesHtml += `
-                    <div class="category-section">
-                        <div class="category-title">${group.categoryName} (${group.colors.length}个)</div>
-                        <div class="colors-grid">
-                `;
-                
-                group.colors.forEach(color => {
-                    const imageUrl = color.image_path ? 
-                        `${this.baseURL}/uploads/${color.image_path}` : '';
-                    
-                    categoriesHtml += `
-                        <div class="color-item">
-                            <div class="color-preview">
-                                ${imageUrl ? 
-                                    `<img src="${imageUrl}" alt="${color.color_code}" />` : 
-                                    '无图片'
-                                }
-                            </div>
-                            <div class="color-code">${color.color_code}</div>
-                            ${color.name ? `<div class="color-name">${color.name}</div>` : ''}
-                        </div>
-                    `;
-                });
-                
-                categoriesHtml += `
-                        </div>
-                    </div>
-                `;
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this.createPrintWindow();
+                }, 300);
             });
+        },
+        
+        // Create print window
+        createPrintWindow() {
+            const printContent = this.generatePrintHTML();
             
-            const finalHtml = htmlContent + categoriesHtml + '</body></html>';
-            
-            // Write to print window and print
-            printWindow.document.write(finalHtml);
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            printWindow.document.write(printContent);
             printWindow.document.close();
             
-            // Wait for images to load before printing
-            printWindow.onload = function() {
+            printWindow.onload = () => {
                 setTimeout(() => {
                     printWindow.print();
+                    printWindow.close();
                 }, 500);
             };
+        },
+        
+        // Generate print HTML
+        generatePrintHTML() {
+            const colorCount = (this.globalData.customColors?.value || []).length;
+            const groupCount = this.paletteGroups.length;
+            const baseURL = this.baseURL || window.location.origin;
+            
+            let html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>自配色列表</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: white;
+        }
+        .print-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .print-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .print-stats {
+            font-size: 14px;
+            color: #666;
+        }
+        .print-main {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .print-group {
+            display: grid;
+            grid-template-columns: 30px 1fr;
+            gap: 12px;
+            margin: 0;
+        }
+        .print-group.group-spacing {
+            margin-top: 8px;
+        }
+        .print-group-label {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            padding: 8px 4px;
+            border-radius: 4px;
+            min-height: 100px;
+        }
+        .print-colors {
+            display: grid;
+            grid-template-columns: repeat(10, 80px);
+            gap: 8px;
+            padding: 0;
+        }
+        .print-color-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .print-color-block {
+            width: 80px;
+            height: 80px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+        }
+        .print-color-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .print-no-image {
+            color: #999;
+            font-size: 10px;
+            text-align: center;
+            padding: 4px;
+        }
+        .print-color-name {
+            font-size: 11px;
+            font-weight: 500;
+            text-align: center;
+            max-width: 80px;
+            word-wrap: break-word;
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-header">
+        <div class="print-title">自配色列表</div>
+        <div class="print-stats">共${colorCount}个颜色，${groupCount}个分类</div>
+    </div>
+    <div class="print-main">`;
+    
+            this.paletteGroups.forEach((group, groupIndex) => {
+                html += `
+        <div class="print-group${groupIndex > 0 ? ' group-spacing' : ''}">
+            <div class="print-group-label">${group.categoryName}</div>
+            <div class="print-colors">`;
+                
+                group.colors.forEach(color => {
+                    const imageUrl = color.image_path ? `${baseURL}/uploads/${color.image_path}` : null;
+                    const imageHtml = imageUrl 
+                        ? `<img src="${imageUrl}" class="print-color-image" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'print-no-image\\'>图片加载失败</div>'" />`
+                        : `<div class="print-no-image">未上传<br/>图片</div>`;
+                    
+                    html += `
+                <div class="print-color-item">
+                    <div class="print-color-block">${imageHtml}</div>
+                    <div class="print-color-name">${color.color_code}</div>
+                </div>`;
+                });
+                
+                html += `
+            </div>
+        </div>`;
+            });
+            
+            html += `
+    </div>
+</body>
+</html>`;
+            return html;
         },
         
         // Helper method to check if color is referenced

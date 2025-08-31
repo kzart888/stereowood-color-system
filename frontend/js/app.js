@@ -137,7 +137,23 @@ const app = createApp({
         async loadPurchaseLinks() { try { const r = await axios.get(`${this.baseURL}/api/purchase-links`); this.purchaseLinks = r.data||[]; } catch(e){} },
         setArtworksViewMode(mode){ if(mode!==this.artworksViewMode && (mode==='byLayer'||mode==='byColor')) { this.artworksViewMode=mode; const comp=this.$refs.artworksRef; if(comp) comp.viewMode=mode; } },
         setSortMode(section, mode){ if(!(mode==='time'||mode==='name')) return; if(section==='customColors') this.customColorsSortMode=mode; else if(section==='artworks') this.artworksSortMode=mode; else if(section==='montMarte') this.montMarteSortMode=mode; },
-        focusCustomColor(code){ if(!code) return; this.setActiveTabPersist('custom-colors'); this._suppressNextRestore=true; this.$nextTick(()=>{ const comp=this.$refs.customColorsRef; if(comp&&comp.focusCustomColor) comp.focusCustomColor(String(code)); }); },
+        focusCustomColor(code){ 
+            if(!code) return; 
+            this.setActiveTabPersist('custom-colors'); 
+            this._suppressNextRestore=true; 
+            // Add retry mechanism similar to focusArtworkScheme to ensure component is mounted
+            const TRY_MAX=20; 
+            let tries=0; 
+            const attempt=()=>{ 
+                const comp=this.$refs.customColorsRef; 
+                if(comp&&comp.focusCustomColor){ 
+                    comp.focusCustomColor(String(code)); 
+                } else if(tries++<TRY_MAX) {
+                    setTimeout(attempt,120); 
+                }
+            }; 
+            this.$nextTick(attempt); 
+        },
         focusArtworkScheme(p){ if(!p||!p.artworkId||!p.schemeId) return; this.setActiveTabPersist('artworks'); this._suppressNextRestore=true; const TRY_MAX=20; let tries=0; const attempt=()=>{ const comp=this.$refs.artworksRef; if(comp&&comp.focusSchemeUsage){ if(comp.hasScheme && !comp.hasScheme(p.schemeId)){ if(tries++<TRY_MAX) return setTimeout(attempt,120); return;} comp.focusSchemeUsage({ artworkId:p.artworkId, schemeId:p.schemeId, layers:Array.isArray(p.layers)?p.layers.slice():[], colorCode:p.colorCode }); } else if(tries++<TRY_MAX) setTimeout(attempt,120); }; this.$nextTick(attempt); },
         setActiveTabPersist(tab){ if(!['custom-colors','artworks','mont-marte'].includes(tab)) return; this.activeTab=tab; try{ localStorage.setItem('sw-active-tab', tab);}catch(e){} window.scrollTo(0,0); },
         registerDataset(type, items){ if(!type||!Array.isArray(items)) return; if(type==='customColors'){ this._searchIndex.customColors=items.slice(); this._indexReady.customColors=true;} else if(type==='artworks'){ this._searchIndex.artworks=items.slice(); this._indexReady.artworks=true;} else if(type==='schemes'){ this._searchIndex.schemes=items.slice(); } else if(type==='rawMaterials'){ this._searchIndex.rawMaterials=items.slice(); this._indexReady.rawMaterials=true;} },
