@@ -29,6 +29,9 @@ const CustomColorsComponent = {
                 <div v-for="color in filteredColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code}">
                     <div class="artwork-header">
                         <div class="artwork-title">
+                            <span>{{ color.color_code }}</span>
+                        </div>
+                        <div class="header-meta-group">
                             <span class="header-meta">分类: {{ categoryName(color) }}</span>
                             <span class="header-meta" v-if="color.updated_at">更新: {{ $helpers.formatDate(color.updated_at) }}</span>
                         </div>
@@ -54,8 +57,6 @@ const CustomColorsComponent = {
                         </div>
                         
                         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; position:relative;">
-                            <!-- Color Code -->
-                            <div style="font-size:13px; color:#999; margin-bottom:4px;">{{ color.color_code }}</div>
                             
                             <div class="meta-text" v-if="!color.formula">配方: (未指定配方)</div>
                             <div class="meta-text" v-else>配方：
@@ -67,14 +68,17 @@ const CustomColorsComponent = {
                             <!-- Color Information Row 1: RGB, CMYK, HEX -->
                             <div class="meta-text color-info-row">
                                 <span class="color-value-group">
+                                    <span v-if="color.rgb_r != null || color.rgb_g != null || color.rgb_b != null" class="color-swatch-inline" :style="{background: 'rgb(' + (color.rgb_r||0) + ', ' + (color.rgb_g||0) + ', ' + (color.rgb_b||0) + ')'}"></span>
+                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
                                     <span class="color-label-inline">RGB:</span>
                                     <span v-if="color.rgb_r != null || color.rgb_g != null || color.rgb_b != null">
                                         {{ color.rgb_r || 0 }}, {{ color.rgb_g || 0 }}, {{ color.rgb_b || 0 }}
-                                        <span class="color-swatch-inline" :style="{background: 'rgb(' + (color.rgb_r||0) + ', ' + (color.rgb_g||0) + ', ' + (color.rgb_b||0) + ')'}"></span>
                                     </span>
                                     <span v-else class="color-value-empty">未填写</span>
                                 </span>
                                 <span class="color-value-group">
+                                    <span v-if="color.cmyk_c != null || color.cmyk_m != null || color.cmyk_y != null || color.cmyk_k != null" class="color-swatch-inline" :style="{background: getCMYKColor(color.cmyk_c || 0, color.cmyk_m || 0, color.cmyk_y || 0, color.cmyk_k || 0)}"></span>
+                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
                                     <span class="color-label-inline">CMYK:</span>
                                     <span v-if="color.cmyk_c != null || color.cmyk_m != null || color.cmyk_y != null || color.cmyk_k != null">
                                         {{ color.cmyk_c || 0 }}, {{ color.cmyk_m || 0 }}, {{ color.cmyk_y || 0 }}, {{ color.cmyk_k || 0 }}
@@ -82,10 +86,11 @@ const CustomColorsComponent = {
                                     <span v-else class="color-value-empty">未填写</span>
                                 </span>
                                 <span class="color-value-group">
+                                    <span v-if="color.hex_color" class="color-swatch-inline" :style="{background: color.hex_color}"></span>
+                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
                                     <span class="color-label-inline">HEX:</span>
                                     <span v-if="color.hex_color">
                                         {{ color.hex_color }}
-                                        <span class="color-swatch-inline" :style="{background: color.hex_color}"></span>
                                     </span>
                                     <span v-else class="color-value-empty">未填写</span>
                                 </span>
@@ -94,11 +99,15 @@ const CustomColorsComponent = {
                             <!-- Color Information Row 2: Pantone -->
                             <div class="meta-text color-info-row">
                                 <span class="color-value-group">
+                                    <span v-if="color.pantone_coated" class="color-swatch-inline" :style="getPantoneSwatchStyle(color.pantone_coated)"></span>
+                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
                                     <span class="color-label-inline">Pantone C:</span>
                                     <span v-if="color.pantone_coated">{{ color.pantone_coated }}</span>
                                     <span v-else class="color-value-empty">未填写</span>
                                 </span>
                                 <span class="color-value-group">
+                                    <span v-if="color.pantone_uncoated" class="color-swatch-inline" :style="getPantoneSwatchStyle(color.pantone_uncoated)"></span>
+                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
                                     <span class="color-label-inline">Pantone U:</span>
                                     <span v-if="color.pantone_uncoated">{{ color.pantone_uncoated }}</span>
                                     <span v-else class="color-value-empty">未填写</span>
@@ -1063,6 +1072,31 @@ const CustomColorsComponent = {
             this.conflictData = conflictData;
             this.pendingFormData = formData;
             this.showConflictDialog = true;
+        },
+        
+        // Helper method to get CMYK color as RGB string
+        getCMYKColor(c, m, y, k) {
+            if (window.ColorConverter) {
+                const rgb = window.ColorConverter.cmykToRgb(c, m, y, k);
+                return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+            }
+            return '#f5f5f5';
+        },
+        
+        // Helper method to get Pantone swatch style
+        getPantoneSwatchStyle(pantoneCode) {
+            if (!pantoneCode || !window.PantoneHelper) {
+                return { background: '#f5f5f5', border: '1px dashed #ccc' };
+            }
+            
+            const color = window.PantoneHelper.getColorByName(pantoneCode);
+            if (color && color.rgb) {
+                return { 
+                    background: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
+                    border: '1px solid rgba(0, 0, 0, 0.15)'
+                };
+            }
+            return { background: '#f5f5f5', border: '1px dashed #ccc' };
         }
     }
 };

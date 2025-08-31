@@ -253,6 +253,33 @@
     font-weight: 600;
 }
 
+/* === Header Layout === */
+.artwork-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+}
+
+.artwork-header .artwork-title {
+    width: 120px; /* Fixed width to align with thumbnail below */
+    flex-shrink: 0;
+}
+
+/* === Header Meta Group === */
+.header-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    padding-left: 0; /* Align with detail content */
+}
+
+.header-meta {
+    font-size: 11px;
+    color: var(--sw-text-muted);
+}
+
 /* === Color Information Display === */
 .color-info-row {
     display: flex;
@@ -269,7 +296,6 @@
     border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.15);
     vertical-align: middle;
-    margin-left: 6px;
 }
 
 .color-value-group {
