@@ -99,9 +99,15 @@
 @keyframes highlight-pulse {
     0%, 100% {
         background-color: transparent;
+        box-shadow: none;
+    }
+    25%, 75% {
+        background-color: rgba(255, 215, 0, 0.3);
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     }
     50% {
-        background-color: var(--sw-primary-light);
+        background-color: rgba(255, 215, 0, 0.5);
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
     }
 }
 
@@ -157,7 +163,9 @@
 
 /* 高亮闪烁 */
 .highlight-pulse {
-    animation: highlight-pulse 1s ease-in-out;
+    animation: highlight-pulse 2s ease-in-out;
+    position: relative;
+    z-index: 10;
 }
 
 /* 加载中 */

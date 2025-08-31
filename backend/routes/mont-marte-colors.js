@@ -18,7 +18,9 @@ const fs = require('fs');
 
 // Multer config (same as server.js)
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) { cb(null, 'uploads/'); },
+  destination: function (req, file, cb) { 
+    cb(null, path.join(__dirname, '..', 'uploads')); 
+  },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
   }

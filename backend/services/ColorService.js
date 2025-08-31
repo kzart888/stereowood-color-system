@@ -235,7 +235,7 @@ class ColorService {
      * 强制合并重复颜色（更新引用）
      */
     async forceMerge({ keepId, removeIds, signature }) {
-        const db = require('../db');
+        const { db } = require('../db');
         
         if (!keepId || !Array.isArray(removeIds) || !removeIds.length) {
             throw new Error('合并参数不完整');

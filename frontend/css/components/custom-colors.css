@@ -379,3 +379,11 @@
     flex-wrap: wrap;
     margin-bottom: 8px;
 }
+
+/* 高亮效果增强 */
+.artwork-bar.highlight-pulse {
+    animation: highlight-pulse 2s ease-in-out !important;
+    border: 2px solid rgba(255, 215, 0, 0.8) !important;
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}
