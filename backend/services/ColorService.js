@@ -230,6 +230,124 @@ class ColorService {
             console.warn('删除图片文件失败:', error.message);
         }
     }
+
+    /**
+     * 强制合并重复颜色（更新引用）
+     */
+    async forceMerge({ keepId, removeIds, signature }) {
+        const db = require('../db');
+        
+        if (!keepId || !Array.isArray(removeIds) || !removeIds.length) {
+            throw new Error('合并参数不完整');
+        }
+
+        // 验证要保留的记录存在
+        const keepRow = await colorQueries.getColorById(keepId);
+        if (!keepRow) {
+            throw new Error('保留记录不存在');
+        }
+
+        // 验证要删除的记录都存在
+        const placeholders = removeIds.map(() => '?').join(',');
+        const remRows = await new Promise((resolve, reject) => {
+            db.all(`SELECT * FROM custom_colors WHERE id IN (${placeholders})`, removeIds, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        if (!remRows || remRows.length !== removeIds.length) {
+            throw new Error('部分 removeIds 不存在');
+        }
+
+        // 如果提供了签名，验证配方签名一致性
+        if (signature) {
+            // 这里可以添加签名验证逻辑
+            // 暂时跳过复杂的签名验证
+        }
+
+        // 执行事务：更新引用，保存历史，删除记录
+        return new Promise((resolve, reject) => {
+            db.serialize(() => {
+                db.run('BEGIN');
+                
+                // 1. 更新 scheme_layers 中的引用
+                db.run(`UPDATE scheme_layers SET custom_color_id = ? WHERE custom_color_id IN (${placeholders})`, 
+                    [keepId, ...removeIds], 
+                    function(err) {
+                        if (err) {
+                            db.run('ROLLBACK');
+                            reject(new Error(`更新引用失败: ${err.message}`));
+                            return;
+                        }
+                        
+                        const updatedLayers = this.changes;
+                        
+                        // 2. 保存删除记录到历史表
+                        const hist = db.prepare(`INSERT INTO custom_colors_history 
+                            (custom_color_id, color_code, image_path, formula, applicable_layers, 
+                             rgb_r, rgb_g, rgb_b, cmyk_c, cmyk_m, cmyk_y, cmyk_k, 
+                             hex_color, pantone_coated, pantone_uncoated) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+                        
+                        remRows.forEach(r => {
+                            hist.run([
+                                r.id, r.color_code, r.image_path, r.formula, r.applicable_layers,
+                                r.rgb_r, r.rgb_g, r.rgb_b, r.cmyk_c, r.cmyk_m, r.cmyk_y, r.cmyk_k,
+                                r.hex_color, r.pantone_coated, r.pantone_uncoated
+                            ]);
+                        });
+                        
+                        hist.finalize(err => {
+                            if (err) {
+                                db.run('ROLLBACK');
+                                reject(new Error(`保存历史失败: ${err.message}`));
+                                return;
+                            }
+                            
+                            // 3. 删除重复记录
+                            db.run(`DELETE FROM custom_colors WHERE id IN (${placeholders})`, 
+                                removeIds, 
+                                function(err) {
+                                    if (err) {
+                                        db.run('ROLLBACK');
+                                        reject(new Error(`删除记录失败: ${err.message}`));
+                                        return;
+                                    }
+                                    
+                                    // 4. 更新相关配色方案的更新时间
+                                    db.run(`UPDATE color_schemes SET updated_at = CURRENT_TIMESTAMP 
+                                        WHERE id IN (SELECT DISTINCT scheme_id FROM scheme_layers WHERE custom_color_id = ?)`, 
+                                        [keepId], 
+                                        err => {
+                                            if (err) {
+                                                db.run('ROLLBACK');
+                                                reject(new Error(`更新方案时间失败: ${err.message}`));
+                                                return;
+                                            }
+                                            
+                                            // 5. 提交事务
+                                            db.run('COMMIT', err => {
+                                                if (err) {
+                                                    reject(new Error(`提交事务失败: ${err.message}`));
+                                                } else {
+                                                    resolve({
+                                                        success: true,
+                                                        updatedLayers: updatedLayers,
+                                                        deleted: removeIds.length
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    );
+                                }
+                            );
+                        });
+                    }
+                );
+            });
+        });
+    }
 }
 
 module.exports = new ColorService();
