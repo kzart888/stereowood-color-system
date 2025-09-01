@@ -28,11 +28,11 @@ const CustomColorsComponent = {
                 <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角"新自配色"添加</div>
                 <div v-for="color in filteredColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code}">
                     <div class="artwork-header" style="display:flex; padding:8px; align-items:center; justify-content:space-between;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <div class="artwork-title" style="flex-shrink:0;">
+                        <div style="display:flex; align-items:center;">
+                            <div class="artwork-title" style="width:88px; flex-shrink:0;">
                                 {{ color.color_code }}
                             </div>
-                            <div class="header-meta-group">
+                            <div class="header-meta-group" style="margin-left:12px;">
                                 <span class="header-meta">分类: {{ categoryName(color) }}</span>
                                 <span class="header-meta" v-if="color.updated_at">更新: {{ $helpers.formatDate(color.updated_at) }}</span>
                             </div>
