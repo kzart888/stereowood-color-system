@@ -27,16 +27,17 @@ const CustomColorsComponent = {
             <div v-else>
                 <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角"新自配色"添加</div>
                 <div v-for="color in filteredColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code}">
-                    <div class="artwork-header" style="display:flex; gap:12px; padding:8px; align-items:center;">
-                        <div class="artwork-title" style="width:88px; flex-shrink:0;">
-                            {{ color.color_code }}
-                        </div>
-                        <div style="flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between;">
+                    <div class="artwork-header" style="display:flex; padding:8px; align-items:center; justify-content:space-between;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div class="artwork-title" style="flex-shrink:0;">
+                                {{ color.color_code }}
+                            </div>
                             <div class="header-meta-group">
                                 <span class="header-meta">分类: {{ categoryName(color) }}</span>
                                 <span class="header-meta" v-if="color.updated_at">更新: {{ $helpers.formatDate(color.updated_at) }}</span>
                             </div>
-                            <div class="color-actions">
+                        </div>
+                        <div class="color-actions">
                             <el-button size="small" @click="$calc && $calc.open(color.color_code, color.formula||'', $event.currentTarget)"><el-icon><ScaleToOriginal /></el-icon> 计算</el-button>
                             <el-button size="small" type="primary" @click="editColor(color)"><el-icon><Edit /></el-icon> 修改</el-button>
                             <el-button size="small" @click="viewHistory(color)" disabled><el-icon><Clock /></el-icon> 历史</el-button>
@@ -48,7 +49,6 @@ const CustomColorsComponent = {
                                 </el-tooltip>
                             </template>
                             <el-button v-else size="small" type="danger" @click="deleteColor(color)"><el-icon><Delete /></el-icon> 删除</el-button>
-                            </div>
                         </div>
                     </div>
                     
