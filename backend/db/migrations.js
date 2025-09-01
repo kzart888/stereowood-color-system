@@ -109,13 +109,8 @@ async function initDatabase() {
     FOREIGN KEY (scheme_id) REFERENCES color_schemes (id)
   )`);
 
-  console.log('数据库表初始化完成 (db/migrations.js)');
-  
   // 确保新增色系"色精"存在（代码 SJ）—— 幂等插入
-  db.run('INSERT OR IGNORE INTO color_categories (code, name) VALUES (?, ?)', ['SJ', '色精'], (err) => {
-    if (err) console.warn('确保色精色系存在时出错:', err.message);
-    else console.log('色精色系已确保存在');
-  });
+  db.run('INSERT OR IGNORE INTO color_categories (code, name) VALUES (?, ?)', ['SJ', '色精']);
 }
 
 // 后续迁移：创建字典表与原表增列（保持与原 server.js 一致）
@@ -153,12 +148,11 @@ async function runMigrations() {
     // 检测是否存在外键引用
     const hasHistoryFK = await new Promise((resolve) => {
       db.all(`PRAGMA foreign_key_list(custom_colors_history)`, (err, rows) => {
-        if (err) { console.error('检测 custom_colors_history 外键失败', err); return resolve(false); }
+        if (err) { return resolve(false); }
         resolve(Array.isArray(rows) && rows.some(r => r && r.table === 'custom_colors'));
       });
     });
     if (hasHistoryFK) {
-      console.log('[迁移] 重建 custom_colors_history 去除外键约束');
       await new Promise((resolve, reject) => {
         db.serialize(() => {
           db.run('BEGIN');
@@ -181,7 +175,6 @@ async function runMigrations() {
                     if (e4) { db.run('ROLLBACK'); return reject(e4); }
                     db.run('COMMIT', (e5) => {
                       if (e5) return reject(e5);
-                      console.log('[迁移] custom_colors_history 外键移除完成');
                       resolve();
                     });
                   });
@@ -195,64 +188,51 @@ async function runMigrations() {
     // 并发控制优化：添加版本字段到关键表
     if (!(await columnExists('custom_colors', 'version'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN version INTEGER DEFAULT 1`);
-      console.log('[迁移] custom_colors 版本字段添加完成');
     }
     
     if (!(await columnExists('color_schemes', 'version'))) {
       await runSafe(`ALTER TABLE color_schemes ADD COLUMN version INTEGER DEFAULT 1`);
-      console.log('[迁移] color_schemes 版本字段添加完成');
     }
     
     if (!(await columnExists('mont_marte_colors', 'version'))) {
       await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN version INTEGER DEFAULT 1`);
-      console.log('[迁移] mont_marte_colors 版本字段添加完成');
     }
 
     // Phase 1: Add color information columns (v0.8.4)
     // RGB columns
     if (!(await columnExists('custom_colors', 'rgb_r'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN rgb_r INTEGER`);
-      console.log('[迁移] custom_colors.rgb_r 字段添加完成');
     }
     if (!(await columnExists('custom_colors', 'rgb_g'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN rgb_g INTEGER`);
-      console.log('[迁移] custom_colors.rgb_g 字段添加完成');
     }
     if (!(await columnExists('custom_colors', 'rgb_b'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN rgb_b INTEGER`);
-      console.log('[迁移] custom_colors.rgb_b 字段添加完成');
     }
     
     // CMYK columns
     if (!(await columnExists('custom_colors', 'cmyk_c'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN cmyk_c REAL`);
-      console.log('[迁移] custom_colors.cmyk_c 字段添加完成');
     }
     if (!(await columnExists('custom_colors', 'cmyk_m'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN cmyk_m REAL`);
-      console.log('[迁移] custom_colors.cmyk_m 字段添加完成');
     }
     if (!(await columnExists('custom_colors', 'cmyk_y'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN cmyk_y REAL`);
-      console.log('[迁移] custom_colors.cmyk_y 字段添加完成');
     }
     if (!(await columnExists('custom_colors', 'cmyk_k'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN cmyk_k REAL`);
-      console.log('[迁移] custom_colors.cmyk_k 字段添加完成');
     }
     
     // HEX and Pantone columns
     if (!(await columnExists('custom_colors', 'hex_color'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN hex_color TEXT`);
-      console.log('[迁移] custom_colors.hex_color 字段添加完成');
     }
     if (!(await columnExists('custom_colors', 'pantone_coated'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN pantone_coated TEXT`);
-      console.log('[迁移] custom_colors.pantone_coated 字段添加完成');
     }
     if (!(await columnExists('custom_colors', 'pantone_uncoated'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN pantone_uncoated TEXT`);
-      console.log('[迁移] custom_colors.pantone_uncoated 字段添加完成');
     }
     
     // Add same columns to custom_colors_history table
@@ -286,9 +266,6 @@ async function runMigrations() {
     if (!(await columnExists('custom_colors_history', 'pantone_uncoated'))) {
       await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pantone_uncoated TEXT`);
     }
-    console.log('[迁移] custom_colors_history 颜色字段添加完成');
-
-    console.log('数据库迁移完成 (db/migrations.js)');
   } catch (e) {
     console.error('数据库迁移失败:', e);
   }

@@ -53,7 +53,6 @@ const app = createApp({
         };
     },
     mounted() {
-        console.log('应用已挂载，开始初始化数据...');
         this.initApp();
         try { if (!localStorage.getItem('sw-active-tab')) localStorage.setItem('sw-active-tab', this.activeTab); } catch(e) {}
         const restoreScroll = () => {
@@ -111,10 +110,10 @@ const app = createApp({
                 ]);
                 // 初次加载后构建自配色配方同步索引
                 this._buildColorFormulaIndex();
-            } catch(e) { console.error('初始化失败', e); } finally { this.loading = false; }
+            } catch(e) { } finally { this.loading = false; }
         },
         async loadCategories() {
-            try { const res = await api.categories.getAll(); this.categories = res.data; } catch(e){ console.error('加载颜色分类失败',e); }
+            try { const res = await api.categories.getAll(); this.categories = res.data; } catch(e){ }
         },
         async loadCustomColors(bypassCache = false) {
             try {
@@ -127,12 +126,12 @@ const app = createApp({
                 } else {
                     this._buildColorFormulaIndex();
                 }
-            } catch(e){ console.error('加载自配颜色失败',e); }
+            } catch(e){ }
         },
         async loadArtworks() {
-            try { const res = await api.artworks.getAll(); this.artworks = res.data; const artworksIdx=[]; const schemesIdx=[]; this.artworks.forEach(a=>{ const name=a.name||a.title||''; const code=a.code||a.no||''; artworksIdx.push({id:a.id,name,code}); if(Array.isArray(a.schemes)) a.schemes.forEach(s=> schemesIdx.push({id:s.id, artworkId:a.id, artworkName:name, artworkCode:code, name:s.name||''})); }); this.registerDataset('artworks', artworksIdx); this.registerDataset('schemes', schemesIdx); } catch(e){ console.error('加载作品列表失败',e); }
+            try { const res = await api.artworks.getAll(); this.artworks = res.data; const artworksIdx=[]; const schemesIdx=[]; this.artworks.forEach(a=>{ const name=a.name||a.title||''; const code=a.code||a.no||''; artworksIdx.push({id:a.id,name,code}); if(Array.isArray(a.schemes)) a.schemes.forEach(s=> schemesIdx.push({id:s.id, artworkId:a.id, artworkName:name, artworkCode:code, name:s.name||''})); }); this.registerDataset('artworks', artworksIdx); this.registerDataset('schemes', schemesIdx); } catch(e){ }
         },
-        async loadMontMarteColors() { try { const res = await api.montMarteColors.getAll(); this.montMarteColors = res.data; this.registerDataset('rawMaterials', this.montMarteColors.map(m=>({id:m.id, name:m.name}))); } catch(e){ console.error('加载原料失败',e); } },
+        async loadMontMarteColors() { try { const res = await api.montMarteColors.getAll(); this.montMarteColors = res.data; this.registerDataset('rawMaterials', this.montMarteColors.map(m=>({id:m.id, name:m.name}))); } catch(e){ } },
         async loadSuppliers() { try { const r = await axios.get(`${this.baseURL}/api/suppliers`); this.suppliers = r.data||[]; } catch(e){} },
         async loadPurchaseLinks() { try { const r = await axios.get(`${this.baseURL}/api/purchase-links`); this.purchaseLinks = r.data||[]; } catch(e){} },
         setArtworksViewMode(mode){ if(mode!==this.artworksViewMode && (mode==='byLayer'||mode==='byColor')) { this.artworksViewMode=mode; const comp=this.$refs.artworksRef; if(comp) comp.viewMode=mode; } },
@@ -210,9 +209,6 @@ if (window.ElementPlusIconsVue) {
     for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
         app.component(key, component);
     }
-    console.log('Element Plus 图标组件已注册');
-} else {
-    console.warn('Element Plus 图标库未加载');
 }
 
 // 注册自定义组件
@@ -234,18 +230,12 @@ app.provide('$api', window.api || {});
 if (window.helpers) {
     app.provide('$helpers', window.helpers);
     app.config.globalProperties.$helpers = window.helpers;
-    console.log('✓ Helpers service initialized');
-} else {
-    console.error('✗ Helpers service not found');
 }
 
 // Thumbnail preview service
 if (window.thumbPreview) {
     app.provide('$thumbPreview', window.thumbPreview);
     app.config.globalProperties.$thumbPreview = window.thumbPreview;
-    console.log('✓ ThumbPreview service initialized');
-} else {
-    console.error('✗ ThumbPreview service not found');
 }
 
 // Calculator service
@@ -256,9 +246,6 @@ if (window.$formulaCalc) {
     };
     app.provide('$calc', calcService);
     app.config.globalProperties.$calc = calcService;
-    console.log('✓ Calculator service initialized');
-} else {
-    console.error('✗ Calculator service not found');
 }
 
 // Root properties access
@@ -267,29 +254,19 @@ app.provide('$root', app.config.globalProperties);
 // 添加配方编辑器组件注册
 if (typeof FormulaEditorComponent !== 'undefined') {
     app.component('formula-editor', FormulaEditorComponent);
-    console.log('配方编辑器组件已注册');
-} else {
-    console.error('FormulaEditorComponent 未定义');
 }
 
 // 添加冲突解决组件注册
 if (typeof ConflictResolver !== 'undefined') {
     app.component('conflict-resolver', ConflictResolver);
-    console.log('冲突解决组件已注册');
-} else {
-    console.error('ConflictResolver 未定义');
 }
 
 // 添加通用操作按钮组件注册 - 暂时禁用
 // if (typeof ActionButtonComponent !== 'undefined') {
 //     app.component('action-button', ActionButtonComponent);
-//     console.log('操作按钮组件已注册');
-// } else {
-//     console.error('ActionButtonComponent 未定义');
 // }
 
 
 // ===== 挂载应用 =====
 // 使用Element Plus UI库并挂载到#app元素
 app.use(ElementPlus).mount('#app');
-console.log('Vue应用已挂载到#app');

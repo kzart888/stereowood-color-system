@@ -35,27 +35,22 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 if (fs.existsSync(FRONTEND_DIR)) {
   app.use('/', express.static(FRONTEND_DIR, { extensions: ['html'] }));
-  console.log('前端静态文件目录已配置:', FRONTEND_DIR);
 }
 
 // 确保上传目录存在
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
-    console.log('上传目录已创建:', uploadDir);
 }
 
 // ========== 数据库初始化 ==========
-console.log('正在初始化数据库...');
 initDatabase();
 runMigrations();
-console.log('数据库初始化完成');
 
 // ========== API路由 ==========
 // 所有API路由都在 /api 路径下
 // 路由定义在 routes/index.js 中聚合
 app.use('/api', routes);
-console.log('API路由已加载: /api/*');
 
 // ========== 错误处理中间件 ==========
 app.use((err, req, res, next) => {
@@ -84,27 +79,14 @@ app.use((req, res) => {
 
 // ========== 启动服务器 ==========
 const server = app.listen(PORT, () => {
-  console.log('========================================');
-  console.log(`✅ 服务器运行在 http://localhost:${PORT}`);
-  console.log('✅ 数据库连接成功 (SQLite WAL模式)');
-  console.log('✅ 模块化路由已加载完成');
-  console.log('========================================');
-  console.log('可用的API端点:');
-  console.log('  - /api/custom-colors     自配颜色管理');
-  console.log('  - /api/artworks          作品配色管理');
-  console.log('  - /api/mont-marte-colors 原料颜色管理');
-  console.log('  - /api/categories        颜色分类管理');
-  console.log('========================================');
+  console.log(`✅ Server running at http://localhost:${PORT}`);
 });
 
 // 优雅关闭
 process.on('SIGTERM', () => {
-  console.log('收到SIGTERM信号，正在关闭服务器...');
   server.close(() => {
-    console.log('服务器已关闭');
     if (db) {
       db.close(() => {
-        console.log('数据库连接已关闭');
         process.exit(0);
       });
     } else {

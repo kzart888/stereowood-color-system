@@ -49,7 +49,6 @@ router.post('/custom-colors', upload.single('image'), async (req, res) => {
     // 处理图片上传（保存原图）
     if (req.file) {
       imagePath = req.file.filename;
-      console.log('图片上传成功:', imagePath);
     }
 
     const colorData = {
@@ -126,15 +125,12 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
       // 有新上传的图片
       imagePath = req.file.filename;
       shouldUpdateImage = true;
-      console.log('编辑图片上传成功:', imagePath);
 
       // 删除旧图片（如果存在）
       if (existingImagePath) {
         const fs = require('fs');
         const oldImagePath = path.join(__dirname, '..', 'uploads', existingImagePath);
         fs.unlink(oldImagePath, (err) => {
-          if (err) console.log('删除旧图片失败:', err.message);
-          else console.log('删除旧图片成功:', existingImagePath);
         });
       }
     } else if (existingImagePath !== undefined) {
@@ -206,7 +202,6 @@ router.post('/custom-colors/force-merge', async (req, res) => {
     const result = await ColorService.forceMerge({ keepId, removeIds, signature });
     res.json(result);
   } catch (error) {
-    console.error('强制合并失败:', error);
     res.status(500).json({ error: error.message });
   }
 });

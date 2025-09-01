@@ -1,12 +1,12 @@
-# Multi-stage build (though frontend is static already)
-# Stage 1: base deps
+# Multi-stage build
+# Stage 1: Install dependencies
 FROM node:20-alpine AS base
 WORKDIR /app
-# Install backend dependencies only
-COPY backend/package.json backend/package-lock.json* ./backend/
-RUN cd backend && npm install --production && npm cache clean --force
+# Copy package files from root and install dependencies
+COPY package*.json ./
+RUN npm install --production && npm cache clean --force
 
-# Stage 2: runtime image
+# Stage 2: Runtime image
 FROM node:20-alpine
 ENV TZ=Asia/Shanghai \
     NODE_ENV=production \
@@ -18,11 +18,16 @@ WORKDIR /app
 RUN mkdir -p /data /app/backend/uploads /app/frontend
 VOLUME ["/data", "/app/backend/uploads"]
 
-# Copy installed node_modules and backend source
-COPY --from=base /app/backend/node_modules ./backend/node_modules
+# Copy installed node_modules from base stage
+COPY --from=base /app/node_modules ./node_modules
+# Copy backend source
 COPY backend ./backend
 # Copy frontend static assets
 COPY frontend ./frontend
+# Copy scripts for backup/restore
+COPY scripts ./scripts
+# Copy package.json for reference
+COPY package.json ./
 
 # Expose port
 EXPOSE 9099
