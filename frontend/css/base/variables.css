@@ -27,16 +27,16 @@
     --sw-thumb-preview-size: 320px; /* 预览图尺寸 */
     
     /* === 颜色系统 === */
-    --sw-primary: #6f42c1;              /* 主色调-紫色 */
-    --sw-primary-hover: #5a34a0;        /* 主色-悬停 */
-    --sw-primary-active: #4b2c85;       /* 主色-激活 */
-    --sw-primary-light: rgba(111,66,193,0.12); /* 主色-浅色背景 */
-    --sw-primary-border: rgba(111,66,193,0.25); /* 主色-边框 */
+    --sw-primary: #4a5568;              /* 主色调-中性灰 */
+    --sw-primary-hover: #2d3748;        /* 主色-悬停 */
+    --sw-primary-active: #1a202c;       /* 主色-激活 */
+    --sw-primary-light: rgba(74,85,104,0.08); /* 主色-浅色背景 */
+    --sw-primary-border: rgba(74,85,104,0.20); /* 主色-边框 */
     
     --sw-success: #2f9e44;              /* 成功色 */
     --sw-warning: #f59e0b;              /* 警告色 */
-    --sw-danger: #d93025;               /* 危险色 */
-    --sw-info: #409EFF;                 /* 信息色 */
+    --sw-danger: #718096;               /* 危险色-中性灰 */
+    --sw-info: #4a5568;                 /* 信息色-中性灰 */
     
     --sw-text-primary: #222;            /* 主要文本 */
     --sw-text-secondary: #666;          /* 次要文本 */

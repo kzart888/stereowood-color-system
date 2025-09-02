@@ -211,10 +211,11 @@ const ArtworksComponent = {
           </div>
         </div>
         
-        <!-- Pagination Controls -->
-        <div v-if="artworks.length > 0" class="pagination-container">
+        <!-- Pagination Controls (Always show for consistency) -->
+        <div class="pagination-container">
           <div class="pagination-info">
-            显示 {{ startItem }}-{{ endItem }} 共 {{ artworks.length }} 项
+            <span v-if="artworks.length > 0">显示 {{ startItem }}-{{ endItem }} 共 {{ artworks.length }} 项</span>
+            <span v-else>暂无作品数据</span>
           </div>
           
           <div class="pagination-controls">

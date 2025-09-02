@@ -266,11 +266,17 @@
 }
 
 /* === Color Information Display === */
+.color-info-container {
+    max-width: 600px;
+    width: 100%;
+}
+
 .color-info-row {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 13px;
+    max-width: 600px;
 }
 
 /* Equal width color info items for table-like layout */

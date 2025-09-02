@@ -1417,18 +1417,32 @@ const CustomColorsComponent = {
         
         focusCustomColor(code) {
             if (this.activeCategory !== 'all') this.activeCategory = 'all';
+            
+            // Find the color in all colors
+            const allColors = this.globalData.customColors?.value || [];
+            const targetIndex = allColors.findIndex(c => c.color_code === code);
+            
+            if (targetIndex === -1) return;
+            
+            // Calculate which page the color is on
+            const targetPage = Math.floor(targetIndex / this.itemsPerPage) + 1;
+            
+            // Navigate to the correct page if needed
+            if (targetPage !== this.currentPage) {
+                this.currentPage = targetPage;
+            }
+            
             this.$nextTick(() => {
                 const el = this._colorItemRefs.get(code);
                 if (el && el.scrollIntoView) {
-                    try {
-                        const rect = el.getBoundingClientRect();
-                        const vh = window.innerHeight || document.documentElement.clientHeight;
-                        const current = window.pageYOffset || document.documentElement.scrollTop;
-                        const targetScroll = current + rect.top - (vh/2 - rect.height/2);
-                        window.scrollTo(0, Math.max(0, targetScroll));
-                    } catch(e) { 
-                        el.scrollIntoView(); 
-                    }
+                    // Instant scroll to element (no animation for efficiency)
+                    const rect = el.getBoundingClientRect();
+                    const current = window.pageYOffset || document.documentElement.scrollTop;
+                    const targetScroll = current + rect.top - 100; // 100px offset from top
+                    window.scrollTo({
+                        top: Math.max(0, targetScroll),
+                        behavior: 'instant' // No animation for factory efficiency
+                    });
                     this.highlightCode = code;
                     setTimeout(()=>{ this.highlightCode = null; }, 2000);
                 }

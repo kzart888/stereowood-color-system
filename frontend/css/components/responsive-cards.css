@@ -15,8 +15,9 @@
   /* Default: 1 column, cards stretch to fill available space */
   grid-template-columns: 1fr;
   
-  /* Ensure rows have equal height */
-  grid-auto-rows: 1fr;
+  /* Let cards have natural height, align by row */
+  grid-auto-rows: min-content;
+  align-items: start;
 }
 
 /* Single column on smaller screens (< 1200px) */
@@ -47,7 +48,7 @@
   
   /* Responsive width */
   min-width: 100%;
-  height: 100%; /* Make cards fill grid cell height */
+  height: auto; /* Natural height based on content */
   
   /* Keep existing styles */
   background: var(--sw-bg-white);
@@ -105,11 +106,15 @@
   justify-content: space-between;
   padding: 16px;
   background: var(--sw-bg-white);
-  border: 1px solid var(--sw-border-light);
-  border-radius: var(--sw-radius-md);
-  margin: 16px;
+  border-top: 1px solid var(--sw-border-light);
   gap: 16px;
   flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* Pagination info */
