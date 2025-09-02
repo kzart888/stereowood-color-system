@@ -6,10 +6,12 @@ package-lock.json
 
 # Production Data (NEVER commit these!)
 database.db
-*.db
-*.db-journal
 *.db-wal
 *.db-shm
+*.db
+*.db-journal
+backend/db/*.db-wal
+backend/db/*.db-shm
 uploads/
 backups/
 backend/uploads/
@@ -86,3 +88,4 @@ docker-compose.override.yml
 deployment-logs/
 *.deployment.log
 .docker-build-cache/
+.playwright-mcp/

@@ -8,35 +8,35 @@
 .color-cards-grid {
   display: grid;
   gap: 8px;
-  padding: 0;
+  padding: 0 8px;
   margin: 0;
+  width: 100%;
   
-  /* Default: 1 column */
+  /* Default: 1 column, cards stretch to fill available space */
   grid-template-columns: 1fr;
-  max-width: 100%;
+  
+  /* Ensure rows have equal height */
+  grid-auto-rows: 1fr;
 }
 
-/* Single column on smaller screens (< 1620px) */
-@media (max-width: 1619px) {
+/* Single column on smaller screens (< 1200px) */
+@media (max-width: 1199px) {
   .color-cards-grid {
-    grid-template-columns: minmax(auto, 780px);
-    justify-content: center;
+    grid-template-columns: 1fr;
   }
 }
 
-/* Two columns when screen can fit 2x780px + gap (≥ 1620px) */
-@media (min-width: 1620px) {
+/* Two columns when screen width ≥ 1200px */
+@media (min-width: 1200px) {
   .color-cards-grid {
-    grid-template-columns: repeat(2, minmax(780px, 1fr));
-    max-width: 1620px;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* Optional: Three columns for ultra-wide screens (≥ 2440px) */
-@media (min-width: 2440px) {
+/* Three columns for ultra-wide screens (≥ 1800px) */
+@media (min-width: 1800px) {
   .color-cards-grid {
-    grid-template-columns: repeat(3, minmax(780px, 1fr));
-    max-width: 2440px;
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -45,24 +45,24 @@
   /* Remove margin that was designed for vertical list */
   margin: 0;
   
-  /* Fixed dimensions based on measurements */
-  min-width: 780px;
-  height: fit-content; /* Changed from auto to fit-content */
-  /* Removed min-height to allow cards to size naturally */
+  /* Responsive width */
+  min-width: 100%;
+  height: 100%; /* Make cards fill grid cell height */
   
   /* Keep existing styles */
   background: var(--sw-bg-white);
   border: 1px solid var(--sw-border-light);
   border-radius: var(--sw-radius-md);
-  transition: border-color var(--sw-transition-base);
+  transition: box-shadow var(--sw-transition-base);
   cursor: pointer;
+  box-sizing: border-box;
+  position: relative;
 }
 
-/* Allow shrinking on mobile (< 820px) */
+/* Mobile adjustments */
 @media (max-width: 819px) {
   .color-cards-grid .artwork-bar {
     min-width: 100%;
-    width: 100%;
   }
   
   /* Allow 适用层 (usage layers) to wrap */
@@ -81,17 +81,15 @@
   }
 }
 
-/* Hover effect with purple border, no animation */
+/* Hover effect with purple shadow (no layout shift) */
 .color-cards-grid .artwork-bar:hover {
-  border: 2px solid var(--sw-primary, #8b5cf6);
-  box-shadow: none;
+  box-shadow: 0 0 0 2px var(--sw-primary, #8b5cf6);
   transform: none;
 }
 
-/* Selected card effect */
+/* Selected card effect with double shadow */
 .color-cards-grid .artwork-bar.selected {
-  border: 2px solid var(--sw-primary, #8b5cf6) !important;
-  box-shadow: 0 0 0 1px var(--sw-primary, #8b5cf6) !important;
+  box-shadow: 0 0 0 2px var(--sw-primary, #8b5cf6), 0 0 0 4px rgba(139, 92, 246, 0.3) !important;
 }
 
 /* Keep highlight effect for search */

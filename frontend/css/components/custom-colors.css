@@ -269,8 +269,16 @@
 .color-info-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     font-size: 13px;
+}
+
+/* Equal width color info items for table-like layout */
+.color-info-row > div {
+    display: inline-flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
 }
 
 /* === Inline Color Swatches === */
@@ -287,12 +295,19 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    flex: 1;
+}
+
+/* Pantone groups take up equal space */
+.color-value-group.pantone-group {
+    flex: 1;
 }
 
 .color-label-inline {
     color: var(--sw-text-secondary);
     font-weight: 500;
     margin-right: 4px;
+    flex-shrink: 0;
 }
 
 .color-value-empty {
