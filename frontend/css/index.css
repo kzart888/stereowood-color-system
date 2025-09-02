@@ -23,6 +23,7 @@
 @import './components/formula-calc.css';  /* 计算器组件 */
 @import './components/print-dialog.css';  /* 打印对话框 */
 @import './components/duplicate-dialog.css';  /* 重复检测对话框 */
+@import './components/responsive-cards.css';  /* 响应式卡片网格布局 */
 
 /* === 4. 工具样式 === */
 @import './utilities/helpers.css';        /* 辅助类 */

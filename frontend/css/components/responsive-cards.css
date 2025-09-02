@@ -1,0 +1,258 @@
+/**
+ * Responsive Card Grid Layout
+ * For 自配色管理 and 颜色原料管理 pages
+ * Cards: 780px min-width, ~215px height
+ */
+
+/* === Grid Container === */
+.color-cards-grid {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  
+  /* Default: 1 column */
+  grid-template-columns: 1fr;
+  max-width: 100%;
+}
+
+/* Single column on smaller screens (< 1620px) */
+@media (max-width: 1619px) {
+  .color-cards-grid {
+    grid-template-columns: minmax(auto, 780px);
+    justify-content: center;
+  }
+}
+
+/* Two columns when screen can fit 2x780px + gap (≥ 1620px) */
+@media (min-width: 1620px) {
+  .color-cards-grid {
+    grid-template-columns: repeat(2, minmax(780px, 1fr));
+    max-width: 1620px;
+  }
+}
+
+/* Optional: Three columns for ultra-wide screens (≥ 2440px) */
+@media (min-width: 2440px) {
+  .color-cards-grid {
+    grid-template-columns: repeat(3, minmax(780px, 1fr));
+    max-width: 2440px;
+  }
+}
+
+/* === Card Adjustments === */
+.color-cards-grid .artwork-bar {
+  /* Remove margin that was designed for vertical list */
+  margin: 0;
+  
+  /* Fixed dimensions based on measurements */
+  min-width: 780px;
+  height: fit-content; /* Changed from auto to fit-content */
+  /* Removed min-height to allow cards to size naturally */
+  
+  /* Keep existing styles */
+  background: var(--sw-bg-white);
+  border: 1px solid var(--sw-border-light);
+  border-radius: var(--sw-radius-md);
+  transition: border-color var(--sw-transition-base);
+  cursor: pointer;
+}
+
+/* Allow shrinking on mobile (< 820px) */
+@media (max-width: 819px) {
+  .color-cards-grid .artwork-bar {
+    min-width: 100%;
+    width: 100%;
+  }
+  
+  /* Allow 适用层 (usage layers) to wrap */
+  .color-cards-grid .usage-chips {
+    flex-wrap: wrap;
+  }
+  
+  /* Adjust button sizes for mobile */
+  .color-cards-grid .color-actions .el-button {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  
+  .color-cards-grid .color-actions .el-button .el-icon {
+    margin-right: 2px;
+  }
+}
+
+/* Hover effect with purple border, no animation */
+.color-cards-grid .artwork-bar:hover {
+  border: 2px solid var(--sw-primary, #8b5cf6);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Selected card effect */
+.color-cards-grid .artwork-bar.selected {
+  border: 2px solid var(--sw-primary, #8b5cf6) !important;
+  box-shadow: 0 0 0 1px var(--sw-primary, #8b5cf6) !important;
+}
+
+/* Keep highlight effect for search */
+.color-cards-grid .artwork-bar.highlight-pulse {
+  animation: highlight-pulse 2s ease-in-out !important;
+  border: 2px solid rgba(255, 215, 0, 0.8) !important;
+}
+
+/* === Pagination Container === */
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--sw-bg-white);
+  border: 1px solid var(--sw-border-light);
+  border-radius: var(--sw-radius-md);
+  margin: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Pagination info */
+.pagination-info {
+  color: var(--sw-text-secondary);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Pagination controls */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+/* Page numbers */
+.page-numbers {
+  display: flex;
+  gap: 4px;
+  margin: 0 8px;
+}
+
+.page-numbers button {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid var(--sw-border-light);
+  background: var(--sw-bg-white);
+  color: var(--sw-text-primary);
+  border-radius: var(--sw-radius-sm);
+  cursor: pointer;
+  transition: all var(--sw-transition-base);
+  font-size: 14px;
+  padding: 0 8px;
+}
+
+.page-numbers button:hover:not(:disabled):not(.ellipsis) {
+  background: var(--sw-bg-light);
+  border-color: var(--sw-primary);
+}
+
+.page-numbers button.active {
+  background: var(--sw-primary);
+  color: white;
+  border-color: var(--sw-primary);
+  font-weight: 600;
+}
+
+.page-numbers button.ellipsis {
+  cursor: default;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.page-numbers button:disabled,
+.page-numbers button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Items per page selector */
+.items-per-page {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.items-per-page .el-select {
+  width: 100px;
+}
+
+/* === Responsive Pagination === */
+@media (max-width: 768px) {
+  .pagination-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .pagination-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .pagination-info,
+  .items-per-page {
+    justify-content: center;
+  }
+  
+  /* Smaller buttons on mobile */
+  .pagination-controls .el-button {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  
+  /* Hide button text on very small screens, show only icons */
+  @media (max-width: 480px) {
+    .pagination-controls .el-button span:not(.el-icon) {
+      display: none;
+    }
+    
+    .pagination-controls .el-button .el-icon {
+      margin: 0;
+    }
+  }
+  
+  .page-numbers {
+    margin: 8px 0;
+  }
+  
+  .page-numbers button {
+    min-width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+}
+
+/* === Empty State === */
+.color-cards-grid .empty-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--sw-text-muted);
+  font-size: 16px;
+}
+
+/* === Loading State === */
+.color-cards-grid .loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--sw-text-secondary);
+  font-size: 16px;
+}
+
+.color-cards-grid .loading .el-icon {
+  font-size: 24px;
+  margin-right: 8px;
+}

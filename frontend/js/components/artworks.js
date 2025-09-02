@@ -21,7 +21,7 @@ const ArtworksComponent = {
         <div v-if="artworks.length === 0" class="empty-message">暂无作品，点击右上角“新作品”添加</div>
 
         <!-- 母bar：作品 -->
-  <div v-for="art in artworks" :key="art.id" class="artwork-bar" :data-art-id="art.id" :data-focus-single="art._swFocusSingle ? 'true' : null">
+  <div v-for="art in paginatedArtworks" :key="art.id" class="artwork-bar" :data-art-id="art.id" :data-focus-single="art._swFocusSingle ? 'true' : null">
           <div class="artwork-header">
             <div class="artwork-title">{{ $helpers.formatArtworkTitle(art) }}</div>
             <div class="color-actions">
@@ -208,6 +208,64 @@ const ArtworksComponent = {
           <div v-else>
             <div v-if="art._swSearchNoSchemeMatch" class="empty-message">作品命中，但未匹配到包含关键字的配色方案</div>
             <div v-else class="empty-message">暂无配色方案，点击“新增配色方案”添加</div>
+          </div>
+        </div>
+        
+        <!-- Pagination Controls -->
+        <div v-if="artworks.length > 0" class="pagination-container">
+          <div class="pagination-info">
+            显示 {{ startItem }}-{{ endItem }} 共 {{ artworks.length }} 项
+          </div>
+          
+          <div class="pagination-controls">
+            <el-button 
+              :disabled="currentPage === 1"
+              @click="goToPage(1)"
+              icon="el-icon-d-arrow-left">
+              首页
+            </el-button>
+            
+            <el-button 
+              :disabled="currentPage === 1"
+              @click="goToPage(currentPage - 1)"
+              icon="el-icon-arrow-left">
+              上一页
+            </el-button>
+            
+            <span class="page-numbers">
+              <button 
+                v-for="page in visiblePages"
+                :key="page"
+                :class="{ active: page === currentPage, ellipsis: page === '...' }"
+                :disabled="page === '...'"
+                @click="goToPage(page)">
+                {{ page }}
+              </button>
+            </span>
+            
+            <el-button 
+              :disabled="currentPage === totalPages"
+              @click="goToPage(currentPage + 1)"
+              icon="el-icon-arrow-right">
+              下一页
+            </el-button>
+            
+            <el-button 
+              :disabled="currentPage === totalPages"
+              @click="goToPage(totalPages)"
+              icon="el-icon-d-arrow-right">
+              末页
+            </el-button>
+          </div>
+          
+          <div class="items-per-page">
+            <span>每页显示：</span>
+            <el-select v-model="itemsPerPage" @change="onItemsPerPageChange">
+              <el-option :value="12" label="12 项" />
+              <el-option :value="24" label="24 项" />
+              <el-option :value="48" label="48 项" />
+              <el-option :value="0" label="全部" />
+            </el-select>
           </div>
         </div>
       </div>
@@ -442,7 +500,11 @@ const ArtworksComponent = {
   , _formulaCache: null
   , _schemeOriginalSnapshot: null
   , _escHandler: null
-  , artworkForm: { title: '' }
+  , artworkForm: { title: '' },
+      
+      // Pagination
+      currentPage: 1,
+      itemsPerPage: 12  // Default: 12 items for compact display
   , artworkRules: {
     title: [
       { required: true, message: '请输入“编号-名称”', trigger: 'blur' },
@@ -545,6 +607,76 @@ const ArtworksComponent = {
       }
       const art = this.artworks.find(a => a.id === this.editingArtId);
       return art ? this.$helpers.formatArtworkTitle(art) : '';
+    },
+    
+    // Pagination computed properties
+    totalPages() {
+      // If showing all items, only 1 page
+      if (this.itemsPerPage === 0) return 1;
+      return Math.ceil(this.artworks.length / this.itemsPerPage);
+    },
+    
+    paginatedArtworks() {
+      // If itemsPerPage is 0, show all items
+      if (this.itemsPerPage === 0) {
+        return this.artworks;
+      }
+      
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.artworks.slice(start, end);
+    },
+    
+    startItem() {
+      if (this.artworks.length === 0) return 0;
+      if (this.itemsPerPage === 0) return 1;  // Show all
+      return (this.currentPage - 1) * this.itemsPerPage + 1;
+    },
+    
+    endItem() {
+      if (this.itemsPerPage === 0) return this.artworks.length;  // Show all
+      return Math.min(
+        this.currentPage * this.itemsPerPage,
+        this.artworks.length
+      );
+    },
+    
+    visiblePages() {
+      const pages = [];
+      const maxVisible = 7;  // Show max 7 page numbers
+      
+      if (this.totalPages <= maxVisible) {
+        // Show all pages
+        for (let i = 1; i <= this.totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Smart pagination with ellipsis
+        if (this.currentPage <= 4) {
+          // Near beginning
+          for (let i = 1; i <= 5; i++) pages.push(i);
+          pages.push('...');
+          pages.push(this.totalPages);
+        } else if (this.currentPage >= this.totalPages - 3) {
+          // Near end
+          pages.push(1);
+          pages.push('...');
+          for (let i = this.totalPages - 4; i <= this.totalPages; i++) {
+            pages.push(i);
+          }
+        } else {
+          // Middle
+          pages.push(1);
+          pages.push('...');
+          for (let i = this.currentPage - 1; i <= this.currentPage + 1; i++) {
+            pages.push(i);
+          }
+          pages.push('...');
+          pages.push(this.totalPages);
+        }
+      }
+      
+      return pages;
     }
   },
   methods: {
@@ -1079,8 +1211,73 @@ const ArtworksComponent = {
           msg.error(msg || '删除失败');
         }
       }
-  }
   },
+    
+    // Pagination methods
+    goToPage(page) {
+      if (page === '...') return;
+      if (page < 1 || page > this.totalPages) return;
+      
+      this.currentPage = page;
+      
+      // Scroll to top of content area
+      this.$nextTick(() => {
+        const container = this.$el.querySelector('.artwork-bar');
+        if (container) {
+          container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      
+      // Save preference
+      try {
+        localStorage.setItem('sw-artworks-page', page);
+      } catch(e) {}
+    },
+    
+    onItemsPerPageChange() {
+      // Reset to first page when changing items per page
+      this.currentPage = 1;
+      
+      // Save preference
+      try {
+        localStorage.setItem('sw-artworks-items-per-page', this.itemsPerPage);
+      } catch(e) {}
+    },
+    
+    // Restore pagination state on mount
+    restorePaginationState() {
+      try {
+        const savedPage = localStorage.getItem('sw-artworks-page');
+        const savedItems = localStorage.getItem('sw-artworks-items-per-page');
+        
+        if (savedItems) {
+          this.itemsPerPage = parseInt(savedItems);
+        }
+        
+        if (savedPage) {
+          const page = parseInt(savedPage);
+          if (page <= this.totalPages) {
+            this.currentPage = page;
+          }
+        }
+      } catch(e) {}
+    }
+  },
+  
+  watch: {
+    // Reset to page 1 when sort mode changes
+    sortMode() {
+      this.currentPage = 1;
+    },
+    
+    // Adjust current page if it exceeds total pages
+    totalPages(newVal) {
+      if (this.currentPage > newVal && newVal > 0) {
+        this.currentPage = newVal;
+      }
+    }
+  },
+  
   async mounted() {
     try {
       this.loading = true;
@@ -1091,6 +1288,10 @@ const ArtworksComponent = {
           this.viewMode = vm;
         }
       } catch(e) {}
+      
+      // Restore pagination state
+      this.restorePaginationState();
+      
       await this.refreshAll();
     } finally {
       this.loading = false;

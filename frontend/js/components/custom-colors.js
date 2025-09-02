@@ -26,7 +26,10 @@ const CustomColorsComponent = {
             <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
             <div v-else>
                 <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角"新自配色"添加</div>
-                <div v-for="color in filteredColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code}">
+                
+                <!-- Grid Container for Cards -->
+                <div class="color-cards-grid">
+                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id)">
                     <div class="artwork-header" style="display:flex; padding:8px; align-items:center; justify-content:space-between;">
                         <div style="display:flex; align-items:center;">
                             <div class="artwork-title" style="width:88px; flex-shrink:0;">
@@ -125,6 +128,69 @@ const CustomColorsComponent = {
                                 <span v-else>(未使用)</span>
                             </div>
                         </div>
+                    </div>
+                </div>
+                </div><!-- End of color-cards-grid -->
+                
+                <!-- Pagination Controls -->
+                <div v-if="filteredColors.length > 0" class="pagination-container">
+                    <div class="pagination-info">
+                        显示 {{ startItem }}-{{ endItem }} 共 {{ filteredColors.length }} 项
+                    </div>
+                    
+                    <div class="pagination-controls">
+                        <el-button 
+                            size="small"
+                            :disabled="currentPage === 1"
+                            @click="goToPage(1)">
+                            <el-icon><DArrowLeft /></el-icon>
+                            <span>首页</span>
+                        </el-button>
+                        
+                        <el-button 
+                            size="small"
+                            :disabled="currentPage === 1"
+                            @click="goToPage(currentPage - 1)">
+                            <el-icon><ArrowLeft /></el-icon>
+                            <span>上一页</span>
+                        </el-button>
+                        
+                        <span class="page-numbers">
+                            <button 
+                                v-for="page in visiblePages"
+                                :key="page"
+                                :class="{ active: page === currentPage, ellipsis: page === '...' }"
+                                :disabled="page === '...'"
+                                @click="goToPage(page)">
+                                {{ page }}
+                            </button>
+                        </span>
+                        
+                        <el-button 
+                            size="small"
+                            :disabled="currentPage === totalPages"
+                            @click="goToPage(currentPage + 1)">
+                            <span>下一页</span>
+                            <el-icon><ArrowRight /></el-icon>
+                        </el-button>
+                        
+                        <el-button 
+                            size="small"
+                            :disabled="currentPage === totalPages"
+                            @click="goToPage(totalPages)">
+                            <span>末页</span>
+                            <el-icon><DArrowRight /></el-icon>
+                        </el-button>
+                    </div>
+                    
+                    <div class="items-per-page">
+                        <span>每页显示：</span>
+                        <el-select v-model="itemsPerPage" @change="onItemsPerPageChange" size="small">
+                            <el-option :value="12" label="12 项" />
+                            <el-option :value="24" label="24 项" />
+                            <el-option :value="48" label="48 项" />
+                            <el-option :value="0" label="全部" />
+                        </el-select>
                     </div>
                 </div>
             </div>
@@ -401,9 +467,16 @@ const CustomColorsComponent = {
             editingColor: null,
             saving: false,
             _colorItemRefs: new Map(),
+            
+            // Pagination
+            currentPage: 1,
+            itemsPerPage: 12,  // Default: 12 items for compact display
             highlightCode: null,
             refreshKey: 0,
             extracting: false,
+            
+            // Card selection
+            selectedColorId: null,
             
             // Form data with color fields
             form: {
@@ -502,6 +575,69 @@ const CustomColorsComponent = {
             }
             
             return list;
+        },
+        
+        // Pagination computed properties
+        totalPages() {
+            if (this.itemsPerPage === 0) return 1;  // Show all
+            return Math.ceil(this.filteredColors.length / this.itemsPerPage);
+        },
+        
+        paginatedColors() {
+            if (this.itemsPerPage === 0) {
+                return this.filteredColors;  // Show all
+            }
+            
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            return this.filteredColors.slice(start, end);
+        },
+        
+        startItem() {
+            if (this.filteredColors.length === 0) return 0;
+            if (this.itemsPerPage === 0) return 1;
+            return (this.currentPage - 1) * this.itemsPerPage + 1;
+        },
+        
+        endItem() {
+            if (this.itemsPerPage === 0) return this.filteredColors.length;
+            return Math.min(
+                this.currentPage * this.itemsPerPage,
+                this.filteredColors.length
+            );
+        },
+        
+        visiblePages() {
+            const pages = [];
+            const maxVisible = 7;
+            
+            if (this.totalPages <= maxVisible) {
+                for (let i = 1; i <= this.totalPages; i++) {
+                    pages.push(i);
+                }
+            } else {
+                if (this.currentPage <= 4) {
+                    for (let i = 1; i <= 5; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(this.totalPages);
+                } else if (this.currentPage >= this.totalPages - 3) {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = this.totalPages - 4; i <= this.totalPages; i++) {
+                        pages.push(i);
+                    }
+                } else {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = this.currentPage - 1; i <= this.currentPage + 1; i++) {
+                        pages.push(i);
+                    }
+                    pages.push('...');
+                    pages.push(this.totalPages);
+                }
+            }
+            
+            return pages;
         },
         
         orderedCategoriesWithOther() {
@@ -680,6 +816,99 @@ const CustomColorsComponent = {
     },
     
     methods: {
+        // Pagination methods
+        goToPage(page) {
+            if (page === '...') return;
+            if (page < 1 || page > this.totalPages) return;
+            
+            this.currentPage = page;
+            
+            // Scroll to top of content area
+            this.$nextTick(() => {
+                const container = this.$el.querySelector('.color-cards-grid');
+                if (container) {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+            
+            // Save preference
+            try {
+                localStorage.setItem('sw-colors-page', page);
+            } catch(e) {}
+        },
+        
+        onItemsPerPageChange() {
+            // Reset to first page when changing items per page
+            this.currentPage = 1;
+            
+            // Save preference
+            try {
+                localStorage.setItem('sw-colors-items-per-page', this.itemsPerPage);
+            } catch(e) {}
+        },
+        
+        restorePaginationState() {
+            try {
+                const savedPage = localStorage.getItem('sw-colors-page');
+                const savedItems = localStorage.getItem('sw-colors-items-per-page');
+                
+                if (savedItems) {
+                    this.itemsPerPage = parseInt(savedItems);
+                }
+                
+                if (savedPage) {
+                    const page = parseInt(savedPage);
+                    if (page <= this.totalPages) {
+                        this.currentPage = page;
+                    }
+                }
+            } catch(e) {}
+        },
+        
+        // Card selection methods
+        toggleColorSelection(colorId) {
+            // Prevent propagation to avoid conflicts with other handlers
+            event.stopPropagation();
+            
+            // Toggle selection
+            if (this.selectedColorId === colorId) {
+                this.selectedColorId = null;
+            } else {
+                this.selectedColorId = colorId;
+            }
+        },
+        
+        clearSelection() {
+            this.selectedColorId = null;
+        },
+        
+        handleGlobalClick(event) {
+            // Clear selection if clicking outside the cards
+            if (!event.target.closest('.artwork-bar')) {
+                this.clearSelection();
+            }
+        },
+        
+        handleEscKey(event) {
+            // Only clear selection if ESC is pressed and no input is focused
+            if (event.key === 'Escape') {
+                // Check if any input, textarea, or select is focused
+                const activeElement = document.activeElement;
+                const isInputFocused = activeElement && (
+                    activeElement.tagName === 'INPUT' ||
+                    activeElement.tagName === 'TEXTAREA' ||
+                    activeElement.tagName === 'SELECT' ||
+                    activeElement.classList.contains('el-input__inner')
+                );
+                
+                // Clear selection only if no input is focused
+                if (!isInputFocused && this.selectedColorId !== null) {
+                    this.clearSelection();
+                    event.preventDefault();
+                }
+            }
+        },
+        
         // Helper to get message service
         getMsg() {
             return ElementPlus.ElMessage;
@@ -1593,6 +1822,35 @@ const CustomColorsComponent = {
 </html>`;
             return html;
         }
+    },
+    
+    // Watch for category changes to reset pagination
+    watch: {
+        activeCategory() {
+            this.currentPage = 1;
+        },
+        
+        totalPages(newVal) {
+            // Adjust current page if it exceeds total pages
+            if (this.currentPage > newVal && newVal > 0) {
+                this.currentPage = newVal;
+            }
+        }
+    },
+    
+    // Restore pagination state on mount
+    mounted() {
+        this.restorePaginationState();
+        
+        // Add global event listeners for selection
+        document.addEventListener('click', this.handleGlobalClick);
+        document.addEventListener('keydown', this.handleEscKey);
+    },
+    
+    beforeUnmount() {
+        // Clean up event listeners
+        document.removeEventListener('click', this.handleGlobalClick);
+        document.removeEventListener('keydown', this.handleEscKey);
     }
 };
 
