@@ -9,10 +9,19 @@
     --dialog-padding: 16px;
 }
 
+/* Responsive and extensible dialog width */
 .color-palette-dialog .el-dialog {
-    width: fit-content !important;
-    max-width: 90vw;
+    min-width: 500px;
+    max-width: min(90vw, 1200px);
     margin: 20px auto;
+}
+
+/* For smaller screens */
+@media (max-width: 768px) {
+    .color-palette-dialog .el-dialog {
+        min-width: 90vw;
+        width: 90vw !important;
+    }
 }
 
 .color-palette-dialog .el-dialog__header {

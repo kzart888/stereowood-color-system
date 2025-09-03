@@ -608,7 +608,7 @@
         mountPoint = document.createElement('div');
         mountPoint.id = 'sw-calc-overlay-root';
         // Ensure mount point doesn't interfere with positioning
-        mountPoint.style.cssText = 'position: absolute; top: 0; left: 0; width: 0; height: 0; pointer-events: none; z-index: 2400;';
+        mountPoint.style.cssText = 'position: absolute; top: 0; left: 0; width: 0; height: 0; pointer-events: none; z-index: 50;';
         document.body.appendChild(mountPoint);
       }
       const compApp = Vue.createApp(FormulaCalculatorOverlay);

@@ -8,7 +8,7 @@
 .color-cards-grid {
   display: grid;
   gap: 8px;
-  padding: 0 8px 70px 8px; /* Bottom padding for fixed pagination */
+  padding: 4px 8px 70px 8px; /* Top 4px, bottom padding for fixed pagination */
   margin: 0;
   width: 100%;
   

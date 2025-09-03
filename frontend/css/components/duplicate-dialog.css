@@ -33,7 +33,7 @@
 .dup-groups-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
 }
 
 /* === 单个重复组块 === */
@@ -41,7 +41,7 @@
     border: 1px solid var(--sw-border-base);
     border-radius: var(--sw-radius-md);
     background: var(--sw-bg-light);
-    padding: 12px;
+    padding: 0 12px 12px 12px;
     box-shadow: var(--sw-shadow-xs);
 }
 
@@ -51,9 +51,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--sw-border-light);
+    background: var(--sw-bg-light);
 }
 
 .dup-group-badge {
@@ -68,14 +66,13 @@
 
 /* === 配方显示 === */
 .dup-group-formula {
-    margin-bottom: 8px;
     padding: 8px;
-    background: var(--sw-bg-white);
+    background: var(--sw-bg-light);
     border-radius: var(--sw-radius-sm);
 }
 
 .dup-group-formula .el-tag {
-    margin: 0 6px 6px 0;
+    margin: 0 6px 0 0;
     font-size: 12px;
 }
 
@@ -91,7 +88,7 @@
     align-items: center;
     gap: 12px;
     font-size: 13px;
-    padding: 8px 10px;
+    padding: 6px;
     background: var(--sw-bg-white);
     border: 1px solid var(--sw-border-light);
     border-radius: var(--sw-radius-sm);
@@ -112,6 +109,13 @@
 /* === 记录行内元素 === */
 .dup-record-row .el-radio {
     margin-right: 0;
+}
+
+/* Keep radio button gap */
+.keep-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .dup-record-row .code {
@@ -151,12 +155,19 @@
 }
 
 /* === 操作按钮样式优化 === */
+.dup-groups-dialog .el-dialog__footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
 .dup-groups-dialog .el-dialog__footer .el-button {
     min-width: 80px;
+    margin-left: 0 !important;
 }
 
 .dup-groups-dialog .el-dialog__footer .el-button + .el-button {
-    margin-left: 10px;
+    margin-left: 0 !important;
 }
 
 /* === 加载状态 === */

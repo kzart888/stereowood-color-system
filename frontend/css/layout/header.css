@@ -49,13 +49,9 @@
 .app-title {
     font-size: 18px;
     font-weight: 600;
-    background: linear-gradient(135deg, var(--sw-primary), var(--sw-primary-active));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--sw-text-primary);
     margin: 0;
     white-space: nowrap;
-    text-shadow: 0 0 30px rgba(111, 66, 193, 0.3);
 }
 
 /* === 中间导航区域 === */
@@ -63,7 +59,6 @@
     flex: 0 0 auto;
     display: flex;
     align-items: center;
-    margin-left: 16px;
 }
 
 /* Tab切换组 - 页面导航按钮 */
@@ -78,7 +73,7 @@
     align-items: center;
     justify-content: center;
     padding: 5px 14px;
-    height: 32px;
+    height: 30px;
     min-width: 90px;
     font-size: 13px;
     font-weight: 500;
@@ -106,6 +101,38 @@
 .app-header-search {
     position: relative;
     flex: 0 0 280px;
+}
+
+/* Standardize input height in header */
+.app-header-search .el-input__wrapper {
+    height: 30px !important;
+    padding: 0 12px !important;
+}
+
+/* === Header Action Buttons === */
+.app-header-right .el-button {
+    height: 30px !important;
+    padding: 0 12px !important;
+    margin-left: 0 !important;
+}
+
+/* Ensure all header buttons have consistent height */
+.app-header .el-button--small {
+    height: 30px !important;
+    line-height: 28px;
+}
+
+/* Fix all small buttons to be exactly 30px */
+.el-button--small {
+    height: 30px !important;
+    min-height: 30px !important;
+    line-height: 28px !important;
+}
+
+/* Specifically target the add button to be 30px */
+.el-button--primary.el-button--small.add-button {
+    height: 30px !important;
+    min-height: 30px !important;
 }
 
 @media (max-width: 1200px) {
@@ -186,12 +213,21 @@
     flex-wrap: nowrap;
     min-width: 450px;
     justify-content: flex-end;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+/* Remove any margin from first child */
+.app-header-tools > *:first-child {
+    margin-left: 0 !important;
 }
 
 /* 双按钮组 */
 .dual-toggle-group {
     display: inline-flex;
-    height: 32px;
+    align-items: stretch;
+    height: 30px;
+    box-sizing: border-box;
     border: 1px solid var(--sw-border-base);
     border-radius: var(--sw-radius-sm);
     overflow: hidden;
@@ -200,7 +236,8 @@
 
 .dual-toggle-group button,
 .dual-toggle-group .el-button {
-    height: 30px;
+    height: 100% !important;
+    max-height: 28px !important;
     padding: 0 12px;
     margin: 0 !important;
     font-size: 13px;
@@ -209,6 +246,14 @@
     box-shadow: none !important;
     background: transparent;
     transition: all var(--sw-transition-fast);
+    line-height: 28px !important;
+}
+
+/* Specifically target the primary small buttons in dual-toggle */
+.dual-toggle-group .el-button--primary.el-button--small {
+    height: 28px !important;
+    max-height: 28px !important;
+    line-height: 26px !important;
 }
 
 .dual-toggle-group button:not(:last-child),
