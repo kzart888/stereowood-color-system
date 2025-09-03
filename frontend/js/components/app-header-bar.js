@@ -172,14 +172,30 @@ const AppHeaderBar = {
 			<div class="app-header-bar app-header-with-search">
 				<div class="app-header-left">
 					<div class="app-title-badge">
-						<h1 class="app-title">STEREOWOOD-梯木叠雕-颜色管理系统</h1>
+						<h1 class="app-title">
+							<span class="app-title-full">STEREOWOOD-梯木叠雕-颜色管理系统</span>
+							<span class="app-title-medium">梯木叠雕-颜色管理系统</span>
+							<span class="app-title-short">梯木叠雕</span>
+						</h1>
 					</div>
 				</div>
 				<div class="app-header-center">
 					<div class="tab-switch-group" role="tablist" aria-label="主功能切换">
-						<button type="button" class="tab-switch" :class="{active: activeTab==='custom-colors'}" @click="$emit('update:activetab','custom-colors')" role="tab" :aria-selected="activeTab==='custom-colors'">自配色管理</button>
-						<button type="button" class="tab-switch" :class="{active: activeTab==='artworks'}" @click="$emit('update:activetab','artworks')" role="tab" :aria-selected="activeTab==='artworks'">作品配色管理</button>
-						<button type="button" class="tab-switch" :class="{active: activeTab==='mont-marte'}" @click="$emit('update:activetab','mont-marte')" role="tab" :aria-selected="activeTab==='mont-marte'">颜色原料管理</button>
+						<button type="button" class="tab-switch" :class="{active: activeTab==='custom-colors'}" @click="$emit('update:activetab','custom-colors')" role="tab" :aria-selected="activeTab==='custom-colors'">
+							<el-icon class="tab-icon"><Brush /></el-icon>
+							<span class="text-full">自配色管理</span>
+							<span class="text-medium">自配色</span>
+						</button>
+						<button type="button" class="tab-switch" :class="{active: activeTab==='artworks'}" @click="$emit('update:activetab','artworks')" role="tab" :aria-selected="activeTab==='artworks'">
+							<el-icon class="tab-icon"><Picture /></el-icon>
+							<span class="text-full">作品配色管理</span>
+							<span class="text-medium">作品</span>
+						</button>
+						<button type="button" class="tab-switch" :class="{active: activeTab==='mont-marte'}" @click="$emit('update:activetab','mont-marte')" role="tab" :aria-selected="activeTab==='mont-marte'">
+							<el-icon class="tab-icon"><Box /></el-icon>
+							<span class="text-full">颜色原料管理</span>
+							<span class="text-medium">原料</span>
+						</button>
 					</div>
 				</div>
 				<!-- 全局搜索输入：在宽度不足时自动换行，占据整行并居中 -->
@@ -218,30 +234,78 @@ const AppHeaderBar = {
 				</div>
 				<div class="app-header-tools">
 					<template v-if="activeTab==='artworks'">
-						<el-button size="small" type="primary" class="add-button" @click="$emit('add-artwork')"><el-icon><Plus /></el-icon> 新作品</el-button>
+						<el-button size="small" type="primary" class="add-button" @click="$emit('add-artwork')">
+							<el-icon><Plus /></el-icon>
+							<span class="text-full">新作品</span>
+						</el-button>
 						<span class="dual-toggle-group">
-							<el-button size="small" :type="artworksViewMode==='byLayer' ? 'primary':'default'" @click="setViewMode('byLayer')">层号优先</el-button>
-							<el-button size="small" :type="artworksViewMode==='byColor' ? 'primary':'default'" @click="setViewMode('byColor')">自配色优先</el-button>
+							<el-button size="small" :type="artworksViewMode==='byLayer' ? 'primary':'default'" @click="setViewMode('byLayer')">
+								<el-icon class="btn-icon"><DCaret /></el-icon>
+								<span class="text-full">层号优先</span>
+								<span class="text-medium">层号</span>
+							</el-button>
+							<el-button size="small" :type="artworksViewMode==='byColor' ? 'primary':'default'" @click="setViewMode('byColor')">
+								<el-icon class="btn-icon"><Brush /></el-icon>
+								<span class="text-full">自配色优先</span>
+								<span class="text-medium">自配色</span>
+							</el-button>
 						</span>
 						<span class="dual-toggle-group">
-							<el-button size="small" :type="artworksSortMode==='time' ? 'primary':'default'" @click="setSort('artworks','time')">按时间</el-button>
-							<el-button size="small" :type="artworksSortMode==='name' ? 'primary':'default'" @click="setSort('artworks','name')">按名称</el-button>
+							<el-button size="small" :type="artworksSortMode==='time' ? 'primary':'default'" @click="setSort('artworks','time')">
+								<el-icon class="btn-icon"><Clock /></el-icon>
+								<span class="text-full">按时间</span>
+								<span class="text-medium">时间</span>
+							</el-button>
+							<el-button size="small" :type="artworksSortMode==='name' ? 'primary':'default'" @click="setSort('artworks','name')">
+								<el-icon class="btn-icon"><Document /></el-icon>
+								<span class="text-full">按名称</span>
+								<span class="text-medium">名称</span>
+							</el-button>
 						</span>
 					</template>
 					<template v-else-if="activeTab==='custom-colors'">
-						<el-button size="small" type="primary" class="add-button" @click="$emit('add-custom-color')"><el-icon><Plus /></el-icon> 新自配色</el-button>
+						<el-button size="small" type="primary" class="add-button" @click="$emit('add-custom-color')">
+							<el-icon><Plus /></el-icon>
+							<span class="text-full">新自配色</span>
+						</el-button>
 						<span class="dual-toggle-group">
-							<el-button size="small" :type="customColorsSortMode==='time' ? 'primary':'default'" @click="setSort('customColors','time')">按时间</el-button>
-							<el-button size="small" :type="customColorsSortMode==='name' ? 'primary':'default'" @click="setSort('customColors','name')">按名称</el-button>
+							<el-button size="small" :type="customColorsSortMode==='time' ? 'primary':'default'" @click="setSort('customColors','time')">
+								<el-icon class="btn-icon"><Clock /></el-icon>
+								<span class="text-full">按时间</span>
+								<span class="text-medium">时间</span>
+							</el-button>
+							<el-button size="small" :type="customColorsSortMode==='name' ? 'primary':'default'" @click="setSort('customColors','name')">
+								<el-icon class="btn-icon"><Document /></el-icon>
+								<span class="text-full">按名称</span>
+								<span class="text-medium">名称</span>
+							</el-button>
 						</span>
-						<el-button size="small" @click="$emit('check-duplicates')">查重</el-button>
-						<el-button size="small" @click="$emit('show-color-palette')"><el-icon><Grid /></el-icon> 自配色列表</el-button>
+						<el-button size="small" @click="$emit('check-duplicates')">
+							<el-icon><CopyDocument /></el-icon>
+							<span class="text-full">查重</span>
+						</el-button>
+						<el-button size="small" @click="$emit('show-color-palette')">
+							<el-icon><Grid /></el-icon>
+							<span class="text-full">自配色列表</span>
+							<span class="text-medium">列表</span>
+						</el-button>
 					</template>
 					<template v-else-if="activeTab==='mont-marte'">
-						<el-button size="small" type="primary" class="add-button" @click="$emit('add-raw-material')"><el-icon><Plus /></el-icon> 新原料</el-button>
+						<el-button size="small" type="primary" class="add-button" @click="$emit('add-raw-material')">
+							<el-icon><Plus /></el-icon>
+							<span class="text-full">新原料</span>
+						</el-button>
 						<span class="dual-toggle-group">
-							<el-button size="small" :type="montMarteSortMode==='time' ? 'primary':'default'" @click="setSort('montMarte','time')">按时间</el-button>
-							<el-button size="small" :type="montMarteSortMode==='name' ? 'primary':'default'" @click="setSort('montMarte','name')">按名称</el-button>
+							<el-button size="small" :type="montMarteSortMode==='time' ? 'primary':'default'" @click="setSort('montMarte','time')">
+								<el-icon class="btn-icon"><Clock /></el-icon>
+								<span class="text-full">按时间</span>
+								<span class="text-medium">时间</span>
+							</el-button>
+							<el-button size="small" :type="montMarteSortMode==='name' ? 'primary':'default'" @click="setSort('montMarte','name')">
+								<el-icon class="btn-icon"><Document /></el-icon>
+								<span class="text-full">按名称</span>
+								<span class="text-medium">名称</span>
+							</el-button>
 						</span>
 					</template>
 				</div>
