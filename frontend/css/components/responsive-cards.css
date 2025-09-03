@@ -8,7 +8,7 @@
 .color-cards-grid {
   display: grid;
   gap: 8px;
-  padding: 0 8px;
+  padding: 0 8px 70px 8px; /* Bottom padding for fixed pagination */
   margin: 0;
   width: 100%;
   
@@ -82,15 +82,15 @@
   }
 }
 
-/* Hover effect with purple shadow (no layout shift) */
+/* Hover effect with grey shadow (no layout shift) */
 .color-cards-grid .artwork-bar:hover {
-  box-shadow: 0 0 0 2px var(--sw-primary, #8b5cf6);
+  box-shadow: 0 0 0 2px var(--sw-border-dark, #c0c4cc);
   transform: none;
 }
 
 /* Selected card effect with double shadow */
 .color-cards-grid .artwork-bar.selected {
-  box-shadow: 0 0 0 2px var(--sw-primary, #8b5cf6), 0 0 0 4px rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 0 0 0 2px var(--sw-border-dark, #c0c4cc), 0 0 0 4px rgba(144, 147, 153, 0.15) !important;
 }
 
 /* Keep highlight effect for search */
@@ -104,15 +104,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 8px 16px;
   background: var(--sw-bg-white);
   border-top: 1px solid var(--sw-border-light);
   gap: 16px;
   flex-wrap: wrap;
-  position: sticky;
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
+  width: 100%;
   z-index: 100;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
 }

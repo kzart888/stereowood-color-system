@@ -104,7 +104,7 @@
     top: 2px; 
     right: 4px; 
     border: none; 
-    background: #6f42c1; 
+    background: var(--sw-primary); 
     color: #fff; 
     font-size: 11px; 
     line-height: 1; 
