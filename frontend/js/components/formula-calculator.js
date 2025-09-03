@@ -205,32 +205,38 @@
         const panel = this.$refs.panel;
         const vw = window.innerWidth, vh = window.innerHeight;
         
-        // Calculate position for fixed positioning (relative to viewport)
-        let left = rect.left;
-        let top = rect.bottom + 6; // Default: open below
+        // Calculate position for absolute positioning (relative to document)
+        // Add scroll offsets to convert from viewport to document coordinates
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
+        let left = rect.left + scrollX;
+        let top = rect.bottom + scrollY + 6; // Default: open below
         const width = panel.offsetWidth || 380;
         const height = panel.offsetHeight || 200;
         
         // Horizontal positioning
         if (rect.left < vw/2) {
           this.direction = 'right';
-          if (left + width > vw - 8) left = vw - width - 8;
+          if (rect.left + width > vw - 8) left = (vw - width - 8) + scrollX;
         } else {
           this.direction = 'left';
-          left = rect.right - width;
-          if (left < 8) left = 8;
+          left = rect.right + scrollX - width;
+          if (rect.right - width < 8) left = 8 + scrollX;
         }
         
-        // Vertical overflow handling
-        if (top + height > vh - 8) {
+        // Vertical overflow handling (check against viewport)
+        if (rect.bottom + 6 + height > vh - 8) {
           const altTop = rect.top - height - 6;
           if (altTop >= 8) {
-            top = altTop;
+            top = rect.top + scrollY - height - 6;
           } else {
-            top = vh - height - 8;
+            top = (vh - height - 8) + scrollY;
           }
         }
-        if (top < 8) top = 8;
+        if (rect.top - height - 6 < 8 && rect.bottom + 6 + height > vh - 8) {
+          top = Math.max(8 + scrollY, rect.top + scrollY - height - 6);
+        }
         
         const finalStyle = { left: Math.round(left)+'px', top: Math.round(top)+'px' };
         

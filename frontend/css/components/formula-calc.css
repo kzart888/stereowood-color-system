@@ -6,7 +6,7 @@
 
 /* === 配方用量快速计算器浮层 === */
 .sw-calc-layer { 
-    position: fixed; 
+    position: absolute; 
     z-index: 2400; 
     min-width: 360px; 
     max-width: 400px; 
