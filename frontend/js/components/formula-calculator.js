@@ -19,8 +19,8 @@
             {{ currentCode }}<template v-if="displayScale"> （当前倍数：{{ displayScale }}x）</template>
           </span>
           <div class="actions">
-            <el-button size="small" text @click="onClear">清空</el-button>
-            <el-button size="small" text @click="onClose">关闭</el-button>
+            <el-button size="small" plain @click="onClear">清空</el-button>
+            <el-button size="small" plain @click="onClose">关闭</el-button>
           </div>
         </div>
         <div class="sw-calc-body" v-if="ready">

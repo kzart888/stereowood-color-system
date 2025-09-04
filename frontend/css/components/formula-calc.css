@@ -29,6 +29,30 @@
     margin-bottom: 4px; 
 }
 
+/* Calculator action buttons styling */
+.sw-calc-layer .actions {
+    display: flex;
+    gap: 4px;
+}
+
+.sw-calc-layer .actions .el-button {
+    background: var(--sw-bg-white);
+    border-color: var(--sw-border-light);
+    color: var(--sw-text-secondary);
+    font-size: 12px;
+    padding: 3px 10px;
+}
+
+.sw-calc-layer .actions .el-button:hover {
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
+}
+
+.sw-calc-layer .actions .el-button:active {
+    background: var(--sw-primary-light);
+}
+
 .sw-calc-layer .sw-calc-header .title { 
     font-weight: 600; 
     font-size: 13px; 
