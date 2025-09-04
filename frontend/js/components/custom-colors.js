@@ -101,22 +101,23 @@ const CustomColorsComponent = {
                                 </span>
                             </div>
                             
-                            <!-- Color Information Row 2: Pantone -->
-                            <div class="meta-text color-info-row">
-                                <span class="color-value-group">
+                            <!-- Color Information Row 2: Pantone (U aligned with CMYK) -->
+                            <div class="meta-text color-info-row pantone-row">
+                                <span class="color-value-group pantone-c-group">
                                     <span v-if="color.pantone_coated" class="color-swatch-inline" :style="getPantoneSwatchStyle(color.pantone_coated)"></span>
                                     <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
                                     <span class="color-label-inline">Pantone C:</span>
                                     <span v-if="color.pantone_coated">{{ color.pantone_coated }}</span>
                                     <span v-else class="color-value-empty">未填写</span>
                                 </span>
-                                <span class="color-value-group">
+                                <span class="color-value-group pantone-u-group">
                                     <span v-if="color.pantone_uncoated" class="color-swatch-inline" :style="getPantoneSwatchStyle(color.pantone_uncoated)"></span>
                                     <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
                                     <span class="color-label-inline">Pantone U:</span>
                                     <span v-if="color.pantone_uncoated">{{ color.pantone_uncoated }}</span>
                                     <span v-else class="color-value-empty">未填写</span>
                                 </span>
+                                <span class="pantone-spacer"></span> <!-- Spacer for third column -->
                             </div>
                             
                             <div class="meta-text">适用层：

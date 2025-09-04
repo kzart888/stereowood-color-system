@@ -244,17 +244,77 @@
     padding: 0 8px;
 }
 
-/* === 操作按钮 === */
+/* === 统一所有按钮类型的内边距 === */
+/* 确保所有按钮变体（danger, warning, success等）具有一致的padding */
+.el-button--default,
+.el-button--primary,
+.el-button--success,
+.el-button--warning,
+.el-button--danger,
+.el-button--info,
+.el-button--text {
+    padding: 6px 8px !important;  /* 统一垂直6px，水平8px */
+}
+
+/* === 按钮颜色主题 === */
+/* Danger button - 柔和粉红 */
+.el-button--danger {
+    --el-button-text-color: #ffffff;
+    --el-button-bg-color: var(--sw-danger);
+    --el-button-border-color: var(--sw-danger);
+    --el-button-hover-text-color: #ffffff;
+    --el-button-hover-bg-color: #ff9595;
+    --el-button-hover-border-color: #ff9595;
+    --el-button-active-bg-color: #ff8080;
+    --el-button-active-border-color: #ff8080;
+}
+
+/* Warning button - 柔和橙 */
+.el-button--warning {
+    --el-button-text-color: #ffffff;
+    --el-button-bg-color: var(--sw-warning);
+    --el-button-border-color: var(--sw-warning);
+    --el-button-hover-bg-color: #f3ab4f;
+    --el-button-hover-border-color: #f3ab4f;
+    --el-button-active-bg-color: #f09d3c;
+    --el-button-active-border-color: #f09d3c;
+}
+
+/* Success button - 柔和绿 */
+.el-button--success {
+    --el-button-text-color: #ffffff;
+    --el-button-bg-color: var(--sw-success);
+    --el-button-border-color: var(--sw-success);
+    --el-button-hover-bg-color: #6daa70;
+    --el-button-hover-border-color: #6daa70;
+    --el-button-active-bg-color: #5e9c61;
+    --el-button-active-border-color: #5e9c61;
+}
+
+/* Small size buttons */
 .el-button--small {
     height: 28px;
-    padding: 4px 8px;
+    padding: 4px 8px !important;
     font-size: 13px;
 }
 
+.el-button--small.el-button--danger,
+.el-button--small.el-button--warning,
+.el-button--small.el-button--success {
+    padding: 4px 8px !important;  /* 确保small尺寸的危险/警告/成功按钮也是8px */
+}
+
+/* Mini size buttons */
 .el-button--mini {
     height: 24px;
-    padding: 3px 9px;
+    padding: 3px 8px !important;  /* 改为8px以保持一致 */
     font-size: 12px;
+}
+
+.el-button--mini.el-button--danger,
+.el-button--mini.el-button--warning,
+.el-button--mini.el-button--success {
+    padding: 3px 8px !important;
 }
 
 /* === 响应式调整 === */

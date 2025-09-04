@@ -304,9 +304,28 @@
     flex: 1;
 }
 
-/* Pantone groups take up equal space */
-.color-value-group.pantone-group {
-    flex: 1;
+/* Pantone row special layout - align with first row columns */
+.pantone-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Pantone C - takes first column space, can expand if needed */
+.pantone-c-group {
+    flex: 1 0 0; /* Same as regular color-value-group */
+    min-width: 0;
+}
+
+/* Pantone U - takes second column space (aligned with CMYK) */
+.pantone-u-group {
+    flex: 1 0 0; /* Same flex as CMYK column */
+    min-width: 0;
+}
+
+/* Spacer to maintain three-column layout alignment */
+.pantone-spacer {
+    flex: 1 0 0; /* Takes third column space like HEX */
 }
 
 .color-label-inline {
