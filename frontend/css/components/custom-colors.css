@@ -304,28 +304,73 @@
     flex: 1;
 }
 
-/* Pantone row special layout - align with first row columns */
+/* Pantone row special layout - grid-based for perfect alignment */
 .pantone-row {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(calc(33.33% - 5.33px), max-content) minmax(calc(33.33% - 5.33px), max-content) 1fr;
     gap: 8px;
+    align-items: center;
+    overflow: visible; /* Allow content to extend beyond container */
 }
 
-/* Pantone C - takes first column space, can expand if needed */
+/* Pantone C - starts at column 1, can extend right */
 .pantone-c-group {
-    flex: 1 0 0; /* Same as regular color-value-group */
-    min-width: 0;
+    grid-column: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    overflow: visible; /* Allow content to extend */
 }
 
-/* Pantone U - takes second column space (aligned with CMYK) */
+/* Pantone U - starts at column 2 (aligned with CMYK), can extend right */  
 .pantone-u-group {
-    flex: 1 0 0; /* Same flex as CMYK column */
-    min-width: 0;
+    grid-column: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    overflow: visible; /* Allow content to extend */
 }
 
-/* Spacer to maintain three-column layout alignment */
+/* Spacer - takes column 3 */
 .pantone-spacer {
-    flex: 1 0 0; /* Takes third column space like HEX */
+    grid-column: 3;
+    min-width: 0; /* Can shrink completely */
+}
+
+/* Keep text on one line - never wrap or truncate */
+.pantone-c-group > span,
+.pantone-u-group > span {
+    white-space: nowrap; /* Prevent wrapping */
+    overflow: visible; /* No truncation */
+}
+
+/* Remove all truncation - allow full text display */
+.pantone-c-group > span:last-child,
+.pantone-u-group > span:last-child {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+/* No hover state needed - text always visible */
+.pantone-row:hover .pantone-c-group > span:last-child,
+.pantone-row:hover .pantone-u-group > span:last-child {
+    /* Removed hover state - text always visible */
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+    .pantone-c-group,
+    .pantone-u-group {
+        min-width: 45%; /* Smaller minimum on mobile */
+        flex: 1 1 45%;
+    }
+    
+    .pantone-c-group > span:last-child,
+    .pantone-u-group > span:last-child {
+        white-space: normal;
+        word-break: break-word;
+    }
 }
 
 .color-label-inline {
