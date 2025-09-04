@@ -6,49 +6,26 @@
 
 /* === Grid Container === */
 .color-cards-grid {
-  display: grid;
-  gap: 8px;
-  padding: 4px 8px 70px 8px; /* Top 4px, bottom padding for fixed pagination */
-  margin: 0;
-  width: 100%;
-  
-  /* Default: 1 column, cards stretch to fill available space */
-  grid-template-columns: 1fr;
-  
-  /* Let cards have natural height, align by row */
-  grid-auto-rows: min-content;
-  align-items: start;
-}
-
-/* Single column on smaller screens (< 1200px) */
-@media (max-width: 1199px) {
-  .color-cards-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Two columns when screen width ≥ 1200px */
-@media (min-width: 1200px) {
-  .color-cards-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Three columns for ultra-wide screens (≥ 1800px) */
-@media (min-width: 1800px) {
-  .color-cards-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  display: flex;
+  flex-wrap: wrap;
+  margin: -4px; /* Negative margin to offset card margins */
+  padding: 0 4px 66px 4px; /* Adjusted padding */
+  width: calc(100% + 8px); /* Compensate for negative margins */
+  align-items: stretch; /* Equal height for items in same row */
 }
 
 /* === Card Adjustments === */
 .color-cards-grid .artwork-bar {
-  /* Remove margin that was designed for vertical list */
-  margin: 0;
+  /* Card spacing using margins */
+  margin: 4px;
   
-  /* Responsive width */
-  min-width: 100%;
-  height: auto; /* Natural height based on content */
+  /* Flexbox sizing - Default: 1 column */
+  flex: 0 0 calc(100% - 8px);
+  
+  /* Allow cards to stretch in height within their row */
+  height: auto;
+  display: flex;
+  flex-direction: column;
   
   /* Keep existing styles */
   background: var(--sw-bg-white);
@@ -60,11 +37,34 @@
   position: relative;
 }
 
+/* Two columns when screen width ≥ 1200px */
+@media (min-width: 1200px) {
+  .color-cards-grid .artwork-bar {
+    flex: 0 0 calc(50% - 8px); /* 50% minus margins */
+  }
+}
+
+/* Three columns for ultra-wide screens (≥ 1800px) */
+@media (min-width: 1800px) {
+  .color-cards-grid .artwork-bar {
+    flex: 0 0 calc(33.333% - 8px); /* 33.333% minus margins */
+  }
+}
+
+/* Keep content at natural height, don't stretch */
+.color-cards-grid .artwork-bar > div:first-child {
+  flex: 0 0 auto; /* Don't grow, keep natural height */
+}
+
+/* Push color-actions to bottom with auto margin that creates the gap */
+.color-cards-grid .color-actions {
+  margin-top: auto; /* This creates the flexible gap */
+  padding-top: 8px;
+  padding-bottom: 8px; /* Add bottom padding for better spacing */
+}
+
 /* Mobile adjustments */
 @media (max-width: 819px) {
-  .color-cards-grid .artwork-bar {
-    min-width: 100%;
-  }
   
   /* Allow 适用层 (usage layers) to wrap */
   .color-cards-grid .usage-chips {
