@@ -77,9 +77,7 @@
     font-size: 12px;
   }
   
-  .color-cards-grid .color-actions .el-button .el-icon {
-    margin-right: 2px;
-  }
+  /* el-icon margin already set globally to 2px in buttons.css */
 }
 
 /* Hover effect with grey shadow (no layout shift) */

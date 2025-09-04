@@ -4,6 +4,33 @@
  * @module components/buttons
  */
 
+/* === Global Icon Margin Consolidation === */
+/* All icons should have consistent 2px right margin */
+.el-icon,
+.tab-icon,
+.btn-icon {
+    margin-right: 2px;
+}
+
+/* Text spans should have no margin */
+.text-full,
+.text-medium {
+    margin: 0 !important;  /* Override Element Plus default margin */
+}
+
+/* Element Plus adds margin-left to elements after icons - override it */
+.el-button .el-icon + span,
+.el-button .el-icon + .text-full,
+.el-button .el-icon + .text-medium {
+    margin-left: 0 !important;
+}
+
+/* Remove all button margins in header tools area for compact layout */
+.app-header-tools .el-button,
+.app-header-tools button {
+    margin: 0 !important;
+}
+
 /* === 基础按钮样式 === */
 .btn-base {
     display: inline-flex;
@@ -52,9 +79,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 5px 14px;
-    height: 32px;
-    min-width: 80px;
+    padding: 5px 8px;
+    height: 30px;  /* Standardized to 30px to match other header buttons */
     font-size: 13px;
     font-weight: 500;
     border-radius: var(--sw-radius-sm);
@@ -90,7 +116,7 @@
 .dual-toggle-group button,
 .dual-toggle-group .el-button {
     height: 30px;
-    padding: 0 12px;
+    padding: 0 8px;
     margin: 0 !important;
     font-size: 13px;
     border: none !important;
@@ -213,15 +239,15 @@
 .add-button {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    height: 32px;
-    padding: 0 14px;
+    /* No gap - icon margin handles spacing */
+    height: 30px;  /* Match other header buttons */
+    padding: 0 8px;
 }
 
 /* === 操作按钮 === */
 .el-button--small {
     height: 28px;
-    padding: 4px 14px;
+    padding: 4px 8px;
     font-size: 13px;
 }
 

@@ -54,41 +54,14 @@
     align-items: center;
 }
 
-/* Tab切换组 - 页面导航按钮 */
+/* Tab切换组 - 页面导航按钮容器 (布局样式) */
 .tab-switch-group {
     display: inline-flex;
     gap: 6px;
     align-items: center;
 }
 
-.tab-switch {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px 14px;
-    height: 30px;
-    min-width: 90px;
-    font-size: 13px;
-    font-weight: 500;
-    border-radius: var(--sw-radius-sm);
-    border: 1px solid var(--sw-border-light);
-    background: var(--sw-bg-white);
-    color: var(--sw-text-secondary);
-    cursor: pointer;
-    transition: all var(--sw-transition-fast);
-}
-
-.tab-switch:hover {
-    background: var(--sw-bg-light);
-    border-color: var(--sw-primary);
-    color: var(--sw-primary);
-}
-
-.tab-switch.active {
-    background: var(--sw-primary);
-    border-color: var(--sw-primary);
-    color: white;
-}
+/* Tab switch button styles moved to buttons.css for consistency */
 
 /* === 搜索区域 === */
 .app-header-search {
@@ -105,8 +78,8 @@
 /* === Header Action Buttons === */
 .app-header-right .el-button {
     height: 30px !important;
-    padding: 0 12px !important;
-    margin-left: 0 !important;
+    padding: 0 8px !important;
+    margin: 0 !important;
 }
 
 /* Ensure all header buttons have consistent height */
@@ -226,7 +199,7 @@
 .dual-toggle-group .el-button {
     height: 100% !important;
     max-height: 28px !important;
-    padding: 0 12px;
+    padding: 0 8px;
     margin: 0 !important;
     font-size: 13px;
     border: none !important;
@@ -261,12 +234,7 @@
     color: white;
 }
 
-/* 添加按钮 */
-.add-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
+/* Add button styles moved to buttons.css for consistency */
 
 @media (max-width: 768px) {
     .app-header-tools {
@@ -287,11 +255,7 @@
 .text-full { display: inline; }
 .text-medium { display: none; }
 
-/* Icons in buttons - always visible */
-.tab-icon,
-.btn-icon {
-    margin-right: 4px;
-}
+/* Icon margin styles moved to buttons.css for consolidation (2px) */
 
 /* Stage 2: Medium Text (1200px-1400px) */
 @media (max-width: 1400px) and (min-width: 1200px) {
@@ -325,8 +289,7 @@
     .tab-switch .text-full { display: none; }
     .tab-switch .text-medium { display: inline; }
     .tab-switch {
-        min-width: 70px;
-        padding: 5px 10px;
+        padding: 5px 8px;  /* Keep 8px to match base style */
     }
     
     /* Tool buttons: Hide all text, icons only */
@@ -349,7 +312,9 @@
     }
     
     /* Remove icon margin when no text */
+    .app-header-tools .el-button:not(.add-button) .el-icon,
     .app-header-tools .el-button:not(.add-button) .btn-icon,
+    .dual-toggle-group .el-icon,
     .dual-toggle-group .btn-icon {
         margin-right: 0;
     }
@@ -391,11 +356,10 @@
     .tab-switch .text-full { display: none; }
     .tab-switch .text-medium { display: none; }
     .tab-switch {
-        min-width: auto;
-        width: 36px;
         padding: 5px;
     }
-    .tab-switch .tab-icon {
+    .tab-switch .tab-icon,
+    .tab-switch .el-icon {
         margin-right: 0;
     }
     
@@ -410,10 +374,10 @@
         min-width: 30px;
     }
     
-    /* Remove all icon margins */
+    /* Remove all icon margins in icon-only mode */
     .tab-icon,
     .btn-icon,
-    .app-header-tools .el-icon {
+    .el-icon {
         margin-right: 0 !important;
     }
     
@@ -490,13 +454,13 @@
     /* Tab buttons: Show medium text */
     .tab-switch {
         flex: 1;
-        min-width: auto;
         padding: 5px 8px;
     }
     .tab-switch .text-full { display: none; }
     .tab-switch .text-medium { display: inline; }
-    .tab-switch .tab-icon {
-        margin-right: 4px;
+    .tab-switch .tab-icon,
+    .tab-switch .el-icon {
+        margin-right: 4px;  /* Restore margin in mobile where text is visible */
     }
     
     .tab-switch-group {
@@ -520,9 +484,7 @@
     
     /* Add button shows abbreviated text */
     .add-button .text-medium { display: inline; }
-    .add-button .el-icon {
-        margin-right: 2px;
-    }
+    /* el-icon margin already set globally to 2px in buttons.css */
     
     /* Dual toggle groups */
     .dual-toggle-group {
