@@ -131,15 +131,6 @@
     padding: 16px 0;
 }
 
-@media (max-width: 768px) {
-    .mont-marte-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 12px;
-    }
-}
+/* Removed 768px media query - no longer using this breakpoint */
 
-@media (max-width: 480px) {
-    .mont-marte-grid {
-        grid-template-columns: 1fr;
-    }
-}
+/* Removed 480px media query - page has min-width of 720px */

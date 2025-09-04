@@ -159,15 +159,4 @@
 }
 
 /* === 响应式调整 === */
-@media (max-width: 768px) {
-    .chips-container {
-        gap: 2px;
-    }
-    
-    .mf-chip,
-    .formula-chip,
-    .usage-chip {
-        font-size: 11px;
-        padding: 1px 4px;
-    }
-}
+/* Removed 768px media query - no longer using this breakpoint */

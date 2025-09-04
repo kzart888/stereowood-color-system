@@ -146,10 +146,11 @@
 }
 
 .layer-table td strong {
-    display: block;
+    display: inline-block;
     font-size: 13px;
     color: var(--sw-text-primary);
-    margin-bottom: 4px;
+    margin-right: 8px;
+    margin-bottom: 2px;
 }
 
 /* 层单元格 - 修改为横向布局 */
@@ -443,38 +444,6 @@
 }
 
 /* === 响应式布局 === */
-@media (max-width: 768px) {
-    .artwork-bar {
-        margin: var(--sw-gap-sm) var(--sw-gap-sm) var(--sw-gap-md) var(--sw-gap-sm);
-    }
-    
-    .scheme-thumbnail {
-        width: 60px;
-        height: 60px;
-    }
-    
-    .layer-table {
-        font-size: 11px;
-    }
-    
-    .layer-table th,
-    .layer-table td {
-        padding: 4px;
-    }
-}
+/* Removed 768px media query - maintain consistent thumbnail size and spacing */
 
-@media (max-width: 480px) {
-    .artwork-bar {
-        margin: var(--sw-gap-xs) var(--sw-gap-xs) var(--sw-gap-sm) var(--sw-gap-xs);
-    }
-    
-    .color-actions {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .scheme-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-}
+/* Removed 480px media query - page has min-width of 720px */

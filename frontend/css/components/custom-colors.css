@@ -263,6 +263,7 @@
 .header-meta {
     font-size: 11px;
     color: var(--sw-text-muted);
+    white-space: nowrap;  /* Prevent wrapping since min-width is 720px */
 }
 
 /* === Color Information Display === */

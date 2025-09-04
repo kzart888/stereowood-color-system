@@ -106,7 +106,6 @@
   background: var(--sw-bg-white);
   border-top: 1px solid var(--sw-border-light);
   gap: 16px;
-  flex-wrap: wrap;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -130,6 +129,11 @@
   gap: 8px;
   flex: 1;
   justify-content: center;
+}
+
+/* Remove all margins from pagination navigation buttons */
+.pagination-controls .el-button {
+  margin: 0 !important;
 }
 
 /* Page numbers */
@@ -191,48 +195,41 @@
 }
 
 /* === Responsive Pagination === */
-@media (max-width: 768px) {
-  .pagination-container {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
+
+/* Prevent pagination bar from wrapping */
+.pagination-container {
+  flex-wrap: nowrap !important;
+  white-space: nowrap;
+}
+
+/* Show only icons for pagination buttons between 720-960px */
+@media (max-width: 960px) {
+  /* Hide text spans regardless of position (before or after icon) */
+  .pagination-controls .el-button > span > span:not(.el-icon) {
+    display: none !important;
   }
   
-  .pagination-controls {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  
-  .pagination-info,
-  .items-per-page {
-    justify-content: center;
-  }
-  
-  /* Smaller buttons on mobile */
+  /* Keep buttons properly sized for icons */
   .pagination-controls .el-button {
-    padding: 5px 10px;
-    font-size: 12px;
+    padding: 0 8px;
+    min-width: 32px;
   }
   
-  /* Hide button text on very small screens, show only icons */
-  @media (max-width: 480px) {
-    .pagination-controls .el-button span:not(.el-icon) {
-      display: none;
-    }
-    
-    .pagination-controls .el-button .el-icon {
-      margin: 0;
-    }
+  /* Ensure icons remain visible and properly sized */
+  .pagination-controls .el-button .el-icon {
+    margin: 0 !important;
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    line-height: 1;
+    vertical-align: middle;
   }
   
-  .page-numbers {
-    margin: 8px 0;
-  }
-  
-  .page-numbers button {
-    min-width: 28px;
-    height: 28px;
-    font-size: 12px;
+  /* Ensure SVG icons inside el-icon are visible */
+  .pagination-controls .el-button .el-icon svg {
+    width: 16px !important;
+    height: 16px !important;
+    display: block !important;
   }
 }
 

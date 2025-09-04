@@ -172,7 +172,6 @@
     align-items: center;
     gap: var(--sw-actions-gap);
     flex-wrap: nowrap;
-    min-width: 450px;
     justify-content: flex-end;
     margin-left: 0;
     padding-left: 0;
@@ -236,18 +235,13 @@
 
 /* Add button styles moved to buttons.css for consistency */
 
-@media (max-width: 768px) {
-    .app-header-tools {
-        width: 100%;
-        justify-content: center;
-    }
-}
+/* Removed old 768px media query to maintain minimum width */
 
 /* ========================================
    RESPONSIVE HEADER PROGRESSIVE TEXT STAGES
    ======================================== */
 
-/* Stage 1: Full Display (>1400px) - Default */
+/* Stage 1: Full Display (>1460px) - Default */
 /* All text versions visible by default */
 .app-title-full { display: inline; }
 .app-title-medium { display: none; }
@@ -257,8 +251,8 @@
 
 /* Icon margin styles moved to buttons.css for consolidation (2px) */
 
-/* Stage 2: Medium Text (1200px-1400px) */
-@media (max-width: 1400px) and (min-width: 1200px) {
+/* Stage 2: Medium Text (1000px-1460px) */
+@media (max-width: 1460px) and (min-width: 1000px) {
     /* Title: Show medium version */
     .app-title-full { display: none; }
     .app-title-medium { display: inline; }
@@ -276,74 +270,17 @@
     .app-header-search {
         flex: 0 0 240px;
     }
-}
-
-/* Stage 3: Minimal Text (900px-1200px) */
-@media (max-width: 1199px) and (min-width: 900px) {
-    /* Title: Show short version */
-    .app-title-full { display: none; }
-    .app-title-medium { display: none; }
-    .app-title-short { display: inline; }
-    
-    /* Tab buttons: Use medium text */
-    .tab-switch .text-full { display: none; }
-    .tab-switch .text-medium { display: inline; }
-    .tab-switch {
-        padding: 5px 8px;  /* Keep 8px to match base style */
-    }
-    
-    /* Tool buttons: Hide all text, icons only */
-    .app-header-tools .text-full { display: none; }
-    .app-header-tools .text-medium { display: none; }
-    
-    /* Add button special handling - always show text */
-    .add-button .text-full { display: none; }
-    .add-button .text-medium { display: inline; }
-    
-    /* Adjust button padding for icon-only */
-    .app-header-tools .el-button:not(.add-button) {
-        padding: 0 8px !important;
-        min-width: 30px;
-    }
-    
-    /* Dual toggle group buttons */
-    .dual-toggle-group .el-button {
-        padding: 0 8px !important;
-    }
-    
-    /* Remove icon margin when no text */
-    .app-header-tools .el-button:not(.add-button) .el-icon,
-    .app-header-tools .el-button:not(.add-button) .btn-icon,
-    .dual-toggle-group .el-icon,
-    .dual-toggle-group .btn-icon {
-        margin-right: 0;
-    }
     
     /* Keep header in single row */
     .app-header-bar {
         flex-direction: row;
         height: 48px;
-    }
-    
-    /* Search bar smaller */
-    .app-header-search {
-        flex: 0 0 200px;
-    }
-    
-    /* Reduce gaps */
-    .app-header-bar {
         gap: 12px;
-        padding: 8px 12px;
-    }
-    
-    .app-header-tools {
-        gap: 6px;
-        min-width: auto;
     }
 }
 
-/* Stage 4: Icon Only (768px-900px) */
-@media (max-width: 899px) and (min-width: 768px) {
+/* Stage 3: Icon Only (below 1000px) */
+@media (max-width: 999px) {
     /* Title: Show short version */
     .app-title-full { display: none; }
     .app-title-medium { display: none; }
@@ -356,7 +293,7 @@
     .tab-switch .text-full { display: none; }
     .tab-switch .text-medium { display: none; }
     .tab-switch {
-        padding: 5px;
+        padding: 5px 8px;
     }
     .tab-switch .tab-icon,
     .tab-switch .el-icon {
@@ -367,40 +304,48 @@
     .app-header-tools .text-full { display: none; }
     .app-header-tools .text-medium { display: none; }
     
-    /* All buttons icon-only mode */
-    .app-header-tools .el-button,
-    .app-header-tools .add-button {
+    /* Add button special handling - show abbreviated text */
+    .add-button .text-full { display: none; }
+    .add-button .text-medium { display: inline; }
+    
+    /* All buttons icon-only mode except add button */
+    .app-header-tools .el-button:not(.add-button) {
         padding: 0 8px !important;
         min-width: 30px;
     }
     
-    /* Remove all icon margins in icon-only mode */
-    .tab-icon,
-    .btn-icon,
-    .el-icon {
-        margin-right: 0 !important;
+    .app-header-tools .add-button {
+        padding: 0 8px !important;
+    }
+    
+    /* Remove icon margins in icon-only mode */
+    .app-header-tools .el-button:not(.add-button) .el-icon,
+    .app-header-tools .el-button:not(.add-button) .btn-icon,
+    .dual-toggle-group .el-icon,
+    .dual-toggle-group .btn-icon {
+        margin-right: 0;
     }
     
     /* Keep single row */
     .app-header-bar {
         flex-direction: row;
         height: 48px;
-        padding: 8px;
-        gap: 8px;
+        padding: 8px 12px;
+        gap: 10px;
     }
     
-    /* Very small search bar */
+    /* Smaller search bar */
     .app-header-search {
-        flex: 0 0 160px;
+        flex: 0 0 180px;
     }
     
     .app-header-search .el-input__wrapper {
-        padding: 0 8px !important;
+        padding: 0 10px !important;
     }
     
     /* Compact tools area */
     .app-header-tools {
-        gap: 4px;
+        gap: 6px;
         min-width: auto;
     }
     
@@ -414,84 +359,6 @@
     }
 }
 
-/* Stage 5: Mobile Wrap (<768px) */
-@media (max-width: 767px) {
-    /* Allow wrapping to vertical layout */
-    .app-header-bar {
-        flex-direction: column;
-        align-items: stretch;
-        height: auto;
-        padding: 8px;
-        gap: 8px;
-    }
-    
-    /* Top row: Title and search */
-    .app-header-left {
-        width: 100%;
-    }
-    
-    .app-title-full { display: none; }
-    .app-title-medium { display: none; }
-    .app-title-short { display: inline; }
-    .app-title {
-        font-size: 16px;
-    }
-    
-    /* Search bar full width */
-    .app-header-search {
-        flex: 1;
-        width: 100%;
-        order: 2;
-    }
-    
-    /* Center navigation tabs */
-    .app-header-center {
-        order: 3;
-        width: 100%;
-        justify-content: center;
-    }
-    
-    /* Tab buttons: Show medium text */
-    .tab-switch {
-        flex: 1;
-        padding: 5px 8px;
-    }
-    .tab-switch .text-full { display: none; }
-    .tab-switch .text-medium { display: inline; }
-    .tab-switch .tab-icon,
-    .tab-switch .el-icon {
-        margin-right: 4px;  /* Restore margin in mobile where text is visible */
-    }
-    
-    .tab-switch-group {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    /* Tool buttons at bottom */
-    .app-header-tools {
-        order: 4;
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 6px;
-        min-width: auto;
-    }
-    
-    /* Tool buttons: Icons with minimal text */
-    .app-header-tools .text-full { display: none; }
-    .app-header-tools .text-medium { display: none; }
-    
-    /* Add button shows abbreviated text */
-    .add-button .text-medium { display: inline; }
-    /* el-icon margin already set globally to 2px in buttons.css */
-    
-    /* Dual toggle groups */
-    .dual-toggle-group {
-        flex: 0 0 auto;
-    }
-    
-    .dual-toggle-group .el-button {
-        padding: 0 6px !important;
-    }
-}
+/* Stage 4: Mobile Wrap - DISABLED to maintain minimum 720px width */
+/* The mobile wrap layout is removed to enforce min-width: 720px on body */
+/* Scrollbars will appear when viewport is narrower than 720px */

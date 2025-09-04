@@ -318,15 +318,4 @@
 }
 
 /* === 响应式调整 === */
-@media (max-width: 768px) {
-    .tab-switch-group,
-    .category-switch-group {
-        justify-content: center;
-    }
-    
-    .tab-switch,
-    .category-switch {
-        min-width: auto;
-        padding: 5px 10px;
-    }
-}
+/* Removed 768px media query - keep buttons left-aligned */

@@ -16,13 +16,7 @@
     margin: 20px auto;
 }
 
-/* For smaller screens */
-@media (max-width: 768px) {
-    .color-palette-dialog .el-dialog {
-        min-width: 90vw;
-        width: 90vw !important;
-    }
-}
+/* Removed 768px media query - no longer using this breakpoint */
 
 .color-palette-dialog .el-dialog__header {
     padding: 8px 16px;
