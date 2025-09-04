@@ -59,8 +59,7 @@
 /* Push color-actions to bottom with auto margin that creates the gap */
 .color-cards-grid .color-actions {
   margin-top: auto; /* This creates the flexible gap */
-  padding-top: 8px;
-  padding-bottom: 8px; /* Add bottom padding for better spacing */
+  padding: 0px;
 }
 
 /* Mobile adjustments */
