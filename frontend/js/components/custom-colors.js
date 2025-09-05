@@ -508,6 +508,9 @@ const CustomColorsComponent = {
                 ]
             },
             
+            // Flag to disable auto-sync after first manual change
+            autoSyncDisabled: false,
+            
             _originalColorFormSnapshot: null,
             _escHandler: null,
             
@@ -1102,6 +1105,9 @@ const CustomColorsComponent = {
         openAddDialog() {
             this.editingColor = null;
             
+            // Reset auto-sync flag for new dialog
+            this.autoSyncDisabled = false;
+            
             if (this.activeCategory !== 'all') {
                 if (this.activeCategory === 'other') {
                     this.form.category_id = 'other';
@@ -1137,6 +1143,9 @@ const CustomColorsComponent = {
         
         editColor(color) {
             this.editingColor = color;
+            
+            // Disable auto-sync for editing (user has control)
+            this.autoSyncDisabled = true;
             
             const prefix = color.color_code.substring(0, 2).toUpperCase();
             const matchedCategory = this.categories.find(cat => cat.code === prefix);
@@ -1316,6 +1325,10 @@ const CustomColorsComponent = {
         onColorCodeInput(value) {
             const msg = this.getMsg();
             if (this.editingColor) return;
+            
+            // Skip auto-sync if disabled (user has made manual changes)
+            if (this.autoSyncDisabled) return;
+            
             const sjId = this.sjCategoryId;
             if (this.form.category_id === 'other' || (sjId && this.form.category_id === sjId)) return;
             if (!value) return;
@@ -1326,6 +1339,8 @@ const CustomColorsComponent = {
                 if (this.form.category_id !== sjId) {
                     this.form.category_id = sjId;
                     msg.info('已自动识别为 色精');
+                    // Disable further auto-sync after first automation
+                    this.autoSyncDisabled = true;
                 }
                 return;
             }
@@ -1338,11 +1353,15 @@ const CustomColorsComponent = {
                     if (this.form.category_id !== matchedCategory.id) {
                         this.form.category_id = matchedCategory.id;
                         msg.info(`已自动切换到 ${matchedCategory.name}`);
+                        // Disable further auto-sync after first automation
+                        this.autoSyncDisabled = true;
                     }
                 } else {
                     if (this.form.category_id !== 'other') {
                         this.form.category_id = 'other';
                         msg.warning('无法识别的前缀，已切换到"其他"');
+                        // Disable further auto-sync after first automation
+                        this.autoSyncDisabled = true;
                     }
                 }
             }
@@ -1355,10 +1374,17 @@ const CustomColorsComponent = {
         },
         
         onCategoryChange(categoryId) {
+            // Skip auto-sync if disabled (user has made manual changes)
+            if (this.autoSyncDisabled) return;
+            
             if (!this.editingColor && categoryId && categoryId !== 'other' && categoryId !== this.sjCategoryId) {
                 this.generateColorCode(categoryId);
+                // Disable further auto-sync after first automation
+                this.autoSyncDisabled = true;
             } else if (categoryId === 'other' || categoryId === this.sjCategoryId) {
                 this.form.color_code = '';
+                // Also disable auto-sync when user selects other/色精
+                this.autoSyncDisabled = true;
             }
         },
         
