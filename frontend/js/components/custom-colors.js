@@ -409,7 +409,7 @@ const CustomColorsComponent = {
             <!-- Color Palette Dialog -->
             <el-dialog
                 v-model="showColorPaletteDialog"
-                width="50%"
+                width="70%"
                 :close-on-click-modal="false"
                 class="color-palette-dialog"
                 :show-close="false"

@@ -9,7 +9,7 @@
   display: flex;
   flex-wrap: wrap;
   margin: -4px; /* Negative margin to offset card margins */
-  padding: 0 4px 66px 4px; /* Adjusted padding */
+  padding: 4px 4px 66px 4px; /* Top padding added for spacing */
   width: calc(100% + 8px); /* Compensate for negative margins */
   align-items: stretch; /* Equal height for items in same row */
 }
