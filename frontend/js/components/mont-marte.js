@@ -10,7 +10,7 @@ const MontMarteComponent = {
                 <div>
                         <div class="category-switch-group" role="tablist" aria-label="原料类别筛选">
                             <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
-                            <button v-for="cat in materialCategories" :key="cat.value" type="button" class="category-switch" :class="{active: activeCategory===cat.value}" @click="activeCategory=cat.value" role="tab" :aria-selected="activeCategory===cat.value">{{ cat.label }}</button>
+                            <button v-for="cat in montMarteCategories" :key="cat.id" type="button" class="category-switch" :class="{active: activeCategory===cat.id}" @click="activeCategory=cat.id" role="tab" :aria-selected="activeCategory===cat.id">{{ cat.name }}</button>
                         </div>
                         <div v-if="loading" class="loading">
                                 <el-icon class="is-loading"><Loading /></el-icon> 加载中...
@@ -48,7 +48,7 @@ const MontMarteComponent = {
                                                             </div>
                                         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
                                             <div class="meta-text" v-if="color.updated_at">更新：{{ $helpers.formatDate(color.updated_at) }}</div>
-                                            <div class="meta-text">分类：<template v-if="color.category">{{ mapCategoryLabel(color.category) }}</template><template v-else>（未填）</template></div>
+                                            <div class="meta-text">分类：<template v-if="color.category_id">{{ mapCategoryLabel(color.category_id) }}</template><template v-else>（未填）</template></div>
                                             <div class="meta-text">供应商：<template v-if="color.supplier_name">{{ color.supplier_name }}</template><template v-else>（未填）</template></div>
                                             <div class="meta-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="color.purchase_link_url || ''">采购：<template v-if="color.purchase_link_url">{{ color.purchase_link_url }}</template><template v-else>（未填）</template></div>
                                             <div class="meta-text">适用色：
@@ -152,9 +152,9 @@ const MontMarteComponent = {
                             <span v-if="nameDuplicate" class="dup-msg">名称重复</span>
                         </div>
                     </el-form-item>
-                    <el-form-item label="原料类别" prop="category">
-                        <el-select v-model="form.category" placeholder="请选择类别">
-                            <el-option v-for="cat in materialCategories" :key="cat.value" :label="cat.label" :value="cat.value" />
+                    <el-form-item label="原料类别" prop="category_id">
+                        <el-select v-model="form.category_id" placeholder="请选择类别">
+                            <el-option v-for="cat in montMarteCategories" :key="cat.id" :label="cat.name" :value="cat.id" />
                         </el-select>
                     </el-form-item>
 
@@ -313,7 +313,7 @@ const MontMarteComponent = {
             form: {
                 id: null,
                 name: '',
-                category: '',
+                category_id: null,  // Changed from category to category_id
                 supplier_id: null,
                 purchase_link_id: null,
                 imageFile: null,
@@ -322,14 +322,17 @@ const MontMarteComponent = {
 
             rules: {
                 name: [{ required: true, message: '请输入颜色名称', trigger: 'blur' }],
-                category: [{ required: true, message: '请选择原料类别', trigger: 'change' }]
+                category_id: [{ required: true, message: '请选择原料类别', trigger: 'change' }]
             },
 
             supplierBusy: false,
             purchaseBusy: false,
             saving: false,
             _originalFormSnapshot: null,
-            _escHandler: null
+            _escHandler: null,
+            
+            // Mont-Marte categories from API
+            montMarteCategories: []
         };
     },
     computed: {
@@ -353,7 +356,7 @@ const MontMarteComponent = {
             ];
         },
         filteredColors() {
-            let list = (this.activeCategory==='all') ? this.montMarteColors : this.montMarteColors.filter(c => (c.category||'') === this.activeCategory);
+            let list = (this.activeCategory==='all') ? this.montMarteColors : this.montMarteColors.filter(c => c.category_id === this.activeCategory);
             const q = (this.$root && this.$root.globalSearchQuery || '').trim().toLowerCase();
             if (q && this.$root.activeTab === 'mont-marte') {
                 list = list.filter(c => (c.name||'').toLowerCase().includes(q));
@@ -526,9 +529,20 @@ const MontMarteComponent = {
             }
         },
         
-        mapCategoryLabel(val) {
-            const f = this.materialCategories.find(c=>c.value===val);
-            return f?f.label:val;
+        mapCategoryLabel(categoryId) {
+            const cat = this.montMarteCategories.find(c => c.id === categoryId);
+            return cat ? cat.name : '未分类';
+        },
+        
+        async loadMontMarteCategories() {
+            try {
+                const response = await fetch(`${this.baseURL}/api/mont-marte-categories`);
+                if (!response.ok) throw new Error('Failed to fetch categories');
+                this.montMarteCategories = await response.json();
+            } catch (error) {
+                console.error('Error loading Mont-Marte categories:', error);
+                this.$message.error('加载颜料分类失败');
+            }
         },
         focusRawMaterial(id) {
             if (!id) return;
@@ -611,7 +625,7 @@ const MontMarteComponent = {
             this.editing = row;
             this.form.id = row.id;
             this.form.name = row.name || '';
-            this.form.category = row.category || '';
+            this.form.category_id = row.category_id || null;  // Changed from category to category_id
             this.form.supplier_id = row.supplier_id || null;
             this.form.purchase_link_id = row.purchase_link_id || null;
             this.form.imageFile = null;
@@ -635,7 +649,7 @@ const MontMarteComponent = {
             return {
                 id: this.form.id || null,
                 name: this.form.name || '',
-                category: this.form.category || '',
+                category_id: this.form.category_id || null,  // Changed from category to category_id
                 supplier_id: this.form.supplier_id || '',
                 purchase_link_id: this.form.purchase_link_id || '',
                 image: this.form.imagePreview ? '1' : ''
@@ -669,7 +683,7 @@ const MontMarteComponent = {
             this.form = {
                 id: null,
                 name: '',
-                category: '',
+                category_id: null,  // Changed from category to category_id
                 supplier_id: null,
                 purchase_link_id: null,
                 imageFile: null,
@@ -884,6 +898,9 @@ const MontMarteComponent = {
     },
     
     mounted() {
+        // Load Mont-Marte categories from API
+        this.loadMontMarteCategories();
+        
         // Restore pagination state on mount
         this.restorePaginationState();
         
