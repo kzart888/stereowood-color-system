@@ -151,6 +151,7 @@ ALTER TABLE mont_marte_colors ADD FOREIGN KEY (category_id) REFERENCES mont_mart
 
 #### Remove Problematic Code
 ```javascript
+
 // DELETE THIS:
 if (actualCategoryId === 'other') {
     actualCategoryId = this.categories[0]?.id || 1;

@@ -292,6 +292,10 @@ const MontMarteComponent = {
     // 注入全局数据
     inject: ['globalData'],
     data() {
+        // Smart pagination: detect test mode for reduced context usage
+        const isTestMode = window.location.search.includes('test=true') || 
+                          window.navigator.userAgent.includes('Playwright');
+        
         return {
             // 当前原料类别筛选；'all' 表示不过滤
             activeCategory: 'all',
@@ -301,7 +305,7 @@ const MontMarteComponent = {
             
             // Pagination
             currentPage: 1,
-            itemsPerPage: 12,  // Default: 12 items for compact display
+            itemsPerPage: isTestMode ? 3 : 12,  // 3 for test/automation, 12 for production
             
             // Card selection
             selectedColorId: null,

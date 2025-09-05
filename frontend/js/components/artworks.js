@@ -540,6 +540,10 @@ const ArtworksComponent = {
   `,
   inject: ['globalData'],
   data() {
+    // Smart pagination: detect test mode for reduced context usage
+    const isTestMode = window.location.search.includes('test=true') || 
+                      window.navigator.userAgent.includes('Playwright');
+    
     return {
       loading: false,
   viewMode: 'byLayer', // byLayer | byColor（全局切换）
@@ -563,7 +567,7 @@ const ArtworksComponent = {
       
       // Pagination
       currentPage: 1,
-      itemsPerPage: 12  // Default: 12 items for compact display
+      itemsPerPage: isTestMode ? 3 : 12  // 3 for test/automation, 12 for production
   , artworkRules: {
     title: [
       { required: true, message: '请输入“编号-名称”', trigger: 'blur' },

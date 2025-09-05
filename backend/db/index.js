@@ -28,10 +28,12 @@ const db = new sqlite3.Database(DB_FILE, (err) => {
 db.serialize(() => {
   // 写放大下提升并发读
   db.run('PRAGMA journal_mode = WAL;');
-  // 短时间写冲突自动等待，减少 “SQLITE_BUSY”
+  // 短时间写冲突自动等待，减少 "SQLITE_BUSY"
   db.run('PRAGMA busy_timeout = 5000;');
   // 让外键约束生效
   db.run('PRAGMA foreign_keys = ON;');
+  // 确保数据库使用UTF-8编码
+  db.run('PRAGMA encoding = "UTF-8";');
 });
 
 module.exports = { db };

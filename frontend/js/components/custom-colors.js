@@ -463,6 +463,10 @@ const CustomColorsComponent = {
     inject: ['globalData'],
     
     data() {
+        // Smart pagination: detect test mode for reduced context usage
+        const isTestMode = window.location.search.includes('test=true') || 
+                          window.navigator.userAgent.includes('Playwright');
+        
         return {
             loading: false,
             activeCategory: 'all',
@@ -473,7 +477,7 @@ const CustomColorsComponent = {
             
             // Pagination
             currentPage: 1,
-            itemsPerPage: 12,  // Default: 12 items for compact display
+            itemsPerPage: isTestMode ? 3 : 12,  // 3 for test/automation, 12 for production
             highlightCode: null,
             refreshKey: 0,
             extracting: false,
@@ -659,14 +663,15 @@ const CustomColorsComponent = {
                 }
             });
             
-            const sjIndex = result.findIndex(c=>c.code==='SJ');
-            if (sjIndex !== -1) {
-                const sjCat = result.splice(sjIndex,1)[0];
+            // ES (色精) should come after YE (黄色系)
+            const esIndex = result.findIndex(c=>c.code==='ES');
+            if (esIndex !== -1) {
+                const esCat = result.splice(esIndex,1)[0];
                 const yeIndex = result.findIndex(c=>c.code==='YE');
-                if (yeIndex !== -1) result.splice(yeIndex+1,0,sjCat); else result.push(sjCat);
+                if (yeIndex !== -1) result.splice(yeIndex+1,0,esCat); else result.push(esCat);
             }
             
-            result.push({ id: 'other', name: '其他', code: 'OTHER' });
+            // OT (其他) is now a real category from database, no need to add hardcoded one
             return result;
         },
         
@@ -690,9 +695,14 @@ const CustomColorsComponent = {
             return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
         },
         
-        sjCategoryId() {
-            const sj = this.categories.find(c=>c.code==='SJ');
-            return sj ? sj.id : null;
+        esCategoryId() {
+            const es = this.categories.find(c=>c.code==='ES');
+            return es ? es.id : null;
+        },
+        
+        otCategoryId() {
+            const ot = this.categories.find(c=>c.code==='OT');
+            return ot ? ot.id : null;
         },
         
         colorCodeDuplicate() {
@@ -1109,12 +1119,12 @@ const CustomColorsComponent = {
             this.autoSyncDisabled = false;
             
             if (this.activeCategory !== 'all') {
-                if (this.activeCategory === 'other') {
-                    this.form.category_id = 'other';
+                const categoryId = parseInt(this.activeCategory);
+                this.form.category_id = categoryId;
+                // For OT and ES categories, don't auto-generate code
+                if (categoryId === this.otCategoryId || categoryId === this.esCategoryId) {
                     this.form.color_code = '';
                 } else {
-                    const categoryId = parseInt(this.activeCategory);
-                    this.form.category_id = categoryId;
                     this.generateColorCode(categoryId);
                 }
             } else {
@@ -1151,7 +1161,7 @@ const CustomColorsComponent = {
             const matchedCategory = this.categories.find(cat => cat.code === prefix);
             
             this.form = {
-                category_id: matchedCategory ? color.category_id : 'other',
+                category_id: color.category_id, // Use the actual category_id from database
                 color_code: color.color_code,
                 formula: color.formula,
                 imageFile: null,
@@ -1182,16 +1192,8 @@ const CustomColorsComponent = {
                 this.saving = true;
                 const formData = new FormData();
                 
+                // Use the actual category_id from form (including OT category from database)
                 let actualCategoryId = this.form.category_id;
-                if (actualCategoryId === 'other') {
-                    const prefix = this.form.color_code.substring(0, 2).toUpperCase();
-                    const matchedCategory = this.categories.find(cat => cat.code === prefix);
-                    if (matchedCategory) {
-                        actualCategoryId = matchedCategory.id;
-                    } else {
-                        actualCategoryId = this.categories[0]?.id || 1;
-                    }
-                }
                 
                 formData.append('category_id', actualCategoryId);
                 formData.append('color_code', this.form.color_code);
@@ -1329,15 +1331,16 @@ const CustomColorsComponent = {
             // Skip auto-sync if disabled (user has made manual changes)
             if (this.autoSyncDisabled) return;
             
-            const sjId = this.sjCategoryId;
-            if (this.form.category_id === 'other' || (sjId && this.form.category_id === sjId)) return;
+            const esId = this.esCategoryId;
+            const otId = this.otCategoryId;
+            if (this.form.category_id === otId || (esId && this.form.category_id === esId)) return;
             if (!value) return;
             
             const firstChar = value.charAt(0);
-            const sjTriggers = ['酒','沙','红','黑','蓝'];
-            if (sjId && sjTriggers.includes(firstChar)) {
-                if (this.form.category_id !== sjId) {
-                    this.form.category_id = sjId;
+            const esTriggers = ['酒','沙','红','黑','蓝']; // Triggers for ES (色精)
+            if (esId && esTriggers.includes(firstChar)) {
+                if (this.form.category_id !== esId) {
+                    this.form.category_id = esId;
                     msg.info('已自动识别为 色精');
                     // Disable further auto-sync after first automation
                     this.autoSyncDisabled = true;
@@ -1357,8 +1360,9 @@ const CustomColorsComponent = {
                         this.autoSyncDisabled = true;
                     }
                 } else {
-                    if (this.form.category_id !== 'other') {
-                        this.form.category_id = 'other';
+                    const otId = this.otCategoryId;
+                    if (otId && this.form.category_id !== otId) {
+                        this.form.category_id = otId;
                         msg.warning('无法识别的前缀，已切换到"其他"');
                         // Disable further auto-sync after first automation
                         this.autoSyncDisabled = true;
@@ -1368,7 +1372,9 @@ const CustomColorsComponent = {
         },
         
         initForm() {
-            if (!this.editingColor && this.form.category_id && this.form.category_id !== 'other' && this.form.category_id !== this.sjCategoryId) {
+            const esId = this.esCategoryId;
+            const otId = this.otCategoryId;
+            if (!this.editingColor && this.form.category_id && this.form.category_id !== otId && this.form.category_id !== esId) {
                 this.generateColorCode(this.form.category_id);
             }
         },
@@ -1377,11 +1383,14 @@ const CustomColorsComponent = {
             // Skip auto-sync if disabled (user has made manual changes)
             if (this.autoSyncDisabled) return;
             
-            if (!this.editingColor && categoryId && categoryId !== 'other' && categoryId !== this.sjCategoryId) {
+            const esId = this.esCategoryId;
+            const otId = this.otCategoryId;
+            
+            if (!this.editingColor && categoryId && categoryId !== otId && categoryId !== esId) {
                 this.generateColorCode(categoryId);
                 // Disable further auto-sync after first automation
                 this.autoSyncDisabled = true;
-            } else if (categoryId === 'other' || categoryId === this.sjCategoryId) {
+            } else if (categoryId === otId || categoryId === esId) {
                 this.form.color_code = '';
                 // Also disable auto-sync when user selects other/色精
                 this.autoSyncDisabled = true;
@@ -1389,7 +1398,9 @@ const CustomColorsComponent = {
         },
         
         generateColorCode(categoryId) {
-            if (!categoryId || categoryId === 'other' || categoryId === this.sjCategoryId) return;
+            const esId = this.esCategoryId;
+            const otId = this.otCategoryId;
+            if (!categoryId || categoryId === otId || categoryId === esId) return;
             const code = helpers.generateColorCode(this.categories, this.customColors, categoryId);
             if (code) {
                 this.form.color_code = code;

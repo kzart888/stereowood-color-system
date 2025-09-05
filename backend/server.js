@@ -28,6 +28,17 @@ app.use(cors());                                     // 允许跨域请求
 app.use(express.json());                            // 解析JSON请求体
 app.use(express.urlencoded({ extended: true }));    // 解析URL编码请求体
 
+// 设置UTF-8字符编码
+app.use((req, res, next) => {
+    // 只在JSON响应时设置Content-Type
+    const originalJson = res.json;
+    res.json = function(data) {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return originalJson.call(this, data);
+    };
+    next();
+});
+
 // 静态文件服务 - 上传的图片
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

@@ -1,32 +1,31 @@
 /* =========================================================
-   Module: backend/routes/categories.js
-   Responsibility: Color categories full CRUD operations
-   Imports/Relations: Uses db from db/index
-   Origin: Extracted from backend/server.js (2025-08), enhanced 2025-01
+   Module: backend/routes/mont-marte-categories.js
+   Responsibility: Mont-Marte categories full CRUD operations
+   Created: 2025-01 (Category System Redesign)
    Contract: Mount under /api
    Notes: Returns errors as { error: message }
-   Related: custom-colors references category_id
+   Related: mont-marte-colors references category_id
    ========================================================= */
 
 const express = require('express');
 const router = express.Router();
 const { db } = require('../db/index');
 
-// GET /api/categories - List all categories with color count
-router.get('/categories', (req, res) => {
+// GET /api/mont-marte-categories - List all categories with material count
+router.get('/mont-marte-categories', (req, res) => {
   const query = `
     SELECT 
-      cc.id,
-      cc.code,
-      cc.name,
-      cc.display_order,
-      cc.created_at,
-      cc.updated_at,
-      COUNT(colors.id) as color_count
-    FROM color_categories cc
-    LEFT JOIN custom_colors colors ON cc.id = colors.category_id
-    GROUP BY cc.id
-    ORDER BY cc.display_order, cc.id
+      mc.id,
+      mc.code,
+      mc.name,
+      mc.display_order,
+      mc.created_at,
+      mc.updated_at,
+      COUNT(materials.id) as material_count
+    FROM mont_marte_categories mc
+    LEFT JOIN mont_marte_colors materials ON mc.id = materials.category_id
+    GROUP BY mc.id
+    ORDER BY mc.display_order, mc.id
   `;
   
   db.all(query, (err, rows) => {
@@ -38,8 +37,8 @@ router.get('/categories', (req, res) => {
   });
 });
 
-// POST /api/categories - Create new category
-router.post('/categories', (req, res) => {
+// POST /api/mont-marte-categories - Create new category
+router.post('/mont-marte-categories', (req, res) => {
   const { code, name, display_order } = req.body;
   
   // Validate input
@@ -50,15 +49,15 @@ router.post('/categories', (req, res) => {
   // Generate code if not provided
   let categoryCode = code;
   if (!categoryCode) {
-    // Generate code from first two letters of name or use CT (Category) + number
-    const prefix = name.length >= 2 ? name.substring(0, 2).toUpperCase() : 'CT';
+    // Generate code from first two letters of name or use MC (Material Category) + number
+    const prefix = name.length >= 2 ? name.substring(0, 2).toUpperCase() : 'MC';
     categoryCode = prefix;
   }
   
   const order = display_order || 999;
   
   db.run(
-    'INSERT INTO color_categories (code, name, display_order, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+    'INSERT INTO mont_marte_categories (code, name, display_order, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
     [categoryCode, name, order],
     function (err) {
       if (err) {
@@ -73,15 +72,15 @@ router.post('/categories', (req, res) => {
           code: categoryCode, 
           name, 
           display_order: order,
-          color_count: 0 
+          material_count: 0 
         });
       }
     }
   );
 });
 
-// PUT /api/categories/reorder - Batch update display order (must be before /:id)
-router.put('/categories/reorder', (req, res) => {
+// PUT /api/mont-marte-categories/reorder - Batch update display order (must be before /:id)
+router.put('/mont-marte-categories/reorder', (req, res) => {
   const updates = req.body; // Array of {id, display_order}
   
   if (!Array.isArray(updates)) {
@@ -97,7 +96,7 @@ router.put('/categories/reorder', (req, res) => {
     
     updates.forEach((update, index) => {
       db.run(
-        'UPDATE color_categories SET display_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        'UPDATE mont_marte_categories SET display_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [update.display_order, update.id],
         (err) => {
           if (err) {
@@ -125,8 +124,8 @@ router.put('/categories/reorder', (req, res) => {
   });
 });
 
-// PUT /api/categories/:id - Rename category
-router.put('/categories/:id', (req, res) => {
+// PUT /api/mont-marte-categories/:id - Rename category
+router.put('/mont-marte-categories/:id', (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
   
@@ -135,7 +134,7 @@ router.put('/categories/:id', (req, res) => {
   }
   
   db.run(
-    'UPDATE color_categories SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    'UPDATE mont_marte_categories SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
     [name, id],
     function (err) {
       if (err) {
@@ -149,13 +148,13 @@ router.put('/categories/:id', (req, res) => {
   );
 });
 
-// DELETE /api/categories/:id - Delete category (with protection)
-router.delete('/categories/:id', (req, res) => {
+// DELETE /api/mont-marte-categories/:id - Delete category (with protection)
+router.delete('/mont-marte-categories/:id', (req, res) => {
   const { id } = req.params;
   
-  // First check if category has any colors
+  // First check if category has any materials
   db.get(
-    'SELECT COUNT(*) as count FROM custom_colors WHERE category_id = ?',
+    'SELECT COUNT(*) as count FROM mont_marte_colors WHERE category_id = ?',
     [id],
     (err, row) => {
       if (err) {
@@ -164,12 +163,12 @@ router.delete('/categories/:id', (req, res) => {
       
       if (row.count > 0) {
         return res.status(400).json({ 
-          error: `该分类下有 ${row.count} 个颜色，无法删除` 
+          error: `该分类下有 ${row.count} 个颜料，无法删除` 
         });
       }
       
       // Safe to delete
-      db.run('DELETE FROM color_categories WHERE id = ?', [id], function (err) {
+      db.run('DELETE FROM mont_marte_categories WHERE id = ?', [id], function (err) {
         if (err) {
           res.status(500).json({ error: err.message });
         } else if (this.changes === 0) {

@@ -15,6 +15,7 @@ const router = express.Router();
 // Note: Each route file already defines its full path (e.g., /custom-colors)
 // So we mount them at the root level here
 router.use(require('./categories'));
+router.use(require('./mont-marte-categories'));
 router.use(require('./dictionaries'));
 router.use(require('./mont-marte-colors'));
 router.use(require('./custom-colors'));

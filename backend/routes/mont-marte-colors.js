@@ -33,10 +33,12 @@ router.get('/mont-marte-colors', (req, res) => {
   SELECT m.id, m.name, m.image_path, m.updated_at,
            m.supplier_id, s.name AS supplier_name,
        m.purchase_link_id, p.url AS purchase_link_url,
-       m.category
+       m.category,
+       m.category_id, mc.name AS category_name, mc.code AS category_code
       FROM mont_marte_colors m
       LEFT JOIN suppliers s ON s.id = m.supplier_id
       LEFT JOIN purchase_links p ON p.id = m.purchase_link_id
+      LEFT JOIN mont_marte_categories mc ON mc.id = m.category_id
      ORDER BY LOWER(m.name) ASC
   `;
   db.all(sql, [], (err, rows) => {
@@ -47,9 +49,10 @@ router.get('/mont-marte-colors', (req, res) => {
 
 // POST /api/mont-marte-colors
 router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
-  const { name, category } = req.body;
+  const { name, category, category_id } = req.body;
   const supplier_id = req.body.supplier_id ? Number(req.body.supplier_id) : null;
   const purchase_link_id = req.body.purchase_link_id ? Number(req.body.purchase_link_id) : null;
+  const actualCategoryId = category_id ? Number(category_id) : null;
   
   let image_path = null;
   // 处理图片上传
@@ -59,12 +62,15 @@ router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
   }
 
   if (!name || !name.trim()) return res.status(400).json({ error: '颜色名称不能为空' });
-  if (!category || !category.trim()) return res.status(400).json({ error: '原料类别不能为空' });
+  // Support both old (category text) and new (category_id) for backward compatibility
+  if (!actualCategoryId && (!category || !category.trim())) {
+    return res.status(400).json({ error: '原料类别不能为空' });
+  }
 
   db.run(
-  `INSERT INTO mont_marte_colors(name, image_path, supplier_id, purchase_link_id, category)
-   VALUES (?, ?, ?, ?, ?)`,
-  [name.trim(), image_path, supplier_id, purchase_link_id, category.trim()],
+  `INSERT INTO mont_marte_colors(name, image_path, supplier_id, purchase_link_id, category, category_id)
+   VALUES (?, ?, ?, ?, ?, ?)`,
+  [name.trim(), image_path, supplier_id, purchase_link_id, category ? category.trim() : null, actualCategoryId],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       const id = this.lastID;
@@ -72,10 +78,11 @@ router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
   `SELECT m.id, m.name, m.image_path, m.updated_at,
                 m.supplier_id, s.name AS supplier_name,
     m.purchase_link_id, p.url AS purchase_link_url,
-    m.category
+    m.category, m.category_id, mc.name AS category_name, mc.code AS category_code
            FROM mont_marte_colors m
            LEFT JOIN suppliers s ON s.id = m.supplier_id
            LEFT JOIN purchase_links p ON p.id = m.purchase_link_id
+           LEFT JOIN mont_marte_categories mc ON mc.id = m.category_id
           WHERE m.id = ?`,
         [id],
         (err2, row) => {
@@ -90,9 +97,10 @@ router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
 // PUT /api/mont-marte-colors/:id
 router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) => {
   const colorId = req.params.id;
-  const { name, existingImagePath, category } = req.body;
+  const { name, existingImagePath, category, category_id } = req.body;
   const supplier_id = req.body.supplier_id ? Number(req.body.supplier_id) : null;
   const purchase_link_id = req.body.purchase_link_id ? Number(req.body.purchase_link_id) : null;
+  const actualCategoryId = category_id ? Number(category_id) : null;
 
   db.get('SELECT name, image_path FROM mont_marte_colors WHERE id = ?', [colorId], async (err, oldData) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -112,9 +120,9 @@ router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) =>
 
     db.run(
       `UPDATE mont_marte_colors
-         SET name = ?, image_path = ?, supplier_id = ?, purchase_link_id = ?, category = ?, updated_at = CURRENT_TIMESTAMP
+         SET name = ?, image_path = ?, supplier_id = ?, purchase_link_id = ?, category = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [name, newImagePath, supplier_id, purchase_link_id, (category||'').trim() || null, colorId],
+      [name, newImagePath, supplier_id, purchase_link_id, (category||'').trim() || null, actualCategoryId, colorId],
       function (updateErr) {
         if (updateErr) return res.status(400).json({ error: updateErr.message });
 
@@ -132,10 +140,11 @@ router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) =>
       `SELECT m.id, m.name, m.image_path, m.updated_at,
                     m.supplier_id, s.name AS supplier_name,
         m.purchase_link_id, p.url AS purchase_link_url,
-        m.category
+        m.category, m.category_id, mc.name AS category_name, mc.code AS category_code
                FROM mont_marte_colors m
                LEFT JOIN suppliers s ON s.id = m.supplier_id
                LEFT JOIN purchase_links p ON p.id = m.purchase_link_id
+               LEFT JOIN mont_marte_categories mc ON mc.id = m.category_id
               WHERE m.id = ?`,
             [colorId],
             (qErr, row) => {
