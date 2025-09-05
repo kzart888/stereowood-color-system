@@ -878,6 +878,19 @@ const ArtworksComponent = {
     },
     focusSchemeUsage({ artworkId, schemeId, layers, colorCode }) {
       if (!schemeId) return;
+      
+      // Find the artwork that contains this scheme
+      const artworkIndex = this.artworks.findIndex(a => a.id === artworkId);
+      if (artworkIndex === -1) return;
+      
+      // Calculate which page the artwork is on
+      const targetPage = this.itemsPerPage === 0 ? 1 : Math.floor(artworkIndex / this.itemsPerPage) + 1;
+      
+      // Navigate to the correct page if needed
+      if (targetPage !== this.currentPage) {
+        this.currentPage = targetPage;
+      }
+      
       // 设置高亮状态
       this.highlightSchemeId = schemeId;
       this.highlightColorCode = colorCode || '';
@@ -906,7 +919,7 @@ const ArtworksComponent = {
       this._highlightTimer = setTimeout(()=>{
         this.highlightSchemeId = null; this.highlightColorCode=''; this.highlightLayers=[]; this._highlightTimer=null;
       }, 2000);
-      // 滚动定位
+      // 滚动定位 - wait for page change to render
       this.$nextTick(() => {
         const el = this._schemeRefs.get(schemeId);
         if (el && el.scrollIntoView) {

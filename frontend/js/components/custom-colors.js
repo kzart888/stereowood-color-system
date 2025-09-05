@@ -1419,14 +1419,13 @@ const CustomColorsComponent = {
         focusCustomColor(code) {
             if (this.activeCategory !== 'all') this.activeCategory = 'all';
             
-            // Find the color in all colors
-            const allColors = this.globalData.customColors?.value || [];
-            const targetIndex = allColors.findIndex(c => c.color_code === code);
+            // Find the color in filtered colors (which determines pagination)
+            const targetIndex = this.filteredColors.findIndex(c => c.color_code === code);
             
             if (targetIndex === -1) return;
             
-            // Calculate which page the color is on
-            const targetPage = Math.floor(targetIndex / this.itemsPerPage) + 1;
+            // Calculate which page the color is on based on filtered list
+            const targetPage = this.itemsPerPage === 0 ? 1 : Math.floor(targetIndex / this.itemsPerPage) + 1;
             
             // Navigate to the correct page if needed
             if (targetPage !== this.currentPage) {
