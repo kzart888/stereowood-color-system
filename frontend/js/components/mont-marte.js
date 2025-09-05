@@ -869,6 +869,13 @@ const MontMarteComponent = {
             if (this.currentPage > newVal && newVal > 0) {
                 this.currentPage = newVal;
             }
+        },
+        
+        // Clear validation error when there's a duplicate
+        nameDuplicate(val) {
+            if (val && this.$refs.formRef) {
+                this.$refs.formRef.clearValidate('name');
+            }
         }
     },
     

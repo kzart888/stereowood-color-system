@@ -271,3 +271,38 @@
 .color-actions .el-button--danger {
     min-width: 70px;
 }
+
+/* === 内联重复提示样式 === */
+.dup-inline-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.dup-inline-row .el-input {
+    width: 240px !important; /* Fixed width to prevent expansion */
+    flex-shrink: 0;
+}
+
+/* Ensure the input wrapper doesn't expand */
+.dup-inline-row .el-input__wrapper {
+    width: 100%;
+}
+
+.dup-msg {
+    color: var(--el-color-danger);
+    font-size: 12px; /* Match el-form-item__error font size */
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: 4px; /* Small gap after input */
+}
+
+/* Position validation error inline when using dup-inline-row */
+.el-form-item__content .dup-inline-row ~ .el-form-item__error {
+    position: absolute;
+    left: 252px; /* Position after 240px input + 12px gap */
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+}

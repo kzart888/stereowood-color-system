@@ -215,8 +215,10 @@ const CustomColorsComponent = {
                     </el-form-item>
                     
                     <el-form-item label="颜色编号" prop="color_code">
-                        <el-input v-model="form.color_code" placeholder="如：BU001" @input="onColorCodeInput" />
-                        <div v-if="colorCodeDuplicate" class="dup-msg">该编号已存在</div>
+                        <div class="dup-inline-row">
+                            <el-input v-model="form.color_code" placeholder="如：BU001" @input="onColorCodeInput" />
+                            <span v-if="colorCodeDuplicate" class="dup-msg">该编号已存在</span>
+                        </div>
                     </el-form-item>
                     
                     <el-form-item label="配方">
@@ -1848,6 +1850,13 @@ const CustomColorsComponent = {
             // Adjust current page if it exceeds total pages
             if (this.currentPage > newVal && newVal > 0) {
                 this.currentPage = newVal;
+            }
+        },
+        
+        // Clear validation error when there's a duplicate
+        colorCodeDuplicate(val) {
+            if (val && this.$refs.formRef) {
+                this.$refs.formRef.clearValidate('color_code');
             }
         }
     },
