@@ -109,8 +109,8 @@ async function initDatabase() {
     FOREIGN KEY (scheme_id) REFERENCES color_schemes (id)
   )`);
 
-  // 确保新增色系"色精"存在（代码 SJ）—— 幂等插入
-  db.run('INSERT OR IGNORE INTO color_categories (code, name) VALUES (?, ?)', ['SJ', '色精']);
+  // 初始化所有默认分类（使用英文代码）
+  // 注意：这些将在 runMigrations 中进一步完善
 }
 
 // 后续迁移：创建字典表与原表增列（保持与原 server.js 一致）
@@ -271,6 +271,131 @@ async function runMigrations() {
     if (!(await columnExists('custom_colors_history', 'pantone_uncoated'))) {
       await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pantone_uncoated TEXT`);
     }
+
+    // ==================================================================
+    // Phase 1: Category System Redesign (2025-01)
+    // ==================================================================
+    
+    // 1. Add display_order and updated_at to color_categories
+    if (!(await columnExists('color_categories', 'display_order'))) {
+      await runSafe(`ALTER TABLE color_categories ADD COLUMN display_order INTEGER DEFAULT 0`);
+    }
+    if (!(await columnExists('color_categories', 'updated_at'))) {
+      // SQLite doesn't allow CURRENT_TIMESTAMP as default in ALTER TABLE
+      await runSafe(`ALTER TABLE color_categories ADD COLUMN updated_at DATETIME`);
+      // Set initial values for existing rows
+      await runSafe(`UPDATE color_categories SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL`);
+    }
+    
+    // 2. Create mont_marte_categories table
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS mont_marte_categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        display_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 3. Add category_id to mont_marte_colors
+    if (!(await columnExists('mont_marte_colors', 'category_id'))) {
+      await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN category_id INTEGER`);
+      // Add foreign key in future migration after data is migrated
+    }
+    
+    // 4. Initialize/Update color categories with English codes
+    // First, update existing SJ to ES
+    await runSafe(`UPDATE color_categories SET code = 'ES', updated_at = CURRENT_TIMESTAMP WHERE code = 'SJ'`);
+    
+    // Then insert all categories (using INSERT OR IGNORE to be idempotent)
+    const colorCategories = [
+      { code: 'BU', name: '蓝色系', order: 1 },
+      { code: 'YE', name: '黄色系', order: 2 },
+      { code: 'RD', name: '红色系', order: 3 },
+      { code: 'GN', name: '绿色系', order: 4 },
+      { code: 'VT', name: '紫色系', order: 5 },
+      { code: 'ES', name: '色精', order: 6 },
+      { code: 'OT', name: '其他', order: 999 }
+    ];
+    
+    for (const cat of colorCategories) {
+      await runSafe(
+        `INSERT OR IGNORE INTO color_categories (code, name, display_order) VALUES (?, ?, ?)`,
+        [cat.code, cat.name, cat.order]
+      );
+      // Update display_order if already exists
+      await runSafe(
+        `UPDATE color_categories SET display_order = ? WHERE code = ?`,
+        [cat.order, cat.code]
+      );
+    }
+    
+    // 5. Initialize mont_marte_categories
+    const montMarteCategories = [
+      { code: 'WB', name: '水性漆', order: 1 },
+      { code: 'OB', name: '油性漆', order: 2 },
+      { code: 'OT', name: '其他', order: 999 }
+    ];
+    
+    for (const cat of montMarteCategories) {
+      await runSafe(
+        `INSERT OR IGNORE INTO mont_marte_categories (code, name, display_order) VALUES (?, ?, ?)`,
+        [cat.code, cat.name, cat.order]
+      );
+    }
+    
+    // 6. Migrate Mont-Marte text categories to IDs
+    // Map existing text values to new category IDs
+    const categoryMapping = {
+      'water': 'WB',
+      'oil': 'OB',
+      'other': 'OT'
+    };
+    
+    for (const [oldValue, newCode] of Object.entries(categoryMapping)) {
+      await runSafe(`
+        UPDATE mont_marte_colors 
+        SET category_id = (SELECT id FROM mont_marte_categories WHERE code = ?)
+        WHERE category = ? AND category_id IS NULL
+      `, [newCode, oldValue]);
+    }
+    
+    // Handle any unmapped categories as 'OT' (Other)
+    await runSafe(`
+      UPDATE mont_marte_colors 
+      SET category_id = (SELECT id FROM mont_marte_categories WHERE code = 'OT')
+      WHERE category IS NOT NULL AND category_id IS NULL
+    `);
+    
+    // 7. Fix mis-categorized custom colors (those that don't match their category prefix)
+    // Get the OT category id
+    const otCategoryId = await new Promise((resolve, reject) => {
+      db.get(`SELECT id FROM color_categories WHERE code = 'OT'`, (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.id : null);
+      });
+    });
+    
+    if (otCategoryId) {
+      // Update colors where the prefix doesn't match the category code
+      await runSafe(`
+        UPDATE custom_colors 
+        SET category_id = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (
+          SELECT cc.id 
+          FROM custom_colors cc
+          JOIN color_categories cat ON cc.category_id = cat.id
+          WHERE UPPER(SUBSTR(cc.color_code, 1, 2)) != cat.code
+            AND cat.code != 'OT'
+            AND cat.code != 'ES'
+        )
+      `, [otCategoryId]);
+    }
+    
+    console.log('✓ Phase 1: Category system redesign completed');
+    
   } catch (e) {
     console.error('数据库迁移失败:', e);
   }
