@@ -443,6 +443,47 @@
     flex-wrap: wrap;
 }
 
+/* === 初始方案缩略图样式 === */
+.initial-thumbnail-inline {
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    border: 2px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+    vertical-align: middle;
+    margin-left: 4px;
+    transition: all var(--sw-transition-base);
+    background: var(--sw-bg-white);
+}
+
+.initial-thumbnail-inline:hover {
+    border-color: var(--sw-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
+}
+
+.initial-thumbnail-inline.no-image {
+    background: var(--sw-bg-light);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sw-text-muted);
+    font-size: 11px;
+}
+
+.initial-thumbnail-inline img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Enhanced preview for A4 documents - opens in new window style */
+.a4-preview-trigger {
+    cursor: zoom-in;
+}
+
 /* === 响应式布局 === */
 /* Removed 768px media query - maintain consistent thumbnail size and spacing */
 

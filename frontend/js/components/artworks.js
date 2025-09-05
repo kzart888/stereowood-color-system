@@ -47,8 +47,23 @@ const ArtworksComponent = {
                 </div>
                 <div style="flex: 1;">
                   <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
-                  <div class="meta-text">层数：{{ (scheme.layers || []).length }}</div>
-                  <div class="meta-text" v-if="scheme.updated_at">更新：{{ $helpers.formatDate(scheme.updated_at) }}</div>
+                  <div style="display: flex; align-items: flex-start; gap: 30px; margin-top: 4px;">
+                    <!-- 左列：层数和更新时间 -->
+                    <div>
+                      <div class="meta-text">层数：{{ (scheme.layers || []).length }}</div>
+                      <div class="meta-text" v-if="scheme.updated_at">更新：{{ $helpers.formatDate(scheme.updated_at) }}</div>
+                    </div>
+                    <!-- 右列：初始方案缩略图 -->
+                    <div style="display: flex; align-items: flex-start; gap: 8px;">
+                      <span class="meta-text" style="white-space: nowrap;">原始配色：</span>
+                      <span class="initial-thumbnail-inline a4-preview-trigger" 
+                            :class="{ 'no-image': !scheme.initial_thumbnail_path }"
+                            @click="handleInitialThumbnailClick($event, scheme)">
+                        <img v-if="scheme.initial_thumbnail_path" :src="$helpers.buildUploadURL(baseURL, scheme.initial_thumbnail_path)" />
+                        <span v-else>无</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <div class="color-actions">
                   <el-button size="small" type="primary" @click="editScheme(art, scheme)">
@@ -351,6 +366,49 @@ const ArtworksComponent = {
                   size="small" 
                   type="danger" 
                   @click="clearThumb"
+                >
+                  <el-icon><Delete /></el-icon>
+                  清除图片
+                </el-button>
+              </div>
+            </div>
+          </el-form-item>
+
+          <!-- 初始方案缩略图上传 -->
+          <el-form-item label="初始方案">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <!-- 初始方案缩略图预览区域 -->
+              <div class="scheme-thumbnail"
+                :style="{
+                  backgroundImage: schemeForm.initialThumbnailPreview ? 'url(' + schemeForm.initialThumbnailPreview + ')' : 'none',
+                  backgroundColor: schemeForm.initialThumbnailPreview ? 'transparent' : '#f0f0f0'
+                }"
+                :class="{ 'no-image': !schemeForm.initialThumbnailPreview }"
+                style="width: 80px; height: 80px; flex-shrink: 0;"
+                @click="schemeForm.initialThumbnailPreview && handleInitialPreviewClick($event)"
+              >
+                <template v-if="!schemeForm.initialThumbnailPreview">未上传图片</template>
+              </div>
+              
+              <!-- 操作按钮区域 -->
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <el-upload
+                  :auto-upload="false"
+                  :show-file-list="false"
+                  :on-change="onInitialThumbChange"
+                  accept="image/*"
+                >
+                  <el-button size="small" type="primary">
+                    <el-icon><Upload /></el-icon>
+                    选择图片
+                  </el-button>
+                </el-upload>
+                
+                <el-button 
+                  v-if="schemeForm.initialThumbnailPreview" 
+                  size="small" 
+                  type="danger" 
+                  @click="clearInitialThumb"
                 >
                   <el-icon><Delete /></el-icon>
                   清除图片
@@ -949,6 +1007,9 @@ const ArtworksComponent = {
         name: '',
         thumbnailFile: null,
         thumbnailPreview: null,
+        initialThumbnailFile: null,
+        initialThumbnailPreview: null,
+        existingInitialThumbnailPath: null,
         mappings: [{ layer: 1, colorCode: '' }]
       };
       this.showSchemeDialog = true;
@@ -963,7 +1024,10 @@ const ArtworksComponent = {
         id: scheme.id,
         name: scheme.name || '',
         thumbnailFile: null,
-  thumbnailPreview: scheme.thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.thumbnail_path) : null,
+        thumbnailPreview: scheme.thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.thumbnail_path) : null,
+        initialThumbnailFile: null,
+        initialThumbnailPreview: scheme.initial_thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.initial_thumbnail_path) : null,
+        existingInitialThumbnailPath: scheme.initial_thumbnail_path,
         mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }]
       };
       this.showSchemeDialog = true;
@@ -1065,6 +1129,93 @@ const ArtworksComponent = {
       this.schemeForm.thumbnailPreview = null;
       // 仅清预览，是否删除服务器旧图由保存时处理
     },
+    
+    // Handle initial thumbnail upload
+    onInitialThumbChange(f) {
+      if (!f || !f.raw) return;
+      this.schemeForm.initialThumbnailFile = f.raw;
+      const raw = f.raw;
+      const reader = new FileReader();
+      reader.onload = () => { this.schemeForm.initialThumbnailPreview = reader.result; };
+      reader.readAsDataURL(raw);
+    },
+    
+    clearInitialThumb() {
+      this.schemeForm.initialThumbnailFile = null;
+      this.schemeForm.initialThumbnailPreview = null;
+      // 仅清预览，是否删除服务器旧图由保存时处理
+    },
+    
+    // Handle initial preview click in edit dialog
+    handleInitialPreviewClick(event) {
+      const imageUrl = this.schemeForm.initialThumbnailPreview;
+      if (!imageUrl) return;
+      
+      // Open in new window for better A4 document viewing
+      const newWindow = window.open('', '_blank', 'width=1200,height=900,scrollbars=yes,resizable=yes');
+      if (newWindow) {
+        newWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>初始方案预览</title>
+            <style>
+              body { margin: 0; padding: 20px; background: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+              img { max-width: 100%; height: auto; background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+              .controls { position: fixed; top: 10px; right: 10px; z-index: 10; }
+              .controls button { padding: 10px 20px; margin: 0 5px; background: rgba(255,255,255,0.9); border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
+              .controls button:hover { background: white; }
+            </style>
+          </head>
+          <body>
+            <div class="controls">
+              <button onclick="window.print()">打印</button>
+              <button onclick="window.close()">关闭</button>
+            </div>
+            <img src="${imageUrl}" alt="初始方案预览" />
+          </body>
+          </html>
+        `);
+        newWindow.document.close();
+      }
+    },
+    
+    // Handle initial thumbnail click for enhanced preview
+    handleInitialThumbnailClick(event, scheme) {
+      if (!scheme.initial_thumbnail_path) return;
+      
+      const imageUrl = this.$helpers.buildUploadURL(this.baseURL, scheme.initial_thumbnail_path);
+      // Open in new window for better A4 document viewing
+      const newWindow = window.open('', '_blank', 'width=1200,height=900,scrollbars=yes,resizable=yes');
+      if (newWindow) {
+        newWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>初始方案 - ${scheme.name || '未命名'}</title>
+            <style>
+              body { margin: 0; padding: 20px; background: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+              img { max-width: 100%; height: auto; background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+              .controls { position: fixed; top: 10px; right: 10px; z-index: 10; }
+              .controls button { padding: 10px 20px; margin: 0 5px; background: rgba(255,255,255,0.9); border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
+              .controls button:hover { background: white; }
+            </style>
+          </head>
+          <body>
+            <div class="controls">
+              <button onclick="window.print()">打印</button>
+              <button onclick="window.close()">关闭</button>
+            </div>
+            <img src="${imageUrl}" alt="初始方案" />
+          </body>
+          </html>
+        `);
+        newWindow.document.close();
+      } else {
+        // Fallback to regular thumbnail preview if popup blocked
+        this.$thumbPreview && this.$thumbPreview.show(event, imageUrl);
+      }
+    },
 
     addRow() {
       const maxLayer = Math.max(0, ...this.schemeForm.mappings.map(x => Number(x.layer) || 0));
@@ -1125,6 +1276,15 @@ const ArtworksComponent = {
       // 若是编辑且未选择新图但有旧图，由后端决定是否保留
       if (!this.schemeForm.thumbnailFile && this.schemeEditing?.scheme?.thumbnail_path) {
         fd.append('existingThumbnailPath', this.schemeEditing.scheme.thumbnail_path);
+      }
+      
+      // Handle initial thumbnail
+      if (this.schemeForm.initialThumbnailFile) {
+        fd.append('initialThumbnail', this.schemeForm.initialThumbnailFile);
+      }
+      // 若是编辑且未选择新初始图但有旧初始图，由后端决定是否保留
+      if (!this.schemeForm.initialThumbnailFile && this.schemeForm.existingInitialThumbnailPath) {
+        fd.append('existingInitialThumbnailPath', this.schemeForm.existingInitialThumbnailPath);
       }
 
       this.saving = true;

@@ -14,7 +14,7 @@ const ArtworkService = require('../services/ArtworkService');
 // 文件上传配置
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/')
+        cb(null, path.join(__dirname, '..', 'uploads'))
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
@@ -70,12 +70,16 @@ router.delete('/artworks/:id', async (req, res) => {
  * POST /api/artworks/:artworkId/schemes
  * 为作品创建配色方案
  */
-router.post('/artworks/:artworkId/schemes', upload.single('thumbnail'), async (req, res) => {
+router.post('/artworks/:artworkId/schemes', upload.fields([
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'initialThumbnail', maxCount: 1 }
+]), async (req, res) => {
     try {
         const { artworkId } = req.params;
         // Frontend sends 'name' not 'scheme_name'
         const { name, layers } = req.body;
-        const thumbnail_path = req.file ? req.file.filename : null;
+        const thumbnail_path = req.files?.thumbnail?.[0]?.filename || null;
+        const initial_thumbnail_path = req.files?.initialThumbnail?.[0]?.filename || null;
         
         // 解析layers（前端可能传递JSON字符串）
         let parsedLayers = [];
@@ -91,14 +95,18 @@ router.post('/artworks/:artworkId/schemes', upload.single('thumbnail'), async (r
             artwork_id: artworkId,
             scheme_name: name,  // Map 'name' to 'scheme_name'
             thumbnail_path,
+            initial_thumbnail_path,
             layers: parsedLayers
         });
         
         res.json(newScheme);
     } catch (error) {
         // 如果创建失败，删除已上传的文件
-        if (req.file) {
-            await ArtworkService.deleteUploadedImage(req.file.filename);
+        if (req.files?.thumbnail?.[0]) {
+            await ArtworkService.deleteUploadedImage(req.files.thumbnail[0].filename);
+        }
+        if (req.files?.initialThumbnail?.[0]) {
+            await ArtworkService.deleteUploadedImage(req.files.initialThumbnail[0].filename);
         }
         res.status(500).json({ error: error.message });
     }
@@ -108,12 +116,16 @@ router.post('/artworks/:artworkId/schemes', upload.single('thumbnail'), async (r
  * PUT /api/artworks/:artworkId/schemes/:schemeId
  * 更新配色方案
  */
-router.put('/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail'), async (req, res) => {
+router.put('/artworks/:artworkId/schemes/:schemeId', upload.fields([
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'initialThumbnail', maxCount: 1 }
+]), async (req, res) => {
     try {
         const { schemeId } = req.params;
         // Frontend sends 'name' not 'scheme_name'
-        const { name, layers, existingThumbnailPath } = req.body;
-        const newThumbnailPath = req.file ? req.file.filename : existingThumbnailPath;
+        const { name, layers, existingThumbnailPath, existingInitialThumbnailPath } = req.body;
+        const newThumbnailPath = req.files?.thumbnail?.[0]?.filename || existingThumbnailPath;
+        const newInitialThumbnailPath = req.files?.initialThumbnail?.[0]?.filename || existingInitialThumbnailPath;
         
         // 解析layers
         let parsedLayers = [];
@@ -128,19 +140,26 @@ router.put('/artworks/:artworkId/schemes/:schemeId', upload.single('thumbnail'),
         await ArtworkService.updateScheme(schemeId, {
             scheme_name: name,  // Map 'name' to 'scheme_name'
             thumbnail_path: newThumbnailPath,
+            initial_thumbnail_path: newInitialThumbnailPath,
             layers: parsedLayers
         });
         
         // 如果上传了新图片且有旧图片，删除旧图片
-        if (req.file && existingThumbnailPath && existingThumbnailPath !== newThumbnailPath) {
+        if (req.files?.thumbnail?.[0] && existingThumbnailPath && existingThumbnailPath !== newThumbnailPath) {
             await ArtworkService.deleteUploadedImage(existingThumbnailPath);
+        }
+        if (req.files?.initialThumbnail?.[0] && existingInitialThumbnailPath && existingInitialThumbnailPath !== newInitialThumbnailPath) {
+            await ArtworkService.deleteUploadedImage(existingInitialThumbnailPath);
         }
         
         res.json({ success: true });
     } catch (error) {
         // 如果更新失败，删除新上传的文件
-        if (req.file) {
-            await ArtworkService.deleteUploadedImage(req.file.filename);
+        if (req.files?.thumbnail?.[0]) {
+            await ArtworkService.deleteUploadedImage(req.files.thumbnail[0].filename);
+        }
+        if (req.files?.initialThumbnail?.[0]) {
+            await ArtworkService.deleteUploadedImage(req.files.initialThumbnail[0].filename);
         }
         res.status(500).json({ error: error.message });
     }

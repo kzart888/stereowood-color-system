@@ -10,7 +10,7 @@ const path = require('path');
 // 文件存储配置
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/')
+        cb(null, path.join(__dirname, '..', 'uploads'))
     },
     filename: function (req, file, cb) {
         // 生成唯一文件名：时间戳-随机数-原始扩展名

@@ -50,6 +50,7 @@ class ArtworkService {
                         id: row.scheme_id,
                         name: row.scheme_name,  // Frontend expects 'name' not 'scheme_name'
                         thumbnail_path: row.thumbnail_path,
+                        initial_thumbnail_path: row.initial_thumbnail_path,  // Include initial thumbnail
                         created_at: row.scheme_created_at,
                         updated_at: row.scheme_updated_at,
                         layers: []
@@ -194,8 +195,15 @@ class ArtworkService {
             const schemes = await artworkQueries.getArtworkSchemes(null);
             const scheme = schemes.find(s => s.id === schemeId);
             
-            if (scheme && scheme.thumbnail_path) {
-                await this.deleteUploadedImage(scheme.thumbnail_path);
+            if (scheme) {
+                // 删除主缩略图
+                if (scheme.thumbnail_path) {
+                    await this.deleteUploadedImage(scheme.thumbnail_path);
+                }
+                // 删除初始方案缩略图
+                if (scheme.initial_thumbnail_path) {
+                    await this.deleteUploadedImage(scheme.initial_thumbnail_path);
+                }
             }
             
             const changes = await artworkQueries.deleteScheme(schemeId);

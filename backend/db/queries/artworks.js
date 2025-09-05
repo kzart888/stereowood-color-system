@@ -15,7 +15,7 @@ function getAllArtworks() {
     return new Promise((resolve, reject) => {
         db.all(`
             SELECT a.*, 
-                   cs.id as scheme_id, cs.scheme_name, cs.thumbnail_path,
+                   cs.id as scheme_id, cs.scheme_name, cs.thumbnail_path, cs.initial_thumbnail_path,
                    cs.created_at as scheme_created_at, cs.updated_at as scheme_updated_at,
                    sl.layer_number, sl.custom_color_id,
                    cc.color_code, cc.formula, cc.image_path as color_image_path
@@ -129,16 +129,16 @@ function getArtworkSchemes(artworkId) {
  * @returns {Promise<number>} 新创建的方案ID
  */
 function createScheme(schemeData) {
-    const { artwork_id, scheme_name, thumbnail_path, layers } = schemeData;
+    const { artwork_id, scheme_name, thumbnail_path, initial_thumbnail_path, layers } = schemeData;
     
     return new Promise((resolve, reject) => {
         db.serialize(() => {
             db.run('BEGIN TRANSACTION');
             
             db.run(`
-                INSERT INTO color_schemes (artwork_id, scheme_name, thumbnail_path)
-                VALUES (?, ?, ?)
-            `, [artwork_id, scheme_name, thumbnail_path], function(err) {
+                INSERT INTO color_schemes (artwork_id, scheme_name, thumbnail_path, initial_thumbnail_path)
+                VALUES (?, ?, ?, ?)
+            `, [artwork_id, scheme_name, thumbnail_path, initial_thumbnail_path], function(err) {
                 if (err) {
                     db.run('ROLLBACK');
                     return reject(err);
@@ -185,7 +185,7 @@ function createScheme(schemeData) {
  * @returns {Promise<void>}
  */
 function updateScheme(schemeId, schemeData) {
-    const { scheme_name, thumbnail_path, layers } = schemeData;
+    const { scheme_name, thumbnail_path, initial_thumbnail_path, layers } = schemeData;
     
     return new Promise((resolve, reject) => {
         db.serialize(() => {
@@ -194,9 +194,9 @@ function updateScheme(schemeId, schemeData) {
             // 更新方案基本信息
             db.run(`
                 UPDATE color_schemes 
-                SET scheme_name = ?, thumbnail_path = ?, updated_at = CURRENT_TIMESTAMP
+                SET scheme_name = ?, thumbnail_path = ?, initial_thumbnail_path = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-            `, [scheme_name, thumbnail_path, schemeId], (err) => {
+            `, [scheme_name, thumbnail_path, initial_thumbnail_path, schemeId], (err) => {
                 if (err) {
                     db.run('ROLLBACK');
                     return reject(err);
