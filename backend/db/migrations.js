@@ -394,8 +394,6 @@ async function runMigrations() {
       `, [otCategoryId]);
     }
     
-    console.log('✓ Phase 1: Category system redesign completed');
-    
   } catch (e) {
     console.error('数据库迁移失败:', e);
   }

@@ -1457,9 +1457,6 @@ const ArtworksComponent = {
           'artworks', 
           savedItems
         );
-        
-        // Log mode information
-        window.ConfigHelper.logModeInfo(config);
       }
     }
   },

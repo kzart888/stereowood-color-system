@@ -501,9 +501,6 @@ const MontMarteComponent = {
                     'mont-marte', 
                     savedItems
                 );
-                
-                // Log mode information
-                window.ConfigHelper.logModeInfo(config);
             }
         },
         

@@ -28,14 +28,5 @@ window.ConfigHelper = {
     // Check if we're in test mode
     isTestMode(appConfig) {
         return appConfig && appConfig.mode === 'test';
-    },
-    
-    // Log mode information for debugging
-    logModeInfo(appConfig) {
-        if (appConfig) {
-            const mode = appConfig.mode || 'production';
-            const itemsPerPage = appConfig.testModeItemsPerPage || 3;
-            console.log(`App Mode: ${mode}${mode === 'test' ? ` (${itemsPerPage} items/page)` : ''}`);
-        }
     }
 };

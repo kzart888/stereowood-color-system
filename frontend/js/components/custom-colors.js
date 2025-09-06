@@ -897,9 +897,6 @@ const CustomColorsComponent = {
                     'custom-colors', 
                     savedItems
                 );
-                
-                // Log mode information
-                window.ConfigHelper.logModeInfo(config);
             }
         },
         

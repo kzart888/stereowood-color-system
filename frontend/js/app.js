@@ -127,7 +127,6 @@ const app = createApp({
                 const response = await fetch(`${this.baseURL}/api/config`);
                 if (!response.ok) throw new Error('Failed to fetch config');
                 this.appConfig = await response.json();
-                console.log('App mode:', this.appConfig.mode);
             } catch (error) {
                 console.warn('Failed to load app config, using defaults:', error);
             }
