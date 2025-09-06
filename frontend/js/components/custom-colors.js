@@ -668,27 +668,9 @@ const CustomColorsComponent = {
         
         orderedCategoriesWithOther() {
             const raw = [...(this.categories||[])];
-            raw.sort((a,b)=> (a.code||'').localeCompare(b.code||''));
-            const result = [];
-            raw.forEach(cat => {
-                result.push(cat);
-                if (cat.code === 'YE') {
-                    if (!raw.some(c=>c.code==='SJ')) {
-                        // SJ should exist from backend
-                    }
-                }
-            });
-            
-            // ES (色精) should come after YE (黄色系)
-            const esIndex = result.findIndex(c=>c.code==='ES');
-            if (esIndex !== -1) {
-                const esCat = result.splice(esIndex,1)[0];
-                const yeIndex = result.findIndex(c=>c.code==='YE');
-                if (yeIndex !== -1) result.splice(yeIndex+1,0,esCat); else result.push(esCat);
-            }
-            
-            // OT (其他) is now a real category from database, no need to add hardcoded one
-            return result;
+            // Sort by display_order to match backend ordering
+            raw.sort((a,b)=> (a.display_order || 999) - (b.display_order || 999));
+            return raw;
         },
         
         categoriesWithOther() {
