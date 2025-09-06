@@ -463,9 +463,7 @@ const CustomColorsComponent = {
     inject: ['globalData'],
     
     data() {
-        // Smart pagination: detect test mode for reduced context usage
-        const isTestMode = window.location.search.includes('test=true') || 
-                          window.navigator.userAgent.includes('Playwright');
+        // Initial items per page - will be updated from app config in mounted
         
         return {
             loading: false,
@@ -477,7 +475,7 @@ const CustomColorsComponent = {
             
             // Pagination
             currentPage: 1,
-            itemsPerPage: isTestMode ? 3 : 12,  // 3 for test/automation, 12 for production
+            itemsPerPage: 12,  // Default, will be updated from app config
             highlightCode: null,
             refreshKey: 0,
             extracting: false,
@@ -879,6 +877,30 @@ const CustomColorsComponent = {
                     }
                 }
             } catch(e) {}
+        },
+        
+        // Update pagination based on app config
+        updatePaginationFromConfig() {
+            if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
+                const config = this.globalData.appConfig.value;
+                
+                // Get saved items per page preference
+                let savedItems = null;
+                try {
+                    const saved = localStorage.getItem('sw-colors-items-per-page');
+                    if (saved) savedItems = parseInt(saved);
+                } catch(e) {}
+                
+                // Use ConfigHelper to determine items per page
+                this.itemsPerPage = window.ConfigHelper.getItemsPerPage(
+                    config, 
+                    'custom-colors', 
+                    savedItems
+                );
+                
+                // Log mode information
+                window.ConfigHelper.logModeInfo(config);
+            }
         },
         
         // Card selection methods
@@ -1890,6 +1912,16 @@ const CustomColorsComponent = {
             }
         },
         
+        // Watch for app config changes
+        'globalData.appConfig.value': {
+            handler(newConfig) {
+                if (newConfig) {
+                    this.updatePaginationFromConfig();
+                }
+            },
+            deep: true
+        },
+        
         // Clear validation error when there's a duplicate
         colorCodeDuplicate(val) {
             if (val && this.$refs.formRef) {
@@ -1900,6 +1932,9 @@ const CustomColorsComponent = {
     
     // Restore pagination state on mount
     mounted() {
+        // Update items per page based on app config
+        this.updatePaginationFromConfig();
+        
         this.restorePaginationState();
         
         // Add global event listeners for selection

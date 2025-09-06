@@ -17,6 +17,12 @@ const app = createApp({
             customColorsSortMode: 'time',
             artworksSortMode: 'time',
             montMarteSortMode: 'time',
+            // System configuration from backend
+            appConfig: {
+                mode: 'production',
+                testModeItemsPerPage: 3,
+                features: {}
+            },
             // 全局搜索
             globalSearchQuery: '',
             globalSearchResults: [],
@@ -37,6 +43,7 @@ const app = createApp({
         return {
             globalData: {
                 baseURL: this.baseURL,
+                appConfig: Vue.computed(()=>this.appConfig),
                 categories: Vue.computed(()=>this.categories),
                 customColors: Vue.computed(()=>this.customColors),
                 artworks: Vue.computed(()=>this.artworks),
@@ -100,6 +107,9 @@ const app = createApp({
         async initApp() {
             this.loading = true;
             try {
+                // Load app configuration first (to determine test mode)
+                await this.loadAppConfig();
+                
                 await Promise.all([
                     this.loadCategories(),
                     this.loadCustomColors(),
@@ -111,6 +121,16 @@ const app = createApp({
                 // 初次加载后构建自配色配方同步索引
                 this._buildColorFormulaIndex();
             } catch(e) { } finally { this.loading = false; }
+        },
+        async loadAppConfig() {
+            try {
+                const response = await fetch(`${this.baseURL}/api/config`);
+                if (!response.ok) throw new Error('Failed to fetch config');
+                this.appConfig = await response.json();
+                console.log('App mode:', this.appConfig.mode);
+            } catch (error) {
+                console.warn('Failed to load app config, using defaults:', error);
+            }
         },
         async loadCategories() {
             try { const res = await api.categories.getAll(); this.categories = res.data; } catch(e){ }

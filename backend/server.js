@@ -10,6 +10,9 @@
  * 4. 启动服务器
  */
 
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -62,6 +65,20 @@ runMigrations();
 // 所有API路由都在 /api 路径下
 // 路由定义在 routes/index.js 中聚合
 app.use('/api', routes);
+
+// ========== System Config Endpoint ==========
+// Expose application mode to frontend
+app.get('/api/config', (req, res) => {
+  res.json({
+    mode: process.env.MODE || 'production',
+    testModeItemsPerPage: parseInt(process.env.TEST_MODE_ITEMS_PER_PAGE) || 3,
+    features: {
+      formulaCalculator: process.env.ENABLE_FORMULA_CALCULATOR === 'true',
+      artworkManagement: process.env.ENABLE_ARTWORK_MANAGEMENT === 'true',
+      montMarte: process.env.ENABLE_MONT_MARTE === 'true'
+    }
+  });
+});
 
 // ========== 错误处理中间件 ==========
 app.use((err, req, res, next) => {

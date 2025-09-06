@@ -292,9 +292,7 @@ const MontMarteComponent = {
     // 注入全局数据
     inject: ['globalData'],
     data() {
-        // Smart pagination: detect test mode for reduced context usage
-        const isTestMode = window.location.search.includes('test=true') || 
-                          window.navigator.userAgent.includes('Playwright');
+        // Initial items per page - will be updated from app config in mounted
         
         return {
             // 当前原料类别筛选；'all' 表示不过滤
@@ -305,7 +303,7 @@ const MontMarteComponent = {
             
             // Pagination
             currentPage: 1,
-            itemsPerPage: isTestMode ? 3 : 12,  // 3 for test/automation, 12 for production
+            itemsPerPage: 24,  // Default, will be updated from app config
             
             // Card selection
             selectedColorId: null,
@@ -483,6 +481,30 @@ const MontMarteComponent = {
                     }
                 }
             } catch(e) {}
+        },
+        
+        // Update pagination based on app config
+        updatePaginationFromConfig() {
+            if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
+                const config = this.globalData.appConfig.value;
+                
+                // Get saved items per page preference
+                let savedItems = null;
+                try {
+                    const saved = localStorage.getItem('sw-mont-marte-items-per-page');
+                    if (saved) savedItems = parseInt(saved);
+                } catch(e) {}
+                
+                // Use ConfigHelper to determine items per page
+                this.itemsPerPage = window.ConfigHelper.getItemsPerPage(
+                    config, 
+                    'mont-marte', 
+                    savedItems
+                );
+                
+                // Log mode information
+                window.ConfigHelper.logModeInfo(config);
+            }
         },
         
         // Card selection methods
@@ -889,6 +911,16 @@ const MontMarteComponent = {
             }
         },
         
+        // Watch for app config changes
+        'globalData.appConfig.value': {
+            handler(newConfig) {
+                if (newConfig) {
+                    this.updatePaginationFromConfig();
+                }
+            },
+            deep: true
+        },
+        
         // Clear validation error when there's a duplicate
         nameDuplicate(val) {
             if (val && this.$refs.formRef) {
@@ -898,6 +930,9 @@ const MontMarteComponent = {
     },
     
     mounted() {
+        // Update items per page based on app config
+        this.updatePaginationFromConfig();
+        
         // Load Mont-Marte categories from API
         this.loadMontMarteCategories();
         

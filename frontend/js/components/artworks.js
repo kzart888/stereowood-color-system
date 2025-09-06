@@ -540,9 +540,7 @@ const ArtworksComponent = {
   `,
   inject: ['globalData'],
   data() {
-    // Smart pagination: detect test mode for reduced context usage
-    const isTestMode = window.location.search.includes('test=true') || 
-                      window.navigator.userAgent.includes('Playwright');
+    // Initial items per page - will be updated from app config in mounted
     
     return {
       loading: false,
@@ -567,7 +565,7 @@ const ArtworksComponent = {
       
       // Pagination
       currentPage: 1,
-      itemsPerPage: isTestMode ? 3 : 12  // 3 for test/automation, 12 for production
+      itemsPerPage: 12  // Default, will be updated from app config
   , artworkRules: {
     title: [
       { required: true, message: '请输入“编号-名称”', trigger: 'blur' },
@@ -1439,6 +1437,30 @@ const ArtworksComponent = {
           }
         }
       } catch(e) {}
+    },
+    
+    // Update pagination based on app config
+    updatePaginationFromConfig() {
+      if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
+        const config = this.globalData.appConfig.value;
+        
+        // Get saved items per page preference
+        let savedItems = null;
+        try {
+          const saved = localStorage.getItem('sw-artworks-items-per-page');
+          if (saved) savedItems = parseInt(saved);
+        } catch(e) {}
+        
+        // Use ConfigHelper to determine items per page
+        this.itemsPerPage = window.ConfigHelper.getItemsPerPage(
+          config, 
+          'artworks', 
+          savedItems
+        );
+        
+        // Log mode information
+        window.ConfigHelper.logModeInfo(config);
+      }
     }
   },
   
@@ -1453,10 +1475,23 @@ const ArtworksComponent = {
       if (this.currentPage > newVal && newVal > 0) {
         this.currentPage = newVal;
       }
+    },
+    
+    // Watch for app config changes
+    'globalData.appConfig.value': {
+      handler(newConfig) {
+        if (newConfig) {
+          this.updatePaginationFromConfig();
+        }
+      },
+      deep: true
     }
   },
   
   async mounted() {
+    // Update items per page based on app config
+    this.updatePaginationFromConfig();
+    
     try {
       this.loading = true;
       // 恢复视图模式
