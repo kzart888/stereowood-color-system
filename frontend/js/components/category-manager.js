@@ -239,8 +239,8 @@ const CategoryManagerComponent = {
         },
 
         systemCategoryCodes() {
-            // 系统分类：其他(OT) - 不可删除或移到最前
-            return ['OT'];
+            // No system categories - all categories can be modified
+            return [];
         }
     },
 

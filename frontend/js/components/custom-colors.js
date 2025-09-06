@@ -698,10 +698,7 @@ const CustomColorsComponent = {
             return es ? es.id : null;
         },
         
-        otCategoryId() {
-            const ot = this.categories.find(c=>c.code==='OT');
-            return ot ? ot.id : null;
-        },
+        // Removed otCategoryId - OT is now treated like any other category
         
         colorCodeDuplicate() {
             const val = (this.form.color_code || '').trim();
@@ -1148,8 +1145,8 @@ const CustomColorsComponent = {
             if (this.activeCategory !== 'all') {
                 const categoryId = parseInt(this.activeCategory);
                 this.form.category_id = categoryId;
-                // For OT and ES categories, don't auto-generate code
-                if (categoryId === this.otCategoryId || categoryId === this.esCategoryId) {
+                // For ES category, don't auto-generate code
+                if (categoryId === this.esCategoryId) {
                     this.form.color_code = '';
                 } else {
                     this.generateColorCode(categoryId);
@@ -1359,8 +1356,7 @@ const CustomColorsComponent = {
             if (this.autoSyncDisabled) return;
             
             const esId = this.esCategoryId;
-            const otId = this.otCategoryId;
-            if (this.form.category_id === otId || (esId && this.form.category_id === esId)) return;
+            if (esId && this.form.category_id === esId) return;
             if (!value) return;
             
             const firstChar = value.charAt(0);
@@ -1386,22 +1382,14 @@ const CustomColorsComponent = {
                         // Disable further auto-sync after first automation
                         this.autoSyncDisabled = true;
                     }
-                } else {
-                    const otId = this.otCategoryId;
-                    if (otId && this.form.category_id !== otId) {
-                        this.form.category_id = otId;
-                        msg.warning('无法识别的前缀，已切换到"其他"');
-                        // Disable further auto-sync after first automation
-                        this.autoSyncDisabled = true;
-                    }
                 }
+                // No longer auto-switch to OT for unrecognized prefixes
             }
         },
         
         initForm() {
             const esId = this.esCategoryId;
-            const otId = this.otCategoryId;
-            if (!this.editingColor && this.form.category_id && this.form.category_id !== otId && this.form.category_id !== esId) {
+            if (!this.editingColor && this.form.category_id && this.form.category_id !== esId) {
                 this.generateColorCode(this.form.category_id);
             }
         },
@@ -1411,23 +1399,21 @@ const CustomColorsComponent = {
             if (this.autoSyncDisabled) return;
             
             const esId = this.esCategoryId;
-            const otId = this.otCategoryId;
             
-            if (!this.editingColor && categoryId && categoryId !== otId && categoryId !== esId) {
+            if (!this.editingColor && categoryId && categoryId !== esId) {
                 this.generateColorCode(categoryId);
                 // Disable further auto-sync after first automation
                 this.autoSyncDisabled = true;
-            } else if (categoryId === otId || categoryId === esId) {
+            } else if (categoryId === esId) {
                 this.form.color_code = '';
-                // Also disable auto-sync when user selects other/色精
+                // Also disable auto-sync when user selects 色精
                 this.autoSyncDisabled = true;
             }
         },
         
         generateColorCode(categoryId) {
             const esId = this.esCategoryId;
-            const otId = this.otCategoryId;
-            if (!categoryId || categoryId === otId || categoryId === esId) return;
+            if (!categoryId || categoryId === esId) return;
             const code = helpers.generateColorCode(this.categories, this.customColors, categoryId);
             if (code) {
                 this.form.color_code = code;
