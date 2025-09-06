@@ -285,6 +285,20 @@ if (typeof CategoryManagerComponent !== 'undefined') {
     app.component('category-manager', CategoryManagerComponent);
 }
 
+// 添加颜色选择对话框组件注册
+if (typeof ColorPaletteDialog !== 'undefined') {
+    app.component('color-palette-dialog', ColorPaletteDialog);
+}
+if (typeof HslColorSpaceView !== 'undefined') {
+    app.component('hsl-color-space-view', HslColorSpaceView);
+}
+if (typeof ColorWheelView !== 'undefined') {
+    app.component('color-wheel-view', ColorWheelView);
+}
+if (typeof EnhancedListView !== 'undefined') {
+    app.component('enhanced-list-view', EnhancedListView);
+}
+
 // 添加通用操作按钮组件注册 - 暂时禁用
 // if (typeof ActionButtonComponent !== 'undefined') {
 //     app.component('action-button', ActionButtonComponent);

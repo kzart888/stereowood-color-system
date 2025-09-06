@@ -3,7 +3,7 @@
  * Advanced color selection dialog with HSL and Color Wheel views
  */
 
-Vue.component('color-palette-dialog', {
+const ColorPaletteDialog = {
     template: `
         <el-dialog
             :visible.sync="dialogVisible"
@@ -281,15 +281,28 @@ Vue.component('color-palette-dialog', {
             return `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
         }
     }
-});
+};
 
-// HSL Color Space View Component
-Vue.component('hsl-color-space-view', {
+// HSL Color Space View Component - Enhanced
+const HslColorSpaceView = {
     template: `
         <div class="hsl-color-space-view">
             <!-- Hue Slider -->
             <div class="hue-slider-container">
-                <label>色相 (Hue): {{ selectedHue }}°</label>
+                <div class="hue-controls">
+                    <label>色相 (Hue): {{ selectedHue }}°</label>
+                    <div class="hue-presets">
+                        <button 
+                            v-for="preset in huePresets" 
+                            :key="preset.value"
+                            @click="selectedHue = preset.value"
+                            class="hue-preset-btn"
+                            :style="{ backgroundColor: 'hsl(' + preset.value + ', 100%, 50%)' }"
+                            :title="preset.name"
+                        >
+                        </button>
+                    </div>
+                </div>
                 <input 
                     type="range" 
                     v-model="selectedHue"
@@ -300,9 +313,20 @@ Vue.component('hsl-color-space-view', {
                 >
             </div>
             
+            <!-- Grid Size Control -->
+            <div class="grid-controls">
+                <label>网格密度: </label>
+                <el-radio-group v-model="gridSize" size="small">
+                    <el-radio-button :label="5">5x5</el-radio-button>
+                    <el-radio-button :label="10">10x10</el-radio-button>
+                    <el-radio-button :label="15">15x15</el-radio-button>
+                </el-radio-group>
+                <span class="grid-info">{{ matchedColorsCount }} 个颜色在此色相范围</span>
+            </div>
+            
             <!-- Saturation-Lightness Grid -->
             <div class="sl-grid-container">
-                <div class="sl-grid">
+                <div class="sl-grid" :style="gridStyle">
                     <div 
                         v-for="(row, rowIndex) in colorGrid" 
                         :key="rowIndex"
@@ -317,13 +341,26 @@ Vue.component('hsl-color-space-view', {
                             @mouseenter="hoverCell(cell)"
                             @mouseleave="hoveredCell = null"
                             :title="getCellTooltip(cell)"
+                            :class="{ 
+                                'has-colors': cell.colors.length > 0,
+                                'is-hovered': hoveredCell === cell
+                            }"
                         >
+                            <!-- Color count indicator -->
+                            <div v-if="cell.colors.length > 1" class="color-count">
+                                {{ cell.colors.length }}
+                            </div>
+                            
                             <!-- Show dots for actual colors -->
                             <div 
-                                v-for="color in cell.colors"
+                                v-for="(color, idx) in cell.colors.slice(0, 4)"
                                 :key="color.id"
                                 class="color-dot"
-                                :class="{ 'selected': isSelected(color) }"
+                                :class="{ 
+                                    'selected': isSelected(color),
+                                    'mini': cell.colors.length > 2
+                                }"
+                                :style="getDotPosition(idx, cell.colors.length)"
                                 @click.stop="selectColor(color)"
                             />
                         </div>
@@ -332,14 +369,28 @@ Vue.component('hsl-color-space-view', {
                 
                 <!-- Grid Labels -->
                 <div class="grid-labels">
-                    <div class="label-y">明度 →</div>
-                    <div class="label-x">← 饱和度</div>
+                    <div class="label-y">
+                        <span>明</span>
+                        <span>度</span>
+                        <span>↓</span>
+                    </div>
+                    <div class="label-x">饱和度 →</div>
                 </div>
             </div>
             
             <!-- Color matches in current hue -->
             <div class="hue-colors" v-if="colorsInHue.length > 0">
-                <h4>当前色相范围的颜色 (±10°)</h4>
+                <div class="hue-colors-header">
+                    <h4>当前色相范围的颜色 ({{ selectedHue - hueTolerance }}° - {{ selectedHue + hueTolerance }}°)</h4>
+                    <el-slider 
+                        v-model="hueTolerance" 
+                        :min="5" 
+                        :max="30" 
+                        :step="5"
+                        size="small"
+                        style="width: 150px; margin-left: 20px;"
+                    />
+                </div>
                 <div class="color-chips">
                     <div 
                         v-for="color in colorsInHue"
@@ -348,7 +399,8 @@ Vue.component('hsl-color-space-view', {
                         :style="{ backgroundColor: color.hex }"
                         @click="selectColor(color)"
                         @mouseenter="$emit('hover', color)"
-                        :title="color.name"
+                        :title="color.name + ' - ' + color.formula"
+                        :class="{ 'selected': isSelected(color) }"
                     >
                         <span class="chip-name">{{ color.color_code }}</span>
                     </div>
@@ -367,12 +419,26 @@ Vue.component('hsl-color-space-view', {
             selectedHue: 180,
             colorGrid: [],
             hoveredCell: null,
-            gridSize: 10
+            gridSize: 10,
+            hueTolerance: 15,
+            huePresets: [
+                { name: '红', value: 0 },
+                { name: '橙', value: 30 },
+                { name: '黄', value: 60 },
+                { name: '绿', value: 120 },
+                { name: '青', value: 180 },
+                { name: '蓝', value: 240 },
+                { name: '紫', value: 270 },
+                { name: '品红', value: 300 }
+            ]
         };
     },
     
     computed: {
         hueSliderStyle() {
+            if (typeof createHueGradient !== 'undefined') {
+                return { background: createHueGradient() };
+            }
             return {
                 background: `linear-gradient(to right, 
                     hsl(0, 100%, 50%), 
@@ -385,22 +451,41 @@ Vue.component('hsl-color-space-view', {
             };
         },
         
+        gridStyle() {
+            const cellSize = this.gridSize <= 5 ? 60 : this.gridSize <= 10 ? 40 : 30;
+            return {
+                gridTemplateColumns: `repeat(${this.gridSize}, ${cellSize}px)`,
+                gridTemplateRows: `repeat(${this.gridSize}, ${cellSize}px)`
+            };
+        },
+        
         colorsInHue() {
-            const hueTolerance = 10;
             return this.colors.filter(color => {
+                if (!color.hsl) return false;
                 const hueDiff = Math.abs(color.hsl.h - this.selectedHue);
-                return Math.min(hueDiff, 360 - hueDiff) <= hueTolerance;
+                return Math.min(hueDiff, 360 - hueDiff) <= this.hueTolerance;
             }).sort((a, b) => {
-                const aDiff = Math.abs(a.hsl.h - this.selectedHue);
-                const bDiff = Math.abs(b.hsl.h - this.selectedHue);
-                return aDiff - bDiff;
+                // Sort by saturation and lightness
+                const aDist = Math.abs(a.hsl.s - 50) + Math.abs(a.hsl.l - 50);
+                const bDist = Math.abs(b.hsl.s - 50) + Math.abs(b.hsl.l - 50);
+                return aDist - bDist;
             });
+        },
+        
+        matchedColorsCount() {
+            return this.colorsInHue.length;
         }
     },
     
     watch: {
         selectedHue() {
             this.generateGrid();
+        },
+        gridSize() {
+            this.generateGrid();
+        },
+        hueTolerance() {
+            // Just trigger computed update, no need to regenerate grid
         }
     },
     
@@ -419,8 +504,14 @@ Vue.component('hsl-color-space-view', {
             for (let l = 100; l >= 0; l -= step) {
                 const row = [];
                 for (let s = 0; s <= 100; s += step) {
-                    const cellHsl = { h: this.selectedHue, s, l };
-                    const cellRgb = hslToRgb(this.selectedHue, s, l);
+                    const cellHsl = { 
+                        h: this.selectedHue, 
+                        s: Math.round(s), 
+                        l: Math.round(l) 
+                    };
+                    const cellRgb = typeof hslToRgb !== 'undefined' 
+                        ? hslToRgb(this.selectedHue, s, l)
+                        : { r: 128, g: 128, b: 128 };
                     
                     // Find colors that match this cell
                     const matchingColors = this.findMatchingColors(cellHsl);
@@ -428,7 +519,9 @@ Vue.component('hsl-color-space-view', {
                     row.push({
                         hsl: cellHsl,
                         rgb: cellRgb,
-                        hex: rgbToHex(cellRgb.r, cellRgb.g, cellRgb.b),
+                        hex: typeof rgbToHex !== 'undefined'
+                            ? rgbToHex(cellRgb.r, cellRgb.g, cellRgb.b)
+                            : '#808080',
                         colors: matchingColors
                     });
                 }
@@ -439,9 +532,16 @@ Vue.component('hsl-color-space-view', {
         },
         
         findMatchingColors(targetHsl) {
-            const tolerance = { h: 10, s: 15, l: 15 };
+            // Dynamic tolerance based on grid size
+            const tolerance = {
+                h: this.hueTolerance,
+                s: this.gridSize <= 5 ? 20 : this.gridSize <= 10 ? 15 : 10,
+                l: this.gridSize <= 5 ? 20 : this.gridSize <= 10 ? 15 : 10
+            };
             
             return this.colors.filter(color => {
+                if (!color.hsl) return false;
+                
                 const hDiff = Math.abs(color.hsl.h - targetHsl.h);
                 const sDiff = Math.abs(color.hsl.s - targetHsl.s);
                 const lDiff = Math.abs(color.hsl.l - targetHsl.l);
@@ -490,12 +590,39 @@ Vue.component('hsl-color-space-view', {
         
         isSelected(color) {
             return this.selectedColor && this.selectedColor.id === color.id;
+        },
+        
+        getDotPosition(index, total) {
+            // Position dots in a grid pattern within the cell
+            if (total === 1) {
+                return {}; // Center
+            }
+            if (total === 2) {
+                return {
+                    left: index === 0 ? '25%' : '75%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)'
+                };
+            }
+            if (total <= 4) {
+                const positions = [
+                    { left: '25%', top: '25%' },
+                    { left: '75%', top: '25%' },
+                    { left: '25%', top: '75%' },
+                    { left: '75%', top: '75%' }
+                ];
+                return {
+                    ...positions[index],
+                    transform: 'translate(-50%, -50%)'
+                };
+            }
+            return {}; // Default center for more than 4
         }
     }
-});
+};
 
 // Color Wheel View Component (placeholder)
-Vue.component('color-wheel-view', {
+const ColorWheelView = {
     template: `
         <div class="color-wheel-view">
             <div class="wheel-container">
@@ -532,10 +659,10 @@ Vue.component('color-wheel-view', {
             this.$message.info('色轮视图将在第3阶段实现');
         }
     }
-});
+};
 
 // Enhanced List View Component (placeholder)
-Vue.component('enhanced-list-view', {
+const EnhancedListView = {
     template: `
         <div class="enhanced-list-view">
             <div class="list-controls">
@@ -606,4 +733,4 @@ Vue.component('enhanced-list-view', {
             });
         }
     }
-});
+};
