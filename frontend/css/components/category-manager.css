@@ -74,11 +74,18 @@
     user-select: none;
     padding: 4px 8px;
     transition: all 0.2s ease;
+    border-radius: var(--sw-radius-sm);
 }
 
 .drag-handle:hover {
     color: var(--sw-primary);
     transform: scale(1.1);
+    background: var(--sw-bg-light);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+    transform: scale(0.95);
 }
 
 .drag-handle.dragging {
@@ -91,17 +98,49 @@
     font-size: 16px;
     color: var(--sw-text-disabled);
     cursor: not-allowed;
+    opacity: 0.5;
 }
 
 /* Drag and Drop Visual Feedback */
+.el-table__row {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .el-table__row.dragging {
-    opacity: 0.5;
+    opacity: 0.4;
     background: var(--sw-bg-light) !important;
+    transform: scale(0.98);
+    box-shadow: inset 0 0 0 2px var(--sw-primary);
 }
 
 .el-table__row.drop-target {
-    background: #e6f7ff !important;
-    border-top: 2px solid var(--sw-primary);
+    background: linear-gradient(to bottom, #e6f7ff, #f0f9ff) !important;
+    border-top: 3px solid var(--sw-primary);
+    transform: translateY(2px);
+}
+
+.el-table__row.drop-target td {
+    position: relative;
+}
+
+.el-table__row.drop-target::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -3px;
+    height: 3px;
+    background: var(--sw-primary);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
 }
 
 /* Category Name Display */
@@ -131,6 +170,17 @@
 
 .category-actions .el-button {
     padding: 5px 10px;
+    transition: all 0.2s ease;
+}
+
+.category-actions .el-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.category-actions .el-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* System Category Hint */
@@ -141,6 +191,8 @@
 }
 
 /* Responsive Design */
+
+/* Tablet View (600px - 960px) */
 @media (max-width: 960px) {
     .category-manager-dialog {
         width: 95% !important;
@@ -169,54 +221,177 @@
         width: 100%;
     }
     
-    /* Hide button text on mobile, show only icons */
-    .category-actions .el-button span:not(.el-icon) {
-        display: none;
+    /* Compact table layout */
+    .category-manager-dialog .el-table .cell {
+        padding: 10px 8px;
     }
     
-    /* Reduce table padding on mobile */
-    .category-manager-dialog .el-table .cell {
-        padding: 8px 5px;
+    /* Reduce font size slightly */
+    .category-manager-dialog .el-table {
+        font-size: 13px;
     }
 }
 
+/* Mobile View (max-width: 600px) - Card Based Layout */
 @media (max-width: 600px) {
     .category-manager-dialog .el-dialog {
         width: 100% !important;
         margin: 0 !important;
         height: 100vh;
         border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .category-manager-dialog .el-dialog__header {
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--sw-bg-white);
     }
     
     .category-manager-dialog .el-dialog__body {
         padding: 12px;
-        height: calc(100vh - 110px);
+        flex: 1;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     
-    /* Stack action buttons vertically on very small screens */
-    .category-actions {
-        flex-direction: column;
+    .category-manager-dialog .el-dialog__footer {
+        flex-shrink: 0;
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+        background: var(--sw-bg-white);
+    }
+    
+    /* Hide table on mobile, show card layout instead */
+    .category-list-section .el-table {
+        display: none;
+    }
+    
+    /* Card-based layout for mobile */
+    .category-list-section::after {
+        content: '';
+        display: block;
+    }
+    
+    /* Mobile card container */
+    .category-cards-mobile {
+        display: block;
+        padding: 8px;
+    }
+    
+    .category-card-mobile {
+        background: var(--sw-bg-white);
+        border: 1px solid var(--sw-border-light);
+        border-radius: var(--sw-radius-md);
+        padding: 12px;
+        margin-bottom: 12px;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .category-card-mobile.dragging {
+        opacity: 0.5;
+        transform: scale(0.95);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .category-card-mobile.drop-target {
+        border-color: var(--sw-primary);
+        background: #e6f7ff;
+    }
+    
+    /* Card header with drag handle */
+    .card-header-mobile {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .card-drag-handle {
+        font-size: 20px;
+        margin-right: 12px;
+        cursor: move;
+        color: var(--sw-text-secondary);
+        touch-action: none;
+    }
+    
+    .card-name {
+        flex: 1;
+        font-weight: 600;
+        font-size: 16px;
+        color: var(--sw-text-primary);
+    }
+    
+    .card-system-tag {
+        margin-left: 8px;
+    }
+    
+    /* Card info section */
+    .card-info-mobile {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--sw-border-light);
+    }
+    
+    .card-code {
+        font-size: 12px;
+        color: var(--sw-text-secondary);
+        font-family: monospace;
+        background: var(--sw-bg-gray);
+        padding: 2px 6px;
+        border-radius: var(--sw-radius-sm);
+    }
+    
+    .card-count {
+        display: flex;
+        align-items: center;
         gap: 4px;
     }
     
-    .category-actions .el-button {
-        width: 100%;
+    .card-count-label {
+        font-size: 12px;
+        color: var(--sw-text-secondary);
+    }
+    
+    /* Card actions for mobile */
+    .card-actions-mobile {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    
+    .card-actions-mobile .el-button {
+        flex: 1;
         margin: 0 !important;
     }
     
-    /* Make table scrollable horizontally if needed */
-    .category-list-section {
-        overflow-x: auto;
+    /* Inline edit for mobile cards */
+    .card-edit-mobile {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
     }
     
-    .category-manager-dialog .el-table {
-        min-width: 400px;
+    .card-edit-mobile .el-input {
+        flex: 1;
     }
     
-    /* Adjust column widths for mobile */
-    .drag-column {
-        width: 40px !important;
+    /* Optimize add form for mobile */
+    .category-add-section {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    
+    .category-add-section .el-form-item__label {
+        font-size: 14px;
+        margin-bottom: 4px;
     }
 }
 
@@ -236,13 +411,41 @@
     border-color: var(--sw-danger);
 }
 
-/* Animations */
+/* Animations and Transitions */
 .category-manager-dialog .el-table__row {
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-manager-dialog .el-table__row:hover {
+    background-color: var(--sw-bg-light);
 }
 
 .category-manager-dialog .el-button {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Add subtle shadow to dialog */
+.category-manager-dialog .el-dialog {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Smooth input focus transitions */
+.category-manager-dialog .el-input__inner {
+    transition: all 0.3s ease;
+}
+
+.category-manager-dialog .el-input__inner:focus {
+    box-shadow: 0 0 0 3px rgba(var(--sw-primary-rgb), 0.1);
+}
+
+/* Count tag hover effect */
+.category-manager-dialog .el-tag {
     transition: all 0.2s ease;
+    cursor: default;
+}
+
+.category-manager-dialog .el-tag:hover {
+    transform: scale(1.05);
 }
 
 /* Print styles - hide dialog in print */
