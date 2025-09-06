@@ -433,8 +433,39 @@
 }
 
 /* Form Validation */
-.category-add-section .el-form-item.is-error .el-input__inner {
+.category-add-section .el-form-item.is-error .el-input__inner,
+.category-manager-dialog .el-input.is-error .el-input__inner {
     border-color: var(--sw-danger);
+}
+
+/* Validation Error Messages */
+.validation-error-text {
+    color: var(--sw-danger);
+    font-size: 12px;
+    margin-top: 4px;
+    line-height: 1.2;
+}
+
+.edit-validation-error {
+    color: var(--sw-danger);
+    font-size: 11px;
+    margin-top: 4px;
+    padding-left: 2px;
+}
+
+.inline-edit-wrapper {
+    width: 100%;
+}
+
+/* Error shake animation */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+.el-input.is-error {
+    animation: shake 0.4s;
 }
 
 /* Animations and Transitions */

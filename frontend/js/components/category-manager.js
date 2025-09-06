@@ -16,21 +16,28 @@ const CategoryManagerComponent = {
             <!-- Add New Category Section -->
             <div class="category-add-section">
                 <el-form inline @submit.native.prevent="addCategory">
-                    <el-form-item label="新分类名称:">
+                    <el-form-item 
+                        label="新分类名称:"
+                        :error="validationError"
+                    >
                         <el-input
                             v-model="newCategoryName"
-                            placeholder="输入分类名称"
+                            placeholder="输入分类名称 (2-20个字符)"
                             :maxlength="20"
                             clearable
                             ref="newCategoryInput"
+                            :class="{ 'is-error': validationError }"
                         />
+                        <div v-if="validationError" class="validation-error-text">
+                            {{ validationError }}
+                        </div>
                     </el-form-item>
                     <el-form-item>
                         <el-button 
                             type="primary" 
                             @click="addCategory"
                             :loading="adding"
-                            :disabled="!newCategoryName.trim()"
+                            :disabled="!newCategoryName.trim() || !!validationError"
                         >
                             <el-icon><Plus /></el-icon>
                             添加分类
@@ -82,24 +89,32 @@ const CategoryManagerComponent = {
                         min-width="150"
                     >
                         <template #default="{ row }">
-                            <div v-if="editingId === row.id" class="inline-edit">
-                                <el-input
-                                    v-model="editingName"
-                                    size="small"
-                                    @keyup.enter="saveRename(row)"
-                                    @keyup.esc="cancelEdit"
-                                    ref="editInput"
-                                    :maxlength="20"
-                                />
-                                <el-button 
-                                    size="small" 
-                                    type="primary" 
-                                    @click="saveRename(row)"
-                                    :loading="saving"
-                                >
-                                    保存
-                                </el-button>
-                                <el-button size="small" @click="cancelEdit">取消</el-button>
+                            <div v-if="editingId === row.id" class="inline-edit-wrapper">
+                                <div class="inline-edit">
+                                    <el-input
+                                        v-model="editingName"
+                                        size="small"
+                                        @keyup.enter="!editValidationError && saveRename(row)"
+                                        @keyup.esc="cancelEdit"
+                                        ref="editInput"
+                                        :maxlength="20"
+                                        :class="{ 'is-error': editValidationError }"
+                                        placeholder="2-20个字符"
+                                    />
+                                    <el-button 
+                                        size="small" 
+                                        type="primary" 
+                                        @click="saveRename(row)"
+                                        :loading="saving"
+                                        :disabled="!!editValidationError"
+                                    >
+                                        保存
+                                    </el-button>
+                                    <el-button size="small" @click="cancelEdit">取消</el-button>
+                                </div>
+                                <div v-if="editValidationError" class="edit-validation-error">
+                                    {{ editValidationError }}
+                                </div>
                             </div>
                             <div v-else class="category-name-display">
                                 <span>{{ row.name }}</span>
@@ -208,7 +223,9 @@ const CategoryManagerComponent = {
             editingName: '',
             draggedIndex: null,
             sortableCategories: [],
-            dropTargetIndex: null
+            dropTargetIndex: null,
+            validationError: '',
+            editValidationError: ''
         };
     },
 
@@ -245,10 +262,95 @@ const CategoryManagerComponent = {
             },
             deep: true,
             immediate: true
+        },
+        
+        // Real-time validation for new category name
+        newCategoryName(val) {
+            this.validateCategoryName(val);
+        },
+        
+        // Real-time validation for edit category name
+        editingName(val) {
+            if (this.editingId) {
+                this.validateEditName(val);
+            }
         }
     },
 
     methods: {
+        // Validation methods
+        validateCategoryName(name) {
+            const trimmedName = name.trim();
+            
+            if (!trimmedName) {
+                this.validationError = '';
+                return false;
+            }
+            
+            if (trimmedName.length < 2) {
+                this.validationError = '分类名称至少需要2个字符';
+                return false;
+            }
+            
+            if (trimmedName.length > 20) {
+                this.validationError = '分类名称不能超过20个字符';
+                return false;
+            }
+            
+            // Check for special characters (optional)
+            const invalidChars = /[<>:"\/\\|?*]/;
+            if (invalidChars.test(trimmedName)) {
+                this.validationError = '分类名称不能包含特殊字符 < > : " / \\ | ? *';
+                return false;
+            }
+            
+            // Check for duplicate names
+            if (this.sortableCategories.some(cat => cat.name === trimmedName)) {
+                this.validationError = '该分类名称已存在';
+                return false;
+            }
+            
+            this.validationError = '';
+            return true;
+        },
+        
+        validateEditName(name) {
+            const trimmedName = name.trim();
+            const currentCategory = this.sortableCategories.find(cat => cat.id === this.editingId);
+            
+            if (!trimmedName) {
+                this.editValidationError = '分类名称不能为空';
+                return false;
+            }
+            
+            if (trimmedName.length < 2) {
+                this.editValidationError = '分类名称至少需要2个字符';
+                return false;
+            }
+            
+            if (trimmedName.length > 20) {
+                this.editValidationError = '分类名称不能超过20个字符';
+                return false;
+            }
+            
+            // Check for special characters
+            const invalidChars = /[<>:"\/\\|?*]/;
+            if (invalidChars.test(trimmedName)) {
+                this.editValidationError = '分类名称不能包含特殊字符 < > : " / \\ | ? *';
+                return false;
+            }
+            
+            // Check for duplicate names (excluding current)
+            if (this.sortableCategories.some(cat => 
+                cat.id !== this.editingId && cat.name === trimmedName)) {
+                this.editValidationError = '该分类名称已存在';
+                return false;
+            }
+            
+            this.editValidationError = '';
+            return true;
+        },
+        
         handleClose() {
             this.dialogVisible = false;
             this.$emit('update:visible', false);
@@ -261,6 +363,8 @@ const CategoryManagerComponent = {
             this.editingName = '';
             this.draggedIndex = null;
             this.dropTargetIndex = null;
+            this.validationError = '';
+            this.editValidationError = '';
         },
 
         async loadCategories() {
@@ -387,19 +491,36 @@ const CategoryManagerComponent = {
         },
 
         async deleteCategory(row) {
-            if (this.getItemCount(row) > 0) {
-                this.$message.warning(`该分类下有 ${this.getItemCount(row)} 个项目，无法删除`);
+            const itemCount = this.getItemCount(row);
+            
+            if (itemCount > 0) {
+                const itemType = this.categoryType === 'colors' ? '颜色' : '原料';
+                this.$message({
+                    message: `该分类下有 ${itemCount} 个${itemType}，请先将它们移至其他分类后再删除`,
+                    type: 'warning',
+                    duration: 4000,
+                    showClose: true
+                });
                 return;
             }
 
             try {
                 await this.$confirm(
-                    `确定要删除分类"${row.name}"吗？此操作不可恢复。`,
-                    '确认删除',
+                    `<div style="text-align: left;">
+                        <p><strong>即将删除分类：${row.name}</strong></p>
+                        <p style="color: #909399; margin-top: 8px;">• 分类代码：${row.code}</p>
+                        <p style="color: #909399;">• 当前项目数：${itemCount}</p>
+                        <p style="color: #E6A23C; margin-top: 12px;">
+                            <i class="el-icon-warning"></i> 此操作不可恢复
+                        </p>
+                    </div>`,
+                    '确认删除分类',
                     {
                         confirmButtonText: '确定删除',
                         cancelButtonText: '取消',
-                        type: 'warning'
+                        type: 'warning',
+                        dangerouslyUseHTMLString: true,
+                        distinguishCancelAndClose: true
                     }
                 );
 
@@ -413,11 +534,15 @@ const CategoryManagerComponent = {
                     throw new Error(result.error || 'Failed to delete category');
                 }
 
-                this.$message.success('分类删除成功');
+                this.$message({
+                    message: `分类"${row.name}"已成功删除`,
+                    type: 'success',
+                    duration: 2000
+                });
                 this.$emit('updated');
                 await this.loadCategories();
             } catch (error) {
-                if (error !== 'cancel') {
+                if (error !== 'cancel' && error.message !== 'cancel') {
                     this.$message.error('删除失败: ' + error.message);
                 }
             }
