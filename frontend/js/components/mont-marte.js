@@ -11,6 +11,14 @@ const MontMarteComponent = {
                         <div class="category-switch-group" role="tablist" aria-label="原料类别筛选">
                             <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
                             <button v-for="cat in montMarteCategories" :key="cat.id" type="button" class="category-switch" :class="{active: activeCategory===cat.id}" @click="activeCategory=cat.id" role="tab" :aria-selected="activeCategory===cat.id">{{ cat.name }}</button>
+                            <button 
+                                type="button"
+                                class="category-settings-btn"
+                                @click="showCategoryManager = true"
+                                title="管理分类"
+                            >
+                                <el-icon><Setting /></el-icon>
+                            </button>
                         </div>
                         <div v-if="loading" class="loading">
                                 <el-icon class="is-loading"><Loading /></el-icon> 加载中...
@@ -127,6 +135,15 @@ const MontMarteComponent = {
                                 </div>
                         </div>
 
+            <!-- Category Manager Dialog -->
+            <category-manager
+                :visible="showCategoryManager"
+                @update:visible="showCategoryManager = $event"
+                :categories="montMarteCategories"
+                category-type="materials"
+                @updated="handleCategoriesUpdated"
+            />
+            
             <!-- 新增/编辑对话框 -->
             <el-dialog
                 class="scheme-dialog"
@@ -299,6 +316,7 @@ const MontMarteComponent = {
             activeCategory: 'all',
             loading: false,
             showDialog: false,
+            showCategoryManager: false,
             editing: null, // 当前编辑的记录
             
             // Pagination
@@ -434,6 +452,13 @@ const MontMarteComponent = {
         }
     },
     methods: {
+        // Category management
+        async handleCategoriesUpdated() {
+            // Reload categories after changes
+            await this.loadMontMarteCategories();
+            this.$message.success('分类已更新');
+        },
+        
         // Pagination methods
         goToPage(page) {
             if (page === '...') return;
