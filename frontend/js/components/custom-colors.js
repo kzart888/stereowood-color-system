@@ -21,6 +21,14 @@ const CustomColorsComponent = {
                     role="tab"
                     :aria-selected="activeCategory===String(cat.id || 'other')"
                 >{{ cat.name }}</button>
+                <button 
+                    type="button"
+                    class="category-settings-btn"
+                    @click="showCategoryManager = true"
+                    title="管理分类"
+                >
+                    <el-icon><Setting /></el-icon>
+                </button>
             </div>
             
             <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
@@ -195,6 +203,16 @@ const CustomColorsComponent = {
                     </div>
                 </div>
             </div>
+            
+            <!-- Category Manager Dialog -->
+            <category-manager
+                v-if="showCategoryManager"
+                :visible="showCategoryManager"
+                @update:visible="showCategoryManager = $event"
+                :categories="categories"
+                category-type="colors"
+                @updated="handleCategoriesUpdated"
+            />
             
             <!-- Add/Edit Dialog -->
             <el-dialog 
@@ -469,6 +487,7 @@ const CustomColorsComponent = {
             loading: false,
             activeCategory: 'all',
             showAddDialog: false,
+            showCategoryManager: false,
             editingColor: null,
             saving: false,
             _colorItemRefs: new Map(),
@@ -830,6 +849,14 @@ const CustomColorsComponent = {
     },
     
     methods: {
+        // Category management
+        async handleCategoriesUpdated() {
+            // Reload categories and colors after changes
+            await this.globalData.loadCategories();
+            await this.globalData.loadCustomColors();
+            this.$message.success('分类已更新');
+        },
+        
         // Pagination methods
         goToPage(page) {
             if (page === '...') return;

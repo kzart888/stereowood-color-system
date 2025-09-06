@@ -206,6 +206,38 @@
     background: rgba(255, 255, 255, 0.25);
 }
 
+/* === 分类设置按钮 === */
+.category-settings-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-sm);
+    color: var(--sw-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.category-settings-btn:hover {
+    background: var(--sw-bg-light);
+    border-color: var(--sw-primary);
+    color: var(--sw-primary);
+    transform: rotate(90deg);
+}
+
+.category-settings-btn:active {
+    transform: rotate(90deg) scale(0.95);
+}
+
+.category-settings-btn .el-icon {
+    font-size: 16px;
+}
+
 /* === 计算按钮（小） === */
 .calc-mini-btn {
     position: absolute;
