@@ -14,7 +14,7 @@
 }
 
 .category-manager-dialog .el-dialog__body {
-    padding: 20px;
+    padding: 12px;
     background: var(--sw-bg-gray);
 }
 
@@ -27,9 +27,9 @@
 /* Add Category Section */
 .category-add-section {
     background: var(--sw-bg-white);
-    padding: 16px;
+    padding: 12px;
     border-radius: var(--sw-radius-md);
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     border: 1px solid var(--sw-border-light);
 }
 
@@ -60,7 +60,7 @@
 }
 
 .category-manager-dialog .el-table th {
-    background: var(--sw-bg-gray);
+    background: var(--sw-bg-white);
     font-weight: 600;
 }
 
