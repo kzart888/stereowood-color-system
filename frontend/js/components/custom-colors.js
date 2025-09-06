@@ -206,7 +206,6 @@ const CustomColorsComponent = {
             
             <!-- Category Manager Dialog -->
             <category-manager
-                v-if="showCategoryManager"
                 :visible="showCategoryManager"
                 @update:visible="showCategoryManager = $event"
                 :categories="categories"

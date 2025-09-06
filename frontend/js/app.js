@@ -280,6 +280,11 @@ if (typeof ConflictResolver !== 'undefined') {
     app.component('conflict-resolver', ConflictResolver);
 }
 
+// 添加分类管理组件注册
+if (typeof CategoryManagerComponent !== 'undefined') {
+    app.component('category-manager', CategoryManagerComponent);
+}
+
 // 添加通用操作按钮组件注册 - 暂时禁用
 // if (typeof ActionButtonComponent !== 'undefined') {
 //     app.component('action-button', ActionButtonComponent);

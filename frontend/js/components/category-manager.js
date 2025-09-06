@@ -1,6 +1,7 @@
 // Category Manager Component
 // Reusable component for managing categories in both custom colors and Mont-Marte materials
-Vue.component('category-manager', {
+const CategoryManagerComponent = {
+    name: 'CategoryManager',
     template: `
         <el-dialog
             v-model="dialogVisible"
@@ -552,4 +553,9 @@ Vue.component('category-manager', {
             this.loadCategories();
         }
     }
-});
+};
+
+// Register component globally for Vue 3
+if (typeof window !== 'undefined' && window.Vue) {
+    window.CategoryManagerComponent = CategoryManagerComponent;
+}
