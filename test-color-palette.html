@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Color Palette Dialog</title>
+    
+    <!-- Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    
+    <!-- Element Plus -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.14/index.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.14/index.full.min.js"></script>
+    
+    <!-- Element Plus Icons -->
+    <script src="https://unpkg.com/@element-plus/icons-vue@2.1.0/dist/index.iife.min.js"></script>
+    
+    <!-- Our utilities and components -->
+    <script src="frontend/js/utils/colorConversion.js"></script>
+    <script src="frontend/js/utils/colorDistance.js"></script>
+    <script src="frontend/js/components/color-palette-dialog.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="frontend/css/base/variables.css">
+    <link rel="stylesheet" href="frontend/css/components/color-palette-dialog.css">
+    
+    <style>
+        body {
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-colors {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .test-color-card {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-color-preview {
+            width: 100%;
+            height: 80px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="test-container">
+            <h1>Color Palette Dialog Test</h1>
+            
+            <el-button type="primary" @click="showDialog = true">
+                Open Color Palette Dialog
+            </el-button>
+            
+            <div v-if="selectedColor" style="margin-top: 20px;">
+                <h3>Selected Color:</h3>
+                <div class="test-color-card">
+                    <div class="test-color-preview" :style="{ backgroundColor: selectedColor.hex }"></div>
+                    <div>Name: {{ selectedColor.name }}</div>
+                    <div>Code: {{ selectedColor.color_code }}</div>
+                    <div v-if="selectedColor.hsl">
+                        HSL: {{ selectedColor.hsl.h }}°, {{ selectedColor.hsl.s }}%, {{ selectedColor.hsl.l }}%
+                    </div>
+                </div>
+            </div>
+            
+            <h3>Test Colors:</h3>
+            <div class="test-colors">
+                <div v-for="color in testColors" :key="color.id" class="test-color-card">
+                    <div class="test-color-preview" :style="{ backgroundColor: color.hex }"></div>
+                    <div>{{ color.name }}</div>
+                    <div>{{ color.color_code }}</div>
+                </div>
+            </div>
+            
+            <!-- Color Palette Dialog -->
+            <color-palette-dialog
+                v-if="showDialog"
+                :visible.sync="showDialog"
+                :colors="testColors"
+                :categories="testCategories"
+                @select="handleSelect"
+                @confirm="handleConfirm"
+                @close="showDialog = false"
+            />
+        </div>
+    </div>
+    
+    <script>
+        const { createApp } = Vue;
+        
+        // Make color conversion functions global
+        window.rgbToHsl = rgbToHsl;
+        window.hslToRgb = hslToRgb;
+        window.rgbToLab = rgbToLab;
+        window.rgbToHex = rgbToHex;
+        window.hexToRgb = hexToRgb;
+        
+        const app = createApp({
+            data() {
+                return {
+                    showDialog: false,
+                    selectedColor: null,
+                    testCategories: [
+                        { id: 1, name: '蓝色系', code: 'BLUE', display_order: 1 },
+                        { id: 2, name: '黄色系', code: 'YELLOW', display_order: 2 },
+                        { id: 3, name: '红色系', code: 'RED', display_order: 3 },
+                        { id: 4, name: '绿色系', code: 'GREEN', display_order: 4 },
+                        { id: 5, name: '紫色系', code: 'PURPLE', display_order: 5 }
+                    ],
+                    testColors: [
+                        // Blue colors
+                        { id: 1, name: '天空蓝', color_code: 'B-001', category_id: 1, rgb: {r: 135, g: 206, b: 235}, hex: '#87CEEB', formula: '群青 50 白色 50' },
+                        { id: 2, name: '深海蓝', color_code: 'B-002', category_id: 1, rgb: {r: 0, g: 119, b: 190}, hex: '#0077BE', formula: '群青 80 黑色 20' },
+                        { id: 3, name: '钴蓝', color_code: 'B-003', category_id: 1, rgb: {r: 0, g: 71, b: 171}, hex: '#0047AB', formula: '钴蓝 100' },
+                        
+                        // Yellow colors
+                        { id: 4, name: '柠檬黄', color_code: 'Y-001', category_id: 2, rgb: {r: 255, g: 247, b: 0}, hex: '#FFF700', formula: '柠檬黄 100' },
+                        { id: 5, name: '金黄', color_code: 'Y-002', category_id: 2, rgb: {r: 255, g: 215, b: 0}, hex: '#FFD700', formula: '中黄 80 橙色 20' },
+                        { id: 6, name: '土黄', color_code: 'Y-003', category_id: 2, rgb: {r: 218, g: 165, b: 32}, hex: '#DAA520', formula: '土黄 100' },
+                        
+                        // Red colors
+                        { id: 7, name: '朱红', color_code: 'R-001', category_id: 3, rgb: {r: 255, g: 69, b: 0}, hex: '#FF4500', formula: '朱红 100' },
+                        { id: 8, name: '深红', color_code: 'R-002', category_id: 3, rgb: {r: 139, g: 0, b: 0}, hex: '#8B0000', formula: '深红 100' },
+                        { id: 9, name: '粉红', color_code: 'R-003', category_id: 3, rgb: {r: 255, g: 192, b: 203}, hex: '#FFC0CB', formula: '红色 20 白色 80' },
+                        
+                        // Green colors
+                        { id: 10, name: '草绿', color_code: 'G-001', category_id: 4, rgb: {r: 124, g: 252, b: 0}, hex: '#7CFC00', formula: '草绿 100' },
+                        { id: 11, name: '深绿', color_code: 'G-002', category_id: 4, rgb: {r: 0, g: 100, b: 0}, hex: '#006400', formula: '深绿 100' },
+                        { id: 12, name: '橄榄绿', color_code: 'G-003', category_id: 4, rgb: {r: 128, g: 128, b: 0}, hex: '#808000', formula: '橄榄绿 100' },
+                        
+                        // Purple colors
+                        { id: 13, name: '紫罗兰', color_code: 'P-001', category_id: 5, rgb: {r: 238, g: 130, b: 238}, hex: '#EE82EE', formula: '紫色 100' },
+                        { id: 14, name: '深紫', color_code: 'P-002', category_id: 5, rgb: {r: 128, g: 0, b: 128}, hex: '#800080', formula: '深紫 100' },
+                        { id: 15, name: '薰衣草', color_code: 'P-003', category_id: 5, rgb: {r: 230, g: 230, b: 250}, hex: '#E6E6FA', formula: '紫色 20 白色 80' }
+                    ]
+                };
+            },
+            methods: {
+                handleSelect(color) {
+                    console.log('Selected color:', color);
+                    this.selectedColor = color;
+                },
+                handleConfirm(color) {
+                    console.log('Confirmed color:', color);
+                    this.selectedColor = color;
+                    this.showDialog = false;
+                    ElementPlus.ElMessage.success(`已选择颜色: ${color.name} (${color.color_code})`);
+                }
+            }
+        });
+        
+        app.use(ElementPlus);
+        
+        // Register icons
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        
+        app.mount('#app');
+    </script>
+</body>
+</html>

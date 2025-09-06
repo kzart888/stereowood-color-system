@@ -423,57 +423,17 @@ const CustomColorsComponent = {
                 </template>
             </el-dialog>
             
-            <!-- Color Palette Dialog -->
-            <el-dialog
-                v-model="showColorPaletteDialog"
-                width="70%"
-                :close-on-click-modal="false"
-                class="color-palette-dialog"
-                :show-close="false"
-            >
-                <template #header>
-                    <div class="custom-dialog-header">
-                        <div class="palette-title">自配色列表</div>
-                        <div class="palette-header-right">
-                            <span class="palette-stats">共{{ (globalData.customColors && globalData.customColors.value) ? globalData.customColors.value.length : 0 }}个颜色，{{ paletteGroups.length }}个分类</span>
-                            <el-button size="small" type="primary" @click="printColorPalette">
-                                <el-icon><Printer /></el-icon>
-                                打印
-                            </el-button>
-                            <el-button size="small" @click="showColorPaletteDialog = false" class="close-btn">
-                                <el-icon><Close /></el-icon>
-                            </el-button>
-                        </div>
-                    </div>
-                </template>
-                
-                <div class="color-palette-content">
-                    <div v-if="paletteGroups.length === 0" class="empty-palette">
-                        暂无自配色数据
-                    </div>
-                    <div v-else class="palette-main">
-                        <div v-for="(group, groupIndex) in paletteGroups" :key="group.categoryCode" class="palette-group" :class="{ 'group-spacing': groupIndex > 0 }">
-                            <div class="group-layout">
-                                <div class="group-label">{{ group.categoryName }}</div>
-                                <div class="group-colors">
-                                    <div v-for="color in group.colors" :key="color.id" class="color-item">
-                                        <div class="color-block">
-                                            <img 
-                                                v-if="color.image_path" 
-                                                :src="$helpers.buildUploadURL(baseURL, color.image_path)" 
-                                                class="color-preview-image"
-                                                @error="$event.target.style.display='none'"
-                                            />
-                                            <div v-if="!color.image_path" class="no-image-placeholder">未上传图片</div>
-                                        </div>
-                                        <div class="color-name">{{ color.color_code }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </el-dialog>
+            <!-- New Advanced Color Palette Dialog -->
+            <color-palette-dialog
+                v-if="showColorPaletteDialog"
+                :visible.sync="showColorPaletteDialog"
+                :colors="globalData.customColors?.value || []"
+                :categories="globalData.categories?.value || []"
+                title="自配色列表 - 高级选择器"
+                @select="handleColorSelect"
+                @confirm="handleColorConfirm"
+                @close="showColorPaletteDialog = false"
+            />
         </div>
     `,
     
@@ -547,8 +507,7 @@ const CustomColorsComponent = {
             pendingFormData: null,
             
             // Color palette
-            showColorPaletteDialog: false,
-            paletteGroups: []
+            showColorPaletteDialog: false
         };
     },
     
@@ -1568,7 +1527,7 @@ const CustomColorsComponent = {
             msg.warning(`发现 ${sigs.length} 组重复配方`);
         },
         
-        // Show color palette method
+        // Show color palette method - now uses the new advanced dialog
         async showColorPalette() {
             const msg = this.getMsg();
             try {
@@ -1576,68 +1535,29 @@ const CustomColorsComponent = {
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadCategories();
                 
-                // Create groups using real data
-                const categories = this.globalData.categories?.value || [];
-                const customColors = this.globalData.customColors?.value || [];
-                const groups = [];
-                
-                if (customColors.length === 0) {
-                    this.paletteGroups = [];
-                    this.showColorPaletteDialog = true;
-                    return;
-                }
-                
-                if (categories.length === 0) {
-                    // No categories, create a default group
-                    groups.push({
-                        categoryName: '所有自配色',
-                        categoryCode: 'ALL',
-                        colors: customColors
-                    });
-                } else {
-                    // Group by category
-                    const colorsByCategory = {};
-                    const unCategorized = [];
-                    
-                    customColors.forEach(color => {
-                        if (!color.category_id) {
-                            unCategorized.push(color);
-                        } else {
-                            if (!colorsByCategory[color.category_id]) {
-                                colorsByCategory[color.category_id] = [];
-                            }
-                            colorsByCategory[color.category_id].push(color);
-                        }
-                    });
-                    
-                    // Create groups by category
-                    categories.forEach(category => {
-                        const categoryColors = colorsByCategory[category.id] || [];
-                        if (categoryColors.length > 0) {
-                            groups.push({
-                                categoryName: category.name,
-                                categoryCode: category.code || category.id,
-                                colors: categoryColors
-                            });
-                        }
-                    });
-                    
-                    // Add uncategorized if any
-                    if (unCategorized.length > 0) {
-                        groups.push({
-                            categoryName: '其他',
-                            categoryCode: 'OTHER',
-                            colors: unCategorized
-                        });
-                    }
-                }
-                
-                this.paletteGroups = groups;
+                // Simply open the new dialog, it will handle the data internally
                 this.showColorPaletteDialog = true;
                 
             } catch (error) {
-                // Error loading color data - silently handle
                 msg.error('加载数据失败，请重试');
+            }
+        },
+        
+        // Handle color selection from the palette dialog
+        handleColorSelect(color) {
+            // Focus on the selected color in the main list
+            if (color && color.color_code) {
+                this.focusCustomColor(color.color_code);
+            }
+        },
+        
+        // Handle color confirmation from the palette dialog
+        handleColorConfirm(color) {
+            // You can add any action here when a color is confirmed
+            // For example, copying to clipboard or opening edit dialog
+            if (color) {
+                this.handleColorSelect(color);
+                this.showColorPaletteDialog = false;
             }
         },
         
