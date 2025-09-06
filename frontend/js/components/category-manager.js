@@ -65,7 +65,6 @@ const CategoryManagerComponent = {
                     >
                         <template #default="{ row, $index }">
                             <span 
-                                v-if="!isSystemCategory(row)"
                                 class="drag-handle"
                                 :draggable="true"
                                 @dragstart="handleDragStart($index, $event)"
@@ -75,9 +74,6 @@ const CategoryManagerComponent = {
                                 title="拖动排序"
                             >
                                 ≡
-                            </span>
-                            <span v-else class="drag-handle-disabled" title="系统分类不可移动">
-                                🔒
                             </span>
                         </template>
                     </el-table-column>
@@ -118,9 +114,6 @@ const CategoryManagerComponent = {
                             </div>
                             <div v-else class="category-name-display">
                                 <span>{{ row.name }}</span>
-                                <el-tag v-if="isSystemCategory(row)" size="small" type="info" style="margin-left: 8px">
-                                    系统
-                                </el-tag>
                             </div>
                         </template>
                     </el-table-column>
@@ -156,8 +149,7 @@ const CategoryManagerComponent = {
                         <template #default="{ row }">
                             <div class="category-actions">
                                 <el-button
-                                    v-if="!isSystemCategory(row)"
-                                    size="small"
+                                        size="small"
                                     @click="startEdit(row)"
                                     :disabled="editingId !== null"
                                 >
@@ -165,8 +157,7 @@ const CategoryManagerComponent = {
                                     重命名
                                 </el-button>
                                 <el-button
-                                    v-if="!isSystemCategory(row)"
-                                    size="small"
+                                        size="small"
                                     type="danger"
                                     @click="deleteCategory(row)"
                                     :disabled="getItemCount(row) > 0"
@@ -174,13 +165,6 @@ const CategoryManagerComponent = {
                                     <el-icon><Delete /></el-icon>
                                     删除
                                 </el-button>
-                                <el-tooltip
-                                    v-if="isSystemCategory(row)"
-                                    content="系统分类不可修改"
-                                    placement="top"
-                                >
-                                    <span class="system-category-hint">系统分类</span>
-                                </el-tooltip>
                             </div>
                         </template>
                     </el-table-column>
@@ -236,11 +220,6 @@ const CategoryManagerComponent = {
 
         apiEndpoint() {
             return this.categoryType === 'colors' ? '/api/categories' : '/api/mont-marte-categories';
-        },
-
-        systemCategoryCodes() {
-            // No system categories - all categories can be modified
-            return [];
         }
     },
 
@@ -550,10 +529,6 @@ const CategoryManagerComponent = {
 
         // Drag and Drop Methods
         handleDragStart(index, event) {
-            if (this.isSystemCategory(this.sortableCategories[index])) {
-                event.preventDefault();
-                return;
-            }
             
             this.draggedIndex = index;
             event.dataTransfer.effectAllowed = 'move';
@@ -576,12 +551,6 @@ const CategoryManagerComponent = {
 
         handleDragOver(index, event) {
             event.preventDefault();
-            
-            // Don't allow dropping on system categories at the top
-            if (this.isSystemCategory(this.sortableCategories[index]) && index === 0) {
-                event.dataTransfer.dropEffect = 'none';
-                return;
-            }
             
             event.dataTransfer.dropEffect = 'move';
             
@@ -679,11 +648,6 @@ const CategoryManagerComponent = {
                 // Reload to restore original order
                 await this.loadCategories();
             }
-        },
-
-        // Helper methods
-        isSystemCategory(category) {
-            return this.systemCategoryCodes.includes(category.code);
         },
 
         getItemCount(category) {

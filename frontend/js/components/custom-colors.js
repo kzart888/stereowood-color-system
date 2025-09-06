@@ -698,7 +698,6 @@ const CustomColorsComponent = {
             return es ? es.id : null;
         },
         
-        // Removed otCategoryId - OT is now treated like any other category
         
         colorCodeDuplicate() {
             const val = (this.form.color_code || '').trim();
@@ -1025,7 +1024,7 @@ const CustomColorsComponent = {
                 const blob = await response.blob();
                 return new File([blob], 'image.jpg', { type: blob.type });
             } catch (error) {
-                console.error('Failed to fetch image:', error);
+                // Error fetching image - silently handle
                 return null;
             }
         },
@@ -1066,7 +1065,7 @@ const CustomColorsComponent = {
                 
                 msg.success('已提取颜色值');
             } catch (error) {
-                console.error('Error extracting color:', error);
+                // Error extracting color - silently handle
                 msg.error('提取颜色失败');
             }
         },
@@ -1131,7 +1130,7 @@ const CustomColorsComponent = {
                 const uncoatedDisplay = uncoatedMatch ? uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U') : '无';
                 msg.success(`已匹配潘通色号: ${coatedDisplay} / ${uncoatedDisplay}`);
             } catch (error) {
-                console.error('Error finding Pantone match:', error);
+                // Error finding Pantone match - silently handle
                 msg.error('匹配潘通色号失败');
             }
         },
@@ -1216,7 +1215,7 @@ const CustomColorsComponent = {
                 this.saving = true;
                 const formData = new FormData();
                 
-                // Use the actual category_id from form (including OT category from database)
+                // Use the actual category_id from form
                 let actualCategoryId = this.form.category_id;
                 
                 formData.append('category_id', actualCategoryId);
@@ -1383,7 +1382,7 @@ const CustomColorsComponent = {
                         this.autoSyncDisabled = true;
                     }
                 }
-                // No longer auto-switch to OT for unrecognized prefixes
+                // No auto-switch for unrecognized prefixes
             }
         },
         
@@ -1637,7 +1636,7 @@ const CustomColorsComponent = {
                 this.showColorPaletteDialog = true;
                 
             } catch (error) {
-                console.error('加载色彩数据失败:', error);
+                // Error loading color data - silently handle
                 msg.error('加载数据失败，请重试');
             }
         },

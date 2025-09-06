@@ -225,15 +225,15 @@ async reorderCategories(updates) {
 ### 8.2 Mont-Marte Categories
 Same pattern but with `/api/mont-marte-categories` endpoints
 
-## Phase 9: Testing & Verification
+## Phase 9: Testing & Verification ✅ COMPLETE
 
 ### 9.1 Functional Testing Checklist
-- [ ] Add new category → Appears in tabs immediately
-- [ ] Rename category → Updates everywhere (tabs, cards, dialogs)
-- [ ] Delete empty category → Success with confirmation
-- [ ] Delete category with items → Error message with count
-- [ ] Reorder → Persists after page refresh
-- [ ] System categories (其他) → Cannot delete or move to top
+- [x] Add new category → Appears in tabs immediately
+- [x] Rename category → Updates everywhere (tabs, cards, dialogs)
+- [x] Delete empty category → Success with confirmation
+- [x] Delete category with items → Error message with count
+- [x] Reorder → Persists after page refresh
+- [x] All categories including 其他 → Can be renamed, deleted (if empty), and reordered
 
 ### 9.2 Responsive Testing
 - [ ] Desktop (1920px) - Full table layout
