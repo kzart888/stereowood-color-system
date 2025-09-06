@@ -1,0 +1,253 @@
+/* =================================================================
+   Category Manager Component Styles
+   ================================================================= */
+
+/* Dialog Container */
+.category-manager-dialog {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.category-manager-dialog .el-dialog__header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--sw-border-light);
+    background: var(--sw-bg-white);
+}
+
+.category-manager-dialog .el-dialog__body {
+    padding: 20px;
+    background: var(--sw-bg-gray);
+}
+
+.category-manager-dialog .el-dialog__footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--sw-border-light);
+    background: var(--sw-bg-white);
+}
+
+/* Add Category Section */
+.category-add-section {
+    background: var(--sw-bg-white);
+    padding: 16px;
+    border-radius: var(--sw-radius-md);
+    margin-bottom: 20px;
+    border: 1px solid var(--sw-border-light);
+}
+
+.category-add-section .el-form {
+    margin: 0;
+}
+
+.category-add-section .el-form-item {
+    margin-bottom: 0;
+    margin-right: 12px;
+}
+
+.category-add-section .el-form-item:last-child {
+    margin-right: 0;
+}
+
+/* Category List Section */
+.category-list-section {
+    background: var(--sw-bg-white);
+    border-radius: var(--sw-radius-md);
+    overflow: hidden;
+    border: 1px solid var(--sw-border-light);
+}
+
+/* Table Styles */
+.category-manager-dialog .el-table {
+    font-size: 14px;
+}
+
+.category-manager-dialog .el-table th {
+    background: var(--sw-bg-gray);
+    font-weight: 600;
+}
+
+/* Drag Handle Styles */
+.drag-handle {
+    display: inline-block;
+    cursor: move;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--sw-text-secondary);
+    user-select: none;
+    padding: 4px 8px;
+    transition: all 0.2s ease;
+}
+
+.drag-handle:hover {
+    color: var(--sw-primary);
+    transform: scale(1.1);
+}
+
+.drag-handle.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.drag-handle-disabled {
+    display: inline-block;
+    font-size: 16px;
+    color: var(--sw-text-disabled);
+    cursor: not-allowed;
+}
+
+/* Drag and Drop Visual Feedback */
+.el-table__row.dragging {
+    opacity: 0.5;
+    background: var(--sw-bg-light) !important;
+}
+
+.el-table__row.drop-target {
+    background: #e6f7ff !important;
+    border-top: 2px solid var(--sw-primary);
+}
+
+/* Category Name Display */
+.category-name-display {
+    display: flex;
+    align-items: center;
+}
+
+/* Inline Edit Styles */
+.inline-edit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inline-edit .el-input {
+    flex: 1;
+    min-width: 120px;
+}
+
+/* Action Buttons */
+.category-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.category-actions .el-button {
+    padding: 5px 10px;
+}
+
+/* System Category Hint */
+.system-category-hint {
+    color: var(--sw-text-secondary);
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 960px) {
+    .category-manager-dialog {
+        width: 95% !important;
+    }
+    
+    .category-add-section .el-form {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .category-add-section .el-form-item {
+        margin-right: 0;
+        margin-bottom: 12px;
+        width: 100%;
+    }
+    
+    .category-add-section .el-form-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .category-add-section .el-input {
+        width: 100%;
+    }
+    
+    .category-add-section .el-button {
+        width: 100%;
+    }
+    
+    /* Hide button text on mobile, show only icons */
+    .category-actions .el-button span:not(.el-icon) {
+        display: none;
+    }
+    
+    /* Reduce table padding on mobile */
+    .category-manager-dialog .el-table .cell {
+        padding: 8px 5px;
+    }
+}
+
+@media (max-width: 600px) {
+    .category-manager-dialog .el-dialog {
+        width: 100% !important;
+        margin: 0 !important;
+        height: 100vh;
+        border-radius: 0;
+    }
+    
+    .category-manager-dialog .el-dialog__body {
+        padding: 12px;
+        height: calc(100vh - 110px);
+        overflow-y: auto;
+    }
+    
+    /* Stack action buttons vertically on very small screens */
+    .category-actions {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .category-actions .el-button {
+        width: 100%;
+        margin: 0 !important;
+    }
+    
+    /* Make table scrollable horizontally if needed */
+    .category-list-section {
+        overflow-x: auto;
+    }
+    
+    .category-manager-dialog .el-table {
+        min-width: 400px;
+    }
+    
+    /* Adjust column widths for mobile */
+    .drag-column {
+        width: 40px !important;
+    }
+}
+
+/* Loading State */
+.category-manager-dialog .el-loading-mask {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Empty State */
+.category-manager-dialog .el-table__empty-text {
+    line-height: 60px;
+    color: var(--sw-text-secondary);
+}
+
+/* Form Validation */
+.category-add-section .el-form-item.is-error .el-input__inner {
+    border-color: var(--sw-danger);
+}
+
+/* Animations */
+.category-manager-dialog .el-table__row {
+    transition: all 0.3s ease;
+}
+
+.category-manager-dialog .el-button {
+    transition: all 0.2s ease;
+}
+
+/* Print styles - hide dialog in print */
+@media print {
+    .category-manager-dialog {
+        display: none !important;
+    }
+}

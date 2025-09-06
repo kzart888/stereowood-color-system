@@ -24,6 +24,7 @@
 @import './components/print-dialog.css';  /* 打印对话框 */
 @import './components/duplicate-dialog.css';  /* 重复检测对话框 */
 @import './components/responsive-cards.css';  /* 响应式卡片网格布局 */
+@import './components/category-manager.css';  /* 分类管理对话框 */
 
 /* === 4. 工具样式 === */
 @import './utilities/helpers.css';        /* 辅助类 */
