@@ -6,6 +6,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 STEREOWOOD Color Management System - A simplified web application for managing color formulas and artwork schemes in a small factory setting (3-5 users). Built for easy maintenance by a 2-person team.
 
+## Work Routine & Git Practices
+
+### IMPORTANT: After Each Completed Task
+1. **Summarize the work done** in a clear, concise manner
+2. **Create a git commit** with descriptive message following this format:
+   ```bash
+   git add -A
+   git commit -m "feat/fix/docs: Brief description of changes
+   
+   - Detail 1
+   - Detail 2
+   
+   🤖 Generated with Claude Code
+   
+   Co-Authored-By: Claude <noreply@anthropic.com>"
+   ```
+3. **Commit frequently** - After each logical unit of work (feature, bug fix, refactor)
+4. **Never push unless explicitly requested** by the user
+
+### Commit Message Format
+- `feat:` New feature or enhancement
+- `fix:` Bug fix
+- `refactor:` Code restructuring without changing functionality
+- `docs:` Documentation changes
+- `style:` Formatting, missing semicolons, etc.
+- `test:` Adding or updating tests
+- `chore:` Maintenance tasks, dependency updates
+
 ## Development Commands
 
 ### Local Development
