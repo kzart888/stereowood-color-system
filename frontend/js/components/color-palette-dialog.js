@@ -1122,40 +1122,147 @@ const ColorWheelView = {
     }
 };
 
-// Enhanced List View Component (placeholder)
+// Enhanced List View Component with full features
 const EnhancedListView = {
     template: `
         <div class="enhanced-list-view">
             <div class="list-controls">
-                <el-select v-model="sortBy" placeholder="排序方式">
-                    <el-option label="按色相" value="hue"></el-option>
-                    <el-option label="按明度" value="lightness"></el-option>
-                    <el-option label="按饱和度" value="saturation"></el-option>
-                    <el-option label="按名称" value="name"></el-option>
-                </el-select>
-                <el-select v-model="filterCategory" placeholder="筛选分类" clearable>
-                    <el-option 
-                        v-for="cat in categories" 
-                        :key="cat.id"
-                        :label="cat.name" 
-                        :value="cat.id"
-                    ></el-option>
-                </el-select>
+                <div class="control-row">
+                    <el-select v-model="sortBy" placeholder="排序方式" @change="handleSortChange">
+                        <el-option label="按色相" value="hue"></el-option>
+                        <el-option label="按明度" value="lightness"></el-option>
+                        <el-option label="按饱和度" value="saturation"></el-option>
+                        <el-option label="按名称" value="name"></el-option>
+                        <el-option label="按时间" value="date"></el-option>
+                    </el-select>
+                    <el-select v-model="filterCategory" placeholder="筛选分类" clearable @change="handleFilterChange">
+                        <el-option 
+                            v-for="cat in categories" 
+                            :key="cat.id"
+                            :label="cat.name" 
+                            :value="cat.id"
+                        ></el-option>
+                    </el-select>
+                    <el-checkbox v-model="showOnlyWithRGB" @change="handleFilterChange">
+                        仅显示有RGB数据
+                    </el-checkbox>
+                </div>
+                <div class="search-row">
+                    <el-input 
+                        v-model="searchTerm" 
+                        placeholder="搜索颜色编码或配方"
+                        clearable
+                        @input="handleSearch"
+                    >
+                        <template #prefix>
+                            <i class="el-icon-search"></i>
+                        </template>
+                    </el-input>
+                </div>
+                <div class="stats-row">
+                    显示 {{ filteredColors.length }} / {{ colors.length }} 个颜色
+                </div>
             </div>
-            <div class="color-list">
-                <div 
-                    v-for="color in sortedColors"
-                    :key="color.id"
-                    class="color-list-item"
-                    @click="$emit('select', color)"
-                    @mouseenter="$emit('hover', color)"
-                >
-                    <div class="color-swatch" :style="{ backgroundColor: color.hex }"></div>
-                    <div class="color-info">
-                        <div class="color-name">{{ color.name }}</div>
-                        <div class="color-code">{{ color.color_code }}</div>
+            
+            <div class="color-list-container">
+                <div class="view-toggle">
+                    <el-radio-group v-model="viewMode" size="small">
+                        <el-radio-button label="grid">网格</el-radio-button>
+                        <el-radio-button label="list">列表</el-radio-button>
+                        <el-radio-button label="compact">紧凑</el-radio-button>
+                    </el-radio-group>
+                </div>
+                
+                <!-- Grid View -->
+                <div v-if="viewMode === 'grid'" class="color-grid">
+                    <div 
+                        v-for="color in paginatedColors"
+                        :key="color.id"
+                        class="color-grid-item"
+                        :class="{ 
+                            'selected': selectedColor && selectedColor.id === color.id,
+                            'has-rgb': color.hasValidRGB 
+                        }"
+                        @click="handleSelect(color)"
+                        @mouseenter="handleHover(color)"
+                        @mouseleave="handleHoverEnd"
+                    >
+                        <div class="color-preview" :style="{ backgroundColor: color.hex || getCategoryColor(color) }">
+                            <div v-if="!color.hasValidRGB" class="no-rgb-indicator">?</div>
+                        </div>
+                        <div class="color-label">{{ color.color_code }}</div>
+                        <div class="color-hsl" v-if="color.hsl">
+                            H:{{ Math.round(color.hsl.h) }}° S:{{ Math.round(color.hsl.s) }}%
+                        </div>
                     </div>
                 </div>
+                
+                <!-- List View -->
+                <div v-else-if="viewMode === 'list'" class="color-list">
+                    <div 
+                        v-for="color in paginatedColors"
+                        :key="color.id"
+                        class="color-list-item"
+                        :class="{ 'selected': selectedColor && selectedColor.id === color.id }"
+                        @click="handleSelect(color)"
+                        @mouseenter="handleHover(color)"
+                        @mouseleave="handleHoverEnd"
+                    >
+                        <div class="color-swatch" :style="{ backgroundColor: color.hex || getCategoryColor(color) }"></div>
+                        <div class="color-info">
+                            <div class="color-header">
+                                <span class="color-code">{{ color.color_code }}</span>
+                                <span class="color-category">{{ getCategoryName(color.category_id) }}</span>
+                            </div>
+                            <div class="color-formula">{{ color.formula }}</div>
+                            <div class="color-values" v-if="color.hasValidRGB">
+                                <span v-if="color.rgb">RGB: {{ color.rgb.r }}, {{ color.rgb.g }}, {{ color.rgb.b }}</span>
+                                <span v-if="color.hsl">HSL: {{ Math.round(color.hsl.h) }}°, {{ Math.round(color.hsl.s) }}%, {{ Math.round(color.hsl.l) }}%</span>
+                            </div>
+                        </div>
+                        <div class="color-wheel-position" v-if="color.hsl">
+                            <svg width="30" height="30" viewBox="0 0 30 30">
+                                <circle cx="15" cy="15" r="14" fill="none" stroke="#ddd" stroke-width="1"/>
+                                <circle 
+                                    :cx="15 + 12 * Math.cos(color.hsl.h * Math.PI / 180) * (color.hsl.s / 100)"
+                                    :cy="15 + 12 * Math.sin(color.hsl.h * Math.PI / 180) * (color.hsl.s / 100)"
+                                    r="3" 
+                                    :fill="color.hex || '#888'"
+                                />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Compact View -->
+                <div v-else class="color-compact">
+                    <span 
+                        v-for="color in paginatedColors"
+                        :key="color.id"
+                        class="color-chip"
+                        :class="{ 'selected': selectedColor && selectedColor.id === color.id }"
+                        :style="{ backgroundColor: color.hex || getCategoryColor(color) }"
+                        :title="color.color_code + ' - ' + color.formula"
+                        @click="handleSelect(color)"
+                        @mouseenter="handleHover(color)"
+                        @mouseleave="handleHoverEnd"
+                    >
+                        {{ color.color_code }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="pagination-controls" v-if="totalPages > 1">
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    :page-size="pageSize"
+                    :total="filteredColors.length"
+                    :page-sizes="[20, 50, 100, 200]"
+                    layout="total, sizes, prev, pager, next"
+                    @size-change="handleSizeChange"
+                    @current-change="handlePageChange"
+                />
             </div>
         </div>
     `,
@@ -1167,31 +1274,135 @@ const EnhancedListView = {
     data() {
         return {
             sortBy: 'hue',
-            filterCategory: null
+            filterCategory: null,
+            showOnlyWithRGB: false,
+            searchTerm: '',
+            viewMode: 'grid',
+            currentPage: 1,
+            pageSize: 50,
+            hoveredColor: null
         };
     },
     computed: {
-        sortedColors() {
+        filteredColors() {
             let filtered = this.colors;
             
+            // Category filter
             if (this.filterCategory) {
                 filtered = filtered.filter(c => c.category_id === this.filterCategory);
             }
             
+            // RGB filter
+            if (this.showOnlyWithRGB) {
+                filtered = filtered.filter(c => c.hasValidRGB);
+            }
+            
+            // Search filter
+            if (this.searchTerm) {
+                const term = this.searchTerm.toLowerCase();
+                filtered = filtered.filter(c => 
+                    c.color_code.toLowerCase().includes(term) ||
+                    c.formula.toLowerCase().includes(term) ||
+                    (c.name && c.name.toLowerCase().includes(term))
+                );
+            }
+            
+            // Sorting
             return filtered.sort((a, b) => {
                 switch(this.sortBy) {
                     case 'hue':
-                        return (a.hsl?.h || 0) - (b.hsl?.h || 0);
+                        return (a.hsl?.h || 360) - (b.hsl?.h || 360);
                     case 'lightness':
                         return (a.hsl?.l || 0) - (b.hsl?.l || 0);
                     case 'saturation':
                         return (a.hsl?.s || 0) - (b.hsl?.s || 0);
                     case 'name':
-                        return a.name.localeCompare(b.name);
+                        return (a.color_code || '').localeCompare(b.color_code || '');
+                    case 'date':
+                        return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
                     default:
                         return 0;
                 }
             });
+        },
+        
+        paginatedColors() {
+            const start = (this.currentPage - 1) * this.pageSize;
+            const end = start + this.pageSize;
+            return this.filteredColors.slice(start, end);
+        },
+        
+        totalPages() {
+            return Math.ceil(this.filteredColors.length / this.pageSize);
+        }
+    },
+    
+    watch: {
+        selectedColor(newVal) {
+            // Auto-scroll to selected color
+            if (newVal) {
+                const index = this.filteredColors.findIndex(c => c.id === newVal.id);
+                if (index >= 0) {
+                    const page = Math.floor(index / this.pageSize) + 1;
+                    if (page !== this.currentPage) {
+                        this.currentPage = page;
+                    }
+                }
+            }
+        }
+    },
+    
+    methods: {
+        handleSelect(color) {
+            this.$emit('select', color);
+        },
+        
+        handleHover(color) {
+            this.hoveredColor = color;
+            this.$emit('hover', color);
+        },
+        
+        handleHoverEnd() {
+            this.hoveredColor = null;
+        },
+        
+        handleSortChange() {
+            this.currentPage = 1;
+        },
+        
+        handleFilterChange() {
+            this.currentPage = 1;
+        },
+        
+        handleSearch() {
+            this.currentPage = 1;
+        },
+        
+        handlePageChange(page) {
+            this.currentPage = page;
+        },
+        
+        handleSizeChange(size) {
+            this.pageSize = size;
+            this.currentPage = 1;
+        },
+        
+        getCategoryColor(color) {
+            const categoryColors = {
+                1: '#4A90E2', // 蓝色系
+                2: '#F5D547', // 黄色系
+                3: '#E85D75', // 红色系
+                4: '#7FBA40', // 绿色系
+                5: '#9B59B6', // 紫色系
+                6: '#FF6B6B', // 色精
+                7: '#95A5A6'  // 其他
+            };
+            return categoryColors[color.category_id] || '#CCCCCC';
+        },
+        
+        getCategoryName(categoryId) {
+            const category = this.categories.find(c => c.id === categoryId);
+            return category ? category.name : '';
         }
     }
 };
