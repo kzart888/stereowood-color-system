@@ -8,7 +8,6 @@ const ColorPaletteDialog = {
     template: `
         <el-dialog
             v-model="dialogVisible"
-            :title="title"
             width="90%"
             :custom-class="'color-palette-dialog'"
             :close-on-click-modal="false"
@@ -16,75 +15,151 @@ const ColorPaletteDialog = {
             @close="handleClose"
             :fullscreen="isMobile"
         >
-            <!-- Tab Navigation -->
-            <div class="color-palette-tabs">
-                <el-tabs v-model="activeTab" type="card">
-                    <el-tab-pane label="HSL色彩空间" name="hsl">
-                        <hsl-color-space-view
-                            v-if="activeTab === 'hsl'"
-                            :colors="enrichedColors"
-                            :selected-color="selectedColor"
-                            @select="handleColorSelect"
-                            @hover="handleColorHover"
-                        />
-                    </el-tab-pane>
-                    
-                    <el-tab-pane label="色轮导航" name="wheel">
-                        <color-wheel-view
-                            v-if="activeTab === 'wheel'"
-                            :colors="enrichedColors"
-                            :selected-color="selectedColor"
-                            @select="handleColorSelect"
-                            @hover="handleColorHover"
-                        />
-                    </el-tab-pane>
-                    
-                    <el-tab-pane label="列表视图" name="list">
-                        <enhanced-list-view
-                            v-if="activeTab === 'list'"
-                            :colors="enrichedColors"
-                            :selected-color="selectedColor"
-                            :categories="categories"
-                            @select="handleColorSelect"
-                            @hover="handleColorHover"
-                        />
-                    </el-tab-pane>
-                </el-tabs>
-            </div>
-            
-            <!-- Color Info Panel -->
-            <div class="color-info-panel" v-if="hoveredColor || selectedColor">
-                <div class="color-preview-large"
-                     :style="{ backgroundColor: getColorStyle(hoveredColor || selectedColor) }">
-                </div>
-                <div class="color-details">
-                    <h4>{{ (hoveredColor || selectedColor).name }}</h4>
-                    <p class="color-code">{{ (hoveredColor || selectedColor).color_code }}</p>
-                    <div class="color-values">
-                        <div v-if="(hoveredColor || selectedColor).rgb">
-                            RGB: {{ formatRgb((hoveredColor || selectedColor).rgb) }}
-                        </div>
-                        <div v-if="(hoveredColor || selectedColor).hsl">
-                            HSL: {{ formatHsl((hoveredColor || selectedColor).hsl) }}
-                        </div>
-                        <div v-if="(hoveredColor || selectedColor).formula">
-                            配方: {{ (hoveredColor || selectedColor).formula }}
+            <!-- Custom Header -->
+            <template #header>
+                <div class="dialog-header-custom">
+                    <div class="header-row-top">
+                        <h3 class="dialog-title">{{ title }}</h3>
+                        <div class="header-actions">
+                            <el-button 
+                                type="primary" 
+                                @click="handleConfirm"
+                                :disabled="!selectedColor"
+                                size="small"
+                            >
+                                确定选择
+                            </el-button>
+                            <el-button 
+                                @click="showHelp = true" 
+                                circle 
+                                size="small"
+                                icon="el-icon-question"
+                                title="使用帮助"
+                            >
+                            </el-button>
+                            <el-button 
+                                @click="handleClose" 
+                                circle 
+                                size="small"
+                                icon="el-icon-close"
+                                title="关闭"
+                            >
+                            </el-button>
                         </div>
                     </div>
+                    
+                    <!-- Integrated Color Info Panel -->
+                    <div class="header-color-info" v-if="hoveredColor || selectedColor">
+                        <div class="color-preview-header"
+                             :style="{ backgroundColor: getColorStyle(hoveredColor || selectedColor) }">
+                        </div>
+                        <div class="color-details-header">
+                            <div class="color-name-row">
+                                <strong>{{ (hoveredColor || selectedColor).name }}</strong>
+                                <span class="color-code-header">{{ (hoveredColor || selectedColor).color_code }}</span>
+                            </div>
+                            <div class="color-values-row">
+                                <span v-if="(hoveredColor || selectedColor).rgb">
+                                    RGB: {{ formatRgb((hoveredColor || selectedColor).rgb) }}
+                                </span>
+                                <span v-if="(hoveredColor || selectedColor).cmyk_c">
+                                    CMYK: {{ formatCmyk(hoveredColor || selectedColor) }}
+                                </span>
+                                <span v-if="(hoveredColor || selectedColor).hsl">
+                                    HSL: {{ formatHsl((hoveredColor || selectedColor).hsl) }}
+                                </span>
+                                <span v-if="(hoveredColor || selectedColor).hex_color">
+                                    HEX: {{ (hoveredColor || selectedColor).hex_color }}
+                                </span>
+                                <span v-if="(hoveredColor || selectedColor).pantone">
+                                    Pantone: {{ (hoveredColor || selectedColor).pantone }}
+                                </span>
+                            </div>
+                            <div class="color-formula-row" v-if="(hoveredColor || selectedColor).formula">
+                                配方: {{ (hoveredColor || selectedColor).formula }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab Navigation in Header -->
+                    <div class="header-tabs">
+                        <el-tabs v-model="activeTab" type="card">
+                            <el-tab-pane label="HSL色彩空间" name="hsl"></el-tab-pane>
+                            <el-tab-pane label="色轮导航" name="wheel"></el-tab-pane>
+                            <el-tab-pane label="列表视图" name="list"></el-tab-pane>
+                        </el-tabs>
+                    </div>
                 </div>
+            </template>
+            
+            <!-- Tab Content -->
+            <div class="color-palette-tabs">
+                <hsl-color-space-view
+                    v-if="activeTab === 'hsl'"
+                    :colors="enrichedColors"
+                    :selected-color="selectedColor"
+                    @select="handleColorSelect"
+                    @hover="handleColorHover"
+                />
+                
+                <color-wheel-view
+                    v-if="activeTab === 'wheel'"
+                    :colors="enrichedColors"
+                    :selected-color="selectedColor"
+                    @select="handleColorSelect"
+                    @hover="handleColorHover"
+                />
+                
+                <enhanced-list-view
+                    v-if="activeTab === 'list'"
+                    :colors="enrichedColors"
+                    :selected-color="selectedColor"
+                    :categories="categories"
+                    @select="handleColorSelect"
+                    @hover="handleColorHover"
+                />
             </div>
             
-            <!-- Dialog Footer -->
-            <span slot="footer" class="dialog-footer">
-                <el-button @click="handleClose">取消</el-button>
-                <el-button 
-                    type="primary" 
-                    @click="handleConfirm"
-                    :disabled="!selectedColor"
-                >
-                    确定选择
-                </el-button>
-            </span>
+            <!-- Help Dialog -->
+            <el-dialog
+                v-model="showHelp"
+                title="使用帮助"
+                width="600px"
+                append-to-body
+            >
+                <div class="help-content">
+                    <h4>HSL色彩空间</h4>
+                    <ul>
+                        <li>拖动色相滑块选择基础颜色</li>
+                        <li>在饱和度-亮度网格中查找颜色</li>
+                        <li>点击网格单元或颜色块选择颜色</li>
+                        <li>调整网格密度获得更精确的定位</li>
+                    </ul>
+                    
+                    <h4>色轮导航</h4>
+                    <ul>
+                        <li>点击色轮上任意位置选择颜色</li>
+                        <li>调整距离容差查找相似颜色</li>
+                        <li>颜色会根据实际位置显示在色轮上</li>
+                        <li>鼠标悬停查看颜色信息</li>
+                    </ul>
+                    
+                    <h4>列表视图</h4>
+                    <ul>
+                        <li>支持网格、列表、紧凑三种显示模式</li>
+                        <li>可按名称、色相、饱和度、亮度排序</li>
+                        <li>使用搜索框快速查找颜色</li>
+                        <li>按类别筛选颜色</li>
+                    </ul>
+                    
+                    <h4>快捷键</h4>
+                    <ul>
+                        <li><kbd>ESC</kbd> - 取消选择或关闭对话框</li>
+                        <li><kbd>Enter</kbd> - 确认选择</li>
+                        <li>点击空白处 - 取消当前选择</li>
+                    </ul>
+                </div>
+            </el-dialog>
         </el-dialog>
     `,
     
@@ -119,6 +194,7 @@ const ColorPaletteDialog = {
             hoveredColor: null,
             enrichedColors: [],
             isMobile: window.innerWidth < 768,
+            showHelp: false,
             colorState: {
                 selectedHue: 180,
                 proximityRange: 15,
@@ -175,10 +251,18 @@ const ColorPaletteDialog = {
         }
         this.handleResize();
         window.addEventListener('resize', this.handleResize);
+        // Add ESC key handler
+        window.addEventListener('keydown', this.handleKeyDown);
+        // Add click outside handler (delayed to avoid immediate trigger)
+        setTimeout(() => {
+            document.addEventListener('click', this.handleClickOutside);
+        }, 100);
     },
     
     beforeDestroy() {
         window.removeEventListener('resize', this.handleResize);
+        window.removeEventListener('keydown', this.handleKeyDown);
+        document.removeEventListener('click', this.handleClickOutside);
     },
     
     methods: {
@@ -367,6 +451,43 @@ const ColorPaletteDialog = {
             this.isMobile = window.innerWidth < 768;
         },
         
+        // Handle ESC key press
+        handleKeyDown(event) {
+            if (!this.dialogVisible) return;
+            
+            if (event.key === 'Escape' || event.keyCode === 27) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // If there's a selection, clear it first
+                if (this.selectedColor) {
+                    this.selectedColor = null;
+                    this.hoveredColor = null;
+                    this.$emit('select', null);
+                } else {
+                    // If no selection, close the dialog
+                    this.handleClose();
+                }
+            }
+        },
+        
+        // Handle click outside to deselect
+        handleClickOutside(event) {
+            if (!this.dialogVisible || !this.selectedColor) return;
+            
+            // Check if click is outside of color selection elements
+            const target = event.target;
+            const isColorElement = target.closest('.color-chip, .color-dot, .grid-cell, .color-grid-item, .color-list-item, canvas');
+            const isDialogElement = target.closest('.el-dialog');
+            
+            // If clicked outside color elements but inside dialog, deselect
+            if (isDialogElement && !isColorElement) {
+                this.selectedColor = null;
+                this.hoveredColor = null;
+                this.$emit('select', null);
+            }
+        },
+        
         // Get default color based on category
         getDefaultColorForCategory(categoryId) {
             // Default colors for different categories
@@ -400,6 +521,14 @@ const ColorPaletteDialog = {
         // Format HSL for display
         formatHsl(hsl) {
             return `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
+        },
+        
+        // Format CMYK for display
+        formatCmyk(color) {
+            if (color.cmyk_c !== null && color.cmyk_c !== undefined) {
+                return `${color.cmyk_c || 0}, ${color.cmyk_m || 0}, ${color.cmyk_y || 0}, ${color.cmyk_k || 0}`;
+            }
+            return '';
         }
     }
 };
