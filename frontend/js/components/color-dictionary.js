@@ -15,25 +15,26 @@ const ColorDictionaryComponent = {
                     </div>
                     <div v-else class="empty-preview">
                         <el-icon><Palette /></el-icon>
-                        <span>未选择颜色</span>
+                        <span>点击选择</span>
                     </div>
                 </div>
                 
-                <div class="color-details-grid" v-if="selectedColor">
-                    <div class="detail-row">
-                        <div class="detail-item">
-                            <label>名称:</label>
-                            <strong>{{ selectedColor.color_code }}</strong>
+                <div class="color-details-grid">
+                    <template v-if="selectedColor">
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>名称:</label>
+                                <strong>{{ selectedColor.color_code }}</strong>
+                            </div>
+                            <div class="detail-item">
+                                <label>分类:</label>
+                                <span>{{ getCategoryName(selectedColor.category_id) }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>更新时间:</label>
+                                <span>{{ formatDate(selectedColor.updated_at) }}</span>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <label>分类:</label>
-                            <span>{{ getCategoryName(selectedColor.category_id) }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>更新时间:</label>
-                            <span>{{ formatDate(selectedColor.updated_at) }}</span>
-                        </div>
-                    </div>
                     
                     <div class="detail-row">
                         <div class="detail-item">
@@ -78,12 +79,23 @@ const ColorDictionaryComponent = {
                     </div>
                     
                     <div class="detail-row">
-                        <div class="detail-item full-width">
+                        <div class="detail-item">
                             <label>配方:</label>
-                            <span v-if="selectedColor.formula">{{ selectedColor.formula }}</span>
+                            <span v-if="selectedColor.formula" class="formula-text">{{ selectedColor.formula }}</span>
                             <span v-else class="empty-value">未指定配方</span>
                         </div>
+                        <div class="detail-item">
+                            <label>适用层:</label>
+                            <span v-if="selectedColor.applicable_layers">{{ selectedColor.applicable_layers }}</span>
+                            <span v-else class="empty-value">未指定</span>
+                        </div>
                     </div>
+                    </template>
+                    <template v-else>
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sw-text-tertiary); font-size: 14px;">
+                            <span>请从下方列表中选择一个颜色查看详细信息</span>
+                        </div>
+                    </template>
                 </div>
                 
                 <div class="info-actions">
@@ -167,9 +179,25 @@ const ColorDictionaryComponent = {
             
             <!-- View Content -->
             <div class="view-content">
+                <!-- Empty State -->
+                <div v-if="!enrichedColors || enrichedColors.length === 0" class="empty-state">
+                    <div class="empty-state-icon">
+                        <el-icon><Collection /></el-icon>
+                    </div>
+                    <div class="empty-state-title">暂无自配色数据</div>
+                    <div class="empty-state-message">
+                        还没有创建任何自配色。<br>
+                        请前往自配色管理页面添加您的第一个颜色配方。
+                    </div>
+                    <div class="empty-state-hint">
+                        <el-icon><InfoFilled /></el-icon>
+                        提示：您可以通过点击顶部的"在自配色管理中查看"按钮来添加新颜色
+                    </div>
+                </div>
+                
                 <!-- List View -->
                 <simplified-list-view
-                    v-if="viewMode === 'list'"
+                    v-else-if="viewMode === 'list'"
                     :colors="enrichedColors"
                     :categories="categories"
                     :selected-color-id="selectedColorId"
@@ -179,7 +207,7 @@ const ColorDictionaryComponent = {
                 
                 <!-- HSL View -->
                 <hsl-color-space-view
-                    v-if="viewMode === 'hsl'"
+                    v-else-if="viewMode === 'hsl'"
                     :colors="enrichedColors"
                     :selected-color="selectedColor"
                     @select="handleColorSelect"
@@ -188,7 +216,7 @@ const ColorDictionaryComponent = {
                 
                 <!-- Color Wheel View -->
                 <color-wheel-view
-                    v-if="viewMode === 'wheel'"
+                    v-else-if="viewMode === 'wheel'"
                     :colors="enrichedColors"
                     :selected-color="selectedColor"
                     @select="handleColorSelect"
