@@ -187,7 +187,7 @@ const app = createApp({
             }, 50);
         },
         focusArtworkScheme(p){ if(!p||!p.artworkId||!p.schemeId) return; this.setActiveTabPersist('artworks'); this._suppressNextRestore=true; const TRY_MAX=20; let tries=0; const attempt=()=>{ const comp=this.$refs.artworksRef; if(comp&&comp.focusSchemeUsage){ if(comp.hasScheme && !comp.hasScheme(p.schemeId)){ if(tries++<TRY_MAX) return setTimeout(attempt,120); return;} comp.focusSchemeUsage({ artworkId:p.artworkId, schemeId:p.schemeId, layers:Array.isArray(p.layers)?p.layers.slice():[], colorCode:p.colorCode }); } else if(tries++<TRY_MAX) setTimeout(attempt,120); }; this.$nextTick(attempt); },
-        setActiveTabPersist(tab){ if(!['custom-colors','artworks','mont-marte'].includes(tab)) return; this.activeTab=tab; try{ localStorage.setItem('sw-active-tab', tab);}catch(e){} window.scrollTo(0,0); },
+        setActiveTabPersist(tab){ if(!['custom-colors','artworks','mont-marte','color-dictionary'].includes(tab)) return; this.activeTab=tab; try{ localStorage.setItem('sw-active-tab', tab);}catch(e){} window.scrollTo(0,0); },
         registerDataset(type, items){ if(!type||!Array.isArray(items)) return; if(type==='customColors'){ this._searchIndex.customColors=items.slice(); this._indexReady.customColors=true;} else if(type==='artworks'){ this._searchIndex.artworks=items.slice(); this._indexReady.artworks=true;} else if(type==='schemes'){ this._searchIndex.schemes=items.slice(); } else if(type==='rawMaterials'){ this._searchIndex.rawMaterials=items.slice(); this._indexReady.rawMaterials=true;} },
         _buildColorFormulaIndex(){
             // 建立当前自配色 formula 哈希索引以供后续 diff
@@ -245,6 +245,7 @@ if (window.ElementPlusIconsVue) {
 app.component('custom-colors-component', CustomColorsComponent);
 app.component('artworks-component', ArtworksComponent);  
 app.component('mont-marte-component', MontMarteComponent);
+if (typeof ColorDictionaryComponent !== 'undefined') app.component('color-dictionary-component', ColorDictionaryComponent);
 if (typeof AppHeaderBar !== 'undefined') app.component('app-header-bar', AppHeaderBar);
 // 计算器浮层（渲染由全局服务控制）
 if (typeof FormulaCalculatorOverlay !== 'undefined') {
