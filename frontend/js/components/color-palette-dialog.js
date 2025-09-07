@@ -3,10 +3,11 @@
  * Advanced color selection dialog with HSL and Color Wheel views
  */
 
+// Forward declare the component, we'll add child components later
 const ColorPaletteDialog = {
     template: `
         <el-dialog
-            :visible.sync="dialogVisible"
+            v-model="dialogVisible"
             :title="title"
             width="90%"
             :custom-class="'color-palette-dialog'"
@@ -142,7 +143,7 @@ const ColorPaletteDialog = {
     watch: {
         visible(val) {
             this.dialogVisible = val;
-            if (val) {
+            if (val && this.colors && this.colors.length > 0) {
                 this.enrichColors();
             }
         },
@@ -152,15 +153,26 @@ const ColorPaletteDialog = {
         },
         
         colors: {
-            handler() {
-                this.enrichColors();
+            handler(newColors) {
+                if (newColors && newColors.length > 0) {
+                    this.enrichColors();
+                }
             },
             deep: true
         }
     },
     
+    created() {
+        console.log('ColorPaletteDialog created');
+        console.log('Initial visible:', this.visible);
+        console.log('Initial colors:', this.colors?.length);
+    },
+    
     mounted() {
-        this.enrichColors();
+        console.log('ColorPaletteDialog mounted');
+        if (this.colors && this.colors.length > 0) {
+            this.enrichColors();
+        }
         this.handleResize();
         window.addEventListener('resize', this.handleResize);
     },
@@ -171,51 +183,135 @@ const ColorPaletteDialog = {
     
     methods: {
         // Enrich colors with calculated properties
-        async enrichColors() {
-            this.enrichedColors = await Promise.all(this.colors.map(async color => {
+        enrichColors() {
+            console.log('Starting enrichColors with', this.colors?.length, 'colors');
+            
+            // Check if colors exist
+            if (!this.colors || this.colors.length === 0) {
+                this.enrichedColors = [];
+                return;
+            }
+            
+            // Process all colors synchronously
+            this.enrichedColors = this.colors.map((color, index) => {
                 const enriched = { ...color };
                 
-                // Extract RGB from image or use stored value
-                if (color.rgb) {
-                    enriched.rgb = color.rgb;
-                } else if (color.image_path) {
-                    enriched.rgb = await this.extractColorFromImage(color.image_path);
-                } else {
-                    // Default color if no image
+                try {
+                    // Try to get RGB from different sources
+                    let rgb = null;
+                    let hasValidRGB = false;
+                    
+                    // Check for hex value (database field: hex_color)
+                    if (color.hex_color && color.hex_color !== '未填写' && color.hex_color !== '') {
+                        const hex = color.hex_color.startsWith('#') ? color.hex_color : '#' + color.hex_color;
+                        rgb = hexToRgb(hex);
+                        enriched.hex = hex;
+                        hasValidRGB = true;
+                    }
+                    // Check for RGB values (database fields: rgb_r, rgb_g, rgb_b)
+                    else if (color.rgb_r !== null && color.rgb_r !== undefined && 
+                             color.rgb_g !== null && color.rgb_g !== undefined && 
+                             color.rgb_b !== null && color.rgb_b !== undefined) {
+                        rgb = {
+                            r: parseInt(color.rgb_r) || 0,
+                            g: parseInt(color.rgb_g) || 0,
+                            b: parseInt(color.rgb_b) || 0
+                        };
+                        enriched.hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                        hasValidRGB = true;
+                    }
+                    // Use category default color if no RGB data
+                    else {
+                        rgb = this.getDefaultColorForCategory(color.category_id);
+                        enriched.hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                        hasValidRGB = false;
+                    }
+                    
+                    // Mark whether this color has valid RGB data
+                    enriched.hasValidRGB = hasValidRGB;
+                    
+                    enriched.rgb = rgb;
+                    
+                    // Calculate HSL and LAB
+                    if (rgb && typeof rgbToHsl !== 'undefined') {
+                        enriched.hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+                    } else {
+                        enriched.hsl = { h: 0, s: 0, l: 50 };
+                    }
+                    
+                    if (rgb && typeof rgbToLab !== 'undefined') {
+                        enriched.lab = rgbToLab(rgb.r, rgb.g, rgb.b);
+                    } else {
+                        enriched.lab = { L: 50, a: 0, b: 0 };
+                    }
+                    
+                    // Ensure the color has a name property for consistency
+                    // Database returns color_code, not color_name
+                    if (!enriched.name) {
+                        enriched.name = color.color_code || color.color_name || `Color ${index + 1}`;
+                    }
+                    
+                    // Log first few colors for debugging
+                    if (index < 3) {
+                        console.log(`Color ${index}: ${enriched.name}`, {
+                            original: { 
+                                hex_color: color.hex_color, 
+                                rgb_r: color.rgb_r,
+                                rgb_g: color.rgb_g,
+                                rgb_b: color.rgb_b,
+                                hasValidRGB: hasValidRGB
+                            },
+                            enriched: { hex: enriched.hex, rgb: enriched.rgb, hsl: enriched.hsl }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error enriching color:', error);
+                    // Fallback values on any error
                     enriched.rgb = { r: 128, g: 128, b: 128 };
+                    enriched.hsl = { h: 0, s: 0, l: 50 };
+                    enriched.lab = { L: 50, a: 0, b: 0 };
+                    enriched.hex = '#808080';
                 }
                 
-                // Calculate HSL and LAB
-                enriched.hsl = rgbToHsl(enriched.rgb.r, enriched.rgb.g, enriched.rgb.b);
-                enriched.lab = rgbToLab(enriched.rgb.r, enriched.rgb.g, enriched.rgb.b);
-                enriched.hex = rgbToHex(enriched.rgb.r, enriched.rgb.g, enriched.rgb.b);
-                
                 return enriched;
-            }));
+            });
+            
+            console.log('Total enriched colors:', this.enrichedColors.length);
         },
         
         // Extract dominant color from image
         async extractColorFromImage(imagePath) {
             return new Promise((resolve) => {
+                // Skip if no image path
+                if (!imagePath) {
+                    resolve({ r: 128, g: 128, b: 128 });
+                    return;
+                }
+                
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
                 
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = 1;
-                    canvas.height = 1;
-                    
-                    // Draw scaled down image
-                    ctx.drawImage(img, 0, 0, 1, 1);
-                    
-                    // Get pixel data
-                    const pixel = ctx.getImageData(0, 0, 1, 1).data;
-                    resolve({
-                        r: pixel[0],
-                        g: pixel[1],
-                        b: pixel[2]
-                    });
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = 1;
+                        canvas.height = 1;
+                        
+                        // Draw scaled down image
+                        ctx.drawImage(img, 0, 0, 1, 1);
+                        
+                        // Get pixel data
+                        const pixel = ctx.getImageData(0, 0, 1, 1).data;
+                        resolve({
+                            r: pixel[0],
+                            g: pixel[1],
+                            b: pixel[2]
+                        });
+                    } catch (error) {
+                        // Canvas error, return default
+                        resolve({ r: 128, g: 128, b: 128 });
+                    }
                 };
                 
                 img.onerror = () => {
@@ -225,7 +321,16 @@ const ColorPaletteDialog = {
                 
                 // Build proper image URL
                 const baseUrl = window.location.origin;
-                img.src = imagePath.startsWith('http') ? imagePath : `${baseUrl}/${imagePath}`;
+                // Ensure path starts with / or uploads/
+                let fullPath = imagePath;
+                if (!imagePath.startsWith('http')) {
+                    if (!imagePath.startsWith('/')) {
+                        fullPath = '/' + imagePath;
+                    }
+                    img.src = `${baseUrl}${fullPath}`;
+                } else {
+                    img.src = imagePath;
+                }
             });
         },
         
@@ -260,6 +365,22 @@ const ColorPaletteDialog = {
         // Handle window resize
         handleResize() {
             this.isMobile = window.innerWidth < 768;
+        },
+        
+        // Get default color based on category
+        getDefaultColorForCategory(categoryId) {
+            // Default colors for different categories
+            const categoryColors = {
+                1: { r: 70, g: 130, b: 180 },  // 蓝 - Blue
+                2: { r: 255, g: 215, b: 0 },   // 黄 - Yellow
+                3: { r: 220, g: 20, b: 60 },   // 红 - Red
+                4: { r: 34, g: 139, b: 34 },   // 绿 - Green
+                5: { r: 128, g: 0, b: 128 },   // 紫 - Purple
+                6: { r: 139, g: 69, b: 19 },   // 色精 - Brown
+                7: { r: 255, g: 140, b: 0 }    // 其他 - Orange
+            };
+            
+            return categoryColors[categoryId] || { r: 128, g: 128, b: 128 };
         },
         
         // Get color style for preview
@@ -321,6 +442,9 @@ const HslColorSpaceView = {
                     <el-radio-button :label="10">10x10</el-radio-button>
                     <el-radio-button :label="15">15x15</el-radio-button>
                 </el-radio-group>
+                <el-checkbox v-model="showOnlyWithRGB" style="margin-left: 10px;">
+                    仅显示有RGB数据的颜色
+                </el-checkbox>
                 <span class="grid-info">{{ matchedColorsCount }} 个颜色在此色相范围</span>
             </div>
             
@@ -421,6 +545,7 @@ const HslColorSpaceView = {
             hoveredCell: null,
             gridSize: 10,
             hueTolerance: 15,
+            showOnlyWithRGB: false,
             huePresets: [
                 { name: '红', value: 0 },
                 { name: '橙', value: 30 },
@@ -452,19 +577,41 @@ const HslColorSpaceView = {
         },
         
         gridStyle() {
-            const cellSize = this.gridSize <= 5 ? 60 : this.gridSize <= 10 ? 40 : 30;
-            return {
-                gridTemplateColumns: `repeat(${this.gridSize}, ${cellSize}px)`,
-                gridTemplateRows: `repeat(${this.gridSize}, ${cellSize}px)`
-            };
+            // Return empty since we're using flexbox for rows, not CSS grid
+            return {};
         },
         
         colorsInHue() {
-            return this.colors.filter(color => {
-                if (!color.hsl) return false;
+            if (!this.colors || this.colors.length === 0) {
+                console.log('No colors available for filtering');
+                return [];
+            }
+            
+            const filtered = [];
+            for (const color of this.colors) {
+                // Filter out colors without valid RGB data if the option is enabled
+                if (this.showOnlyWithRGB && !color.hasValidRGB) {
+                    continue;
+                }
+                
+                if (!color.hsl) {
+                    if (filtered.length === 0) {
+                        console.log('Color has no HSL:', color);
+                    }
+                    continue;
+                }
                 const hueDiff = Math.abs(color.hsl.h - this.selectedHue);
-                return Math.min(hueDiff, 360 - hueDiff) <= this.hueTolerance;
-            }).sort((a, b) => {
+                const minDiff = Math.min(hueDiff, 360 - hueDiff);
+                const inRange = minDiff <= this.hueTolerance;
+                if (inRange) {
+                    filtered.push(color);
+                    if (filtered.length <= 3) {
+                        console.log(`Color ${color.name || color.color_code} in range: hue=${color.hsl.h}, diff=${minDiff}, hasRGB=${color.hasValidRGB}`);
+                    }
+                }
+            }
+            
+            return filtered.sort((a, b) => {
                 // Sort by saturation and lightness
                 const aDist = Math.abs(a.hsl.s - 50) + Math.abs(a.hsl.l - 50);
                 const bDist = Math.abs(b.hsl.s - 50) + Math.abs(b.hsl.l - 50);
@@ -490,6 +637,15 @@ const HslColorSpaceView = {
     },
     
     mounted() {
+        console.log('HSL view mounted, generating grid');
+        console.log('Colors received in HSL view:', this.colors?.length);
+        console.log('First 3 colors:', this.colors?.slice(0, 3).map(c => ({
+            name: c.name || c.color_name,
+            hsl: c.hsl,
+            hex: c.hex
+        })));
+        console.log('Hue tolerance:', this.hueTolerance);
+        console.log('Selected hue:', this.selectedHue);
         this.generateGrid();
         if (this.selectedColor && this.selectedColor.hsl) {
             this.selectedHue = this.selectedColor.hsl.h;
@@ -498,6 +654,7 @@ const HslColorSpaceView = {
     
     methods: {
         generateGrid() {
+            console.log('generateGrid called, gridSize:', this.gridSize);
             const grid = [];
             const step = 100 / this.gridSize;
             
@@ -529,6 +686,7 @@ const HslColorSpaceView = {
             }
             
             this.colorGrid = grid;
+            console.log('Grid generated, rows:', grid.length, 'first row cells:', grid[0]?.length);
         },
         
         findMatchingColors(targetHsl) {
@@ -733,4 +891,11 @@ const EnhancedListView = {
             });
         }
     }
+};
+
+// Register child components to ColorPaletteDialog
+ColorPaletteDialog.components = {
+    'hsl-color-space-view': HslColorSpaceView,
+    'color-wheel-view': ColorWheelView,
+    'enhanced-list-view': EnhancedListView
 };

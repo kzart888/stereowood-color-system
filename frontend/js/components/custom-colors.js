@@ -426,13 +426,14 @@ const CustomColorsComponent = {
             <!-- New Advanced Color Palette Dialog -->
             <color-palette-dialog
                 v-if="showColorPaletteDialog"
-                :visible.sync="showColorPaletteDialog"
+                :visible="showColorPaletteDialog"
                 :colors="globalData.customColors?.value || []"
                 :categories="globalData.categories?.value || []"
                 title="自配色列表 - 高级选择器"
                 @select="handleColorSelect"
                 @confirm="handleColorConfirm"
                 @close="showColorPaletteDialog = false"
+                @update:visible="showColorPaletteDialog = $event"
             />
         </div>
     `,
@@ -1529,16 +1530,23 @@ const CustomColorsComponent = {
         
         // Show color palette method - now uses the new advanced dialog
         async showColorPalette() {
+            console.log('showColorPalette called');
             const msg = this.getMsg();
             try {
                 // Refresh data before opening dialog
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadCategories();
                 
+                console.log('Data loaded, opening dialog');
+                console.log('Custom colors:', this.globalData.customColors?.value?.length);
+                console.log('Categories:', this.globalData.categories?.value?.length);
+                
                 // Simply open the new dialog, it will handle the data internally
                 this.showColorPaletteDialog = true;
+                console.log('showColorPaletteDialog set to:', this.showColorPaletteDialog);
                 
             } catch (error) {
+                console.error('Error in showColorPalette:', error);
                 msg.error('加载数据失败，请重试');
             }
         },
