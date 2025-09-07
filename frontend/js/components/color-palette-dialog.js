@@ -784,16 +784,48 @@ const ColorWheelView = {
     template: `
         <div class="color-wheel-view">
             <div class="wheel-container">
-                <canvas ref="wheelCanvas" width="600" height="600"></canvas>
+                <canvas 
+                    ref="wheelCanvas" 
+                    width="600" 
+                    height="600"
+                    @click="handleCanvasClick"
+                    @mousemove="handleCanvasHover"
+                ></canvas>
             </div>
             <div class="wheel-controls">
-                <label>邻近范围 (ΔE): {{ proximityRange }}</label>
-                <el-slider 
-                    v-model="proximityRange" 
-                    :min="0" 
-                    :max="50"
-                    :step="1"
-                ></el-slider>
+                <div class="control-row">
+                    <label>邻近范围 (ΔE): {{ proximityRange }}</label>
+                    <el-slider 
+                        v-model="proximityRange" 
+                        :min="0" 
+                        :max="50"
+                        :step="1"
+                        @change="updateWheel"
+                    ></el-slider>
+                </div>
+                <div class="control-row">
+                    <el-checkbox v-model="showOnlyWithRGB" @change="updateWheel">
+                        仅显示有RGB数据的颜色
+                    </el-checkbox>
+                </div>
+                <div class="stats">
+                    显示 {{ visibleColors.length }} / {{ filteredColors.length }} 个颜色
+                </div>
+            </div>
+            <div class="selected-colors" v-if="nearbyColors.length > 0">
+                <h4>邻近颜色 (ΔE ≤ {{ proximityRange }})</h4>
+                <div class="color-chips">
+                    <span 
+                        v-for="color in nearbyColors" 
+                        :key="color.id"
+                        class="color-chip"
+                        :style="{ backgroundColor: color.hex }"
+                        @click="$emit('select', color)"
+                        :title="color.color_code"
+                    >
+                        {{ color.color_code }}
+                    </span>
+                </div>
             </div>
         </div>
     `,
@@ -805,16 +837,287 @@ const ColorWheelView = {
         return {
             proximityRange: 15,
             wheelCanvas: null,
-            ctx: null
+            ctx: null,
+            centerX: 300,
+            centerY: 300,
+            radius: 280,
+            showOnlyWithRGB: false,
+            hoveredColor: null,
+            nearbyColors: [],
+            colorPositions: [] // Store color positions for click detection
         };
     },
+    computed: {
+        filteredColors() {
+            if (this.showOnlyWithRGB) {
+                return this.colors.filter(c => c.hasValidRGB);
+            }
+            return this.colors;
+        },
+        visibleColors() {
+            // Colors visible based on proximity filter
+            if (!this.selectedColor || this.proximityRange === 50) {
+                return this.filteredColors;
+            }
+            
+            return this.filteredColors.filter(color => {
+                const deltaE = this.calculateDeltaE(this.selectedColor, color);
+                return deltaE <= this.proximityRange;
+            });
+        }
+    },
     mounted() {
+        this.wheelCanvas = this.$refs.wheelCanvas;
+        this.ctx = this.wheelCanvas.getContext('2d');
         this.initWheel();
+    },
+    watch: {
+        colors() {
+            this.updateWheel();
+        },
+        selectedColor() {
+            this.updateWheel();
+            this.updateNearbyColors();
+        }
     },
     methods: {
         initWheel() {
-            // Wheel implementation will be added in Phase 3
-            this.$message.info('色轮视图将在第3阶段实现');
+            this.drawWheelBackground();
+            this.plotColors();
+        },
+        
+        drawWheelBackground() {
+            const ctx = this.ctx;
+            ctx.clearRect(0, 0, 600, 600);
+            
+            // Draw the color wheel background
+            const imageData = ctx.createImageData(600, 600);
+            const data = imageData.data;
+            
+            for (let x = 0; x < 600; x++) {
+                for (let y = 0; y < 600; y++) {
+                    const dx = x - this.centerX;
+                    const dy = y - this.centerY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance <= this.radius) {
+                        // Calculate hue from angle
+                        let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                        if (angle < 0) angle += 360;
+                        
+                        // Calculate saturation from distance
+                        const saturation = (distance / this.radius) * 100;
+                        
+                        // Fixed lightness at 50% for wheel
+                        const lightness = 50;
+                        
+                        // Convert HSL to RGB
+                        const rgb = this.hslToRgb(angle, saturation, lightness);
+                        
+                        const index = (y * 600 + x) * 4;
+                        data[index] = rgb.r;
+                        data[index + 1] = rgb.g;
+                        data[index + 2] = rgb.b;
+                        data[index + 3] = 255;
+                    }
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Draw border
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.centerX, this.centerY, this.radius, 0, 2 * Math.PI);
+            ctx.stroke();
+        },
+        
+        plotColors() {
+            const ctx = this.ctx;
+            this.colorPositions = [];
+            
+            // Plot each color as a dot
+            this.visibleColors.forEach(color => {
+                if (!color.hsl) return;
+                
+                const pos = this.mapColorToWheel(color.hsl);
+                this.colorPositions.push({
+                    color: color,
+                    x: pos.x,
+                    y: pos.y,
+                    size: pos.size
+                });
+                
+                // Draw outer white ring
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, pos.size + 2, 0, 2 * Math.PI);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Draw inner color circle
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, pos.size, 0, 2 * Math.PI);
+                ctx.fillStyle = color.hex || '#888';
+                ctx.fill();
+                
+                // Highlight selected color
+                if (this.selectedColor && this.selectedColor.id === color.id) {
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, pos.size + 4, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+            });
+        },
+        
+        mapColorToWheel(hsl) {
+            // Map HSL to wheel position
+            const angle = hsl.h * Math.PI / 180;
+            const distance = (hsl.s / 100) * this.radius * 0.9; // 0.9 to keep dots inside
+            
+            const x = this.centerX + distance * Math.cos(angle);
+            const y = this.centerY + distance * Math.sin(angle);
+            
+            // Size based on lightness (darker = smaller, lighter = larger)
+            const size = 3 + (hsl.l / 100) * 5;
+            
+            return { x, y, size };
+        },
+        
+        hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+            const m = l - c / 2;
+            
+            let r = 0, g = 0, b = 0;
+            
+            if (h >= 0 && h < 60) {
+                r = c; g = x; b = 0;
+            } else if (h >= 60 && h < 120) {
+                r = x; g = c; b = 0;
+            } else if (h >= 120 && h < 180) {
+                r = 0; g = c; b = x;
+            } else if (h >= 180 && h < 240) {
+                r = 0; g = x; b = c;
+            } else if (h >= 240 && h < 300) {
+                r = x; g = 0; b = c;
+            } else if (h >= 300 && h < 360) {
+                r = c; g = 0; b = x;
+            }
+            
+            return {
+                r: Math.round((r + m) * 255),
+                g: Math.round((g + m) * 255),
+                b: Math.round((b + m) * 255)
+            };
+        },
+        
+        calculateDeltaE(color1, color2) {
+            if (!color1.lab || !color2.lab) {
+                // Fallback to simple RGB distance if LAB not available
+                if (!color1.rgb || !color2.rgb) return 100;
+                
+                const dr = color1.rgb.r - color2.rgb.r;
+                const dg = color1.rgb.g - color2.rgb.g;
+                const db = color1.rgb.b - color2.rgb.b;
+                return Math.sqrt(dr * dr + dg * dg + db * db) / 4.41; // Normalize to roughly 0-100
+            }
+            
+            // Simple CIE76 Delta E calculation
+            const dL = color1.lab.L - color2.lab.L;
+            const da = color1.lab.a - color2.lab.a;
+            const db = color1.lab.b - color2.lab.b;
+            
+            return Math.sqrt(dL * dL + da * da + db * db);
+        },
+        
+        handleCanvasClick(event) {
+            const rect = this.wheelCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Find clicked color
+            let minDistance = Infinity;
+            let clickedColor = null;
+            
+            this.colorPositions.forEach(pos => {
+                const distance = Math.sqrt(
+                    Math.pow(x - pos.x, 2) + 
+                    Math.pow(y - pos.y, 2)
+                );
+                
+                if (distance < pos.size + 5 && distance < minDistance) {
+                    minDistance = distance;
+                    clickedColor = pos.color;
+                }
+            });
+            
+            if (clickedColor) {
+                this.$emit('select', clickedColor);
+            }
+        },
+        
+        handleCanvasHover(event) {
+            const rect = this.wheelCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Find hovered color
+            let hoveredColor = null;
+            
+            this.colorPositions.forEach(pos => {
+                const distance = Math.sqrt(
+                    Math.pow(x - pos.x, 2) + 
+                    Math.pow(y - pos.y, 2)
+                );
+                
+                if (distance < pos.size + 5) {
+                    hoveredColor = pos.color;
+                }
+            });
+            
+            if (hoveredColor !== this.hoveredColor) {
+                this.hoveredColor = hoveredColor;
+                if (hoveredColor) {
+                    this.$emit('hover', hoveredColor);
+                    this.wheelCanvas.style.cursor = 'pointer';
+                } else {
+                    this.wheelCanvas.style.cursor = 'default';
+                }
+            }
+        },
+        
+        updateWheel() {
+            this.drawWheelBackground();
+            this.plotColors();
+        },
+        
+        updateNearbyColors() {
+            if (!this.selectedColor) {
+                this.nearbyColors = [];
+                return;
+            }
+            
+            this.nearbyColors = this.filteredColors
+                .filter(color => {
+                    if (color.id === this.selectedColor.id) return false;
+                    const deltaE = this.calculateDeltaE(this.selectedColor, color);
+                    return deltaE <= this.proximityRange;
+                })
+                .sort((a, b) => {
+                    const deltaA = this.calculateDeltaE(this.selectedColor, a);
+                    const deltaB = this.calculateDeltaE(this.selectedColor, b);
+                    return deltaA - deltaB;
+                })
+                .slice(0, 12); // Show max 12 nearby colors
         }
     }
 };
