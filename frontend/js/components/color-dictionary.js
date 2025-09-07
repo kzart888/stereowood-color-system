@@ -297,8 +297,9 @@ const ColorDictionaryComponent = {
         await this.loadCategories();
         await this.loadColors();
         
-        // Sync categories with custom colors page
+        // Sync categories and colors with custom colors page
         this.syncCategories();
+        this.syncColors();
     },
     
     beforeUnmount() {
@@ -574,7 +575,44 @@ const ColorDictionaryComponent = {
             // Listen for category updates from custom colors page
             window.addEventListener('categories-updated', (event) => {
                 this.categories = event.detail || [];
+                // Re-enrich colors when categories change
+                if (this.colors.length > 0) {
+                    this.enrichColors();
+                }
             });
+            
+            // Also sync with global data if available
+            if (this.$root && this.$root.categories) {
+                // Watch for category changes
+                this.$watch(() => this.$root.categories, (newCategories) => {
+                    if (newCategories && newCategories.length > 0) {
+                        this.categories = newCategories;
+                        // Re-enrich colors when categories change
+                        if (this.colors.length > 0) {
+                            this.enrichColors();
+                        }
+                    }
+                }, { deep: true });
+            }
+        },
+        
+        syncColors() {
+            // Listen for color updates
+            window.addEventListener('colors-updated', (event) => {
+                this.colors = event.detail || [];
+                this.enrichColors();
+            });
+            
+            // Also sync with global data if available
+            if (this.$root && this.$root.customColors) {
+                // Watch for color changes
+                this.$watch(() => this.$root.customColors, (newColors) => {
+                    if (newColors && newColors.length > 0) {
+                        this.colors = newColors;
+                        this.enrichColors();
+                    }
+                }, { deep: true });
+            }
         },
         
         restoreViewState() {
@@ -715,7 +753,7 @@ const SimplifiedListView = {
         
         sortColors(colors) {
             if (this.sortMode === 'color') {
-                // Sort by HSL (brightness and saturation)
+                // Sort by HSL (brightness and saturation) - 2D arrangement
                 return [...colors].sort((a, b) => {
                     if (!a.hsl || !b.hsl) return 0;
                     
@@ -727,14 +765,29 @@ const SimplifiedListView = {
                         return lightGroupA - lightGroupB;
                     }
                     
-                    // Within same lightness, sort by saturation
+                    // Within same lightness, sort by saturation (high to low)
                     return b.hsl.s - a.hsl.s;
                 });
             } else {
-                // Sort by name (color_code)
+                // Sort by name (color_code) - extract numbers for proper sorting
                 return [...colors].sort((a, b) => {
                     const codeA = a.color_code || '';
                     const codeB = b.color_code || '';
+                    
+                    // Extract prefix and number parts (e.g., "YE001" -> ["YE", "001"])
+                    const matchA = codeA.match(/^([A-Z]+)(\d+)$/);
+                    const matchB = codeB.match(/^([A-Z]+)(\d+)$/);
+                    
+                    if (matchA && matchB) {
+                        // Compare prefixes first
+                        const prefixCompare = matchA[1].localeCompare(matchB[1]);
+                        if (prefixCompare !== 0) return prefixCompare;
+                        
+                        // If prefixes are same, compare numbers
+                        return parseInt(matchA[2]) - parseInt(matchB[2]);
+                    }
+                    
+                    // Fallback to regular string comparison
                     return codeA.localeCompare(codeB, 'zh-CN');
                 });
             }

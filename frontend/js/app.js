@@ -132,7 +132,14 @@ const app = createApp({
             }
         },
         async loadCategories() {
-            try { const res = await api.categories.getAll(); this.categories = res.data; } catch(e){ }
+            try { 
+                const res = await api.categories.getAll(); 
+                this.categories = res.data;
+                // Broadcast category update for other components
+                window.dispatchEvent(new CustomEvent('categories-updated', { 
+                    detail: this.categories 
+                }));
+            } catch(e){ }
         },
         async loadCustomColors(bypassCache = false) {
             try {
@@ -145,6 +152,10 @@ const app = createApp({
                 } else {
                     this._buildColorFormulaIndex();
                 }
+                // Broadcast color update for other components
+                window.dispatchEvent(new CustomEvent('colors-updated', { 
+                    detail: this.customColors 
+                }));
             } catch(e){ }
         },
         async loadArtworks() {
