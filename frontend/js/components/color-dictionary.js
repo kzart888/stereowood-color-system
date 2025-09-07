@@ -270,6 +270,42 @@ const ColorDictionaryComponent = {
                     </ul>
                 </div>
             </el-dialog>
+            
+            <!-- Print Options Dialog -->
+            <el-dialog
+                v-model="showPrintOptions"
+                title="打印选项"
+                width="500px"
+                append-to-body
+            >
+                <div class="print-options-form">
+                    <h4>选择要包含的信息</h4>
+                    <el-checkbox v-model="printOptions.includeFormulas">包含配方</el-checkbox>
+                    <el-checkbox v-model="printOptions.includeRGB">包含RGB值</el-checkbox>
+                    <el-checkbox v-model="printOptions.includeCMYK">包含CMYK值</el-checkbox>
+                    <el-checkbox v-model="printOptions.includeHEX">包含HEX值</el-checkbox>
+                    <el-checkbox v-model="printOptions.includePantone">包含Pantone值</el-checkbox>
+                    <el-checkbox v-model="printOptions.includeApplicableLayers">包含适用层</el-checkbox>
+                    
+                    <h4 style="margin-top: 20px;">布局设置</h4>
+                    <div class="form-item">
+                        <label>每页列数：</label>
+                        <el-input-number 
+                            v-model="printOptions.columnsPerPage" 
+                            :min="3" 
+                            :max="8" 
+                            :step="1"
+                        />
+                    </div>
+                    <el-checkbox v-model="printOptions.pageBreakBetweenCategories">
+                        分类之间分页
+                    </el-checkbox>
+                </div>
+                <template #footer>
+                    <el-button @click="showPrintOptions = false">取消</el-button>
+                    <el-button type="primary" @click="confirmPrint">确认打印</el-button>
+                </template>
+            </el-dialog>
         </div>
     `,
     
@@ -283,7 +319,18 @@ const ColorDictionaryComponent = {
             viewMode: 'list', // list | hsl | wheel
             listSortMode: 'name', // name | color
             showHelp: false,
-            loading: false
+            loading: false,
+            showPrintOptions: false,
+            printOptions: {
+                includeFormulas: true,
+                includeRGB: true,
+                includeCMYK: false,
+                includeHEX: true,
+                includePantone: false,
+                includeApplicableLayers: false,
+                columnsPerPage: 6,
+                pageBreakBetweenCategories: true
+            }
         };
     },
     
@@ -457,6 +504,12 @@ const ColorDictionaryComponent = {
         },
         
         printColors() {
+            // Show print options dialog
+            this.showPrintOptions = true;
+        },
+        
+        confirmPrint() {
+            this.showPrintOptions = false;
             const printWindow = window.open('', '_blank');
             const date = new Date();
             
@@ -468,6 +521,10 @@ const ColorDictionaryComponent = {
                     <title>自配色列表 - ${date.toLocaleDateString('zh-CN')}</title>
                     <style>
                         @media print {
+                            @page {
+                                margin: 1cm;
+                                size: A4;
+                            }
                             body { 
                                 margin: 0; 
                                 font-family: Arial, 'Microsoft YaHei', sans-serif;
@@ -500,7 +557,7 @@ const ColorDictionaryComponent = {
                             }
                             .color-grid {
                                 display: grid;
-                                grid-template-columns: repeat(6, 1fr);
+                                grid-template-columns: repeat(${this.printOptions.columnsPerPage}, 1fr);
                                 gap: 10px;
                             }
                             .color-item {
@@ -583,17 +640,55 @@ const ColorDictionaryComponent = {
                         <div class="color-item">
                             <div class="color-swatch" style="background: ${rgbStr}"></div>
                             <div class="color-code">${color.color_code}</div>
-                            <div class="color-info">
-                                ${color.formula ? color.formula.substring(0, 20) + (color.formula.length > 20 ? '...' : '') : '无配方'}
-                            </div>
-                        </div>
                     `;
+                    
+                    // Add optional information based on print options
+                    const infoItems = [];
+                    
+                    if (this.printOptions.includeFormulas && color.formula) {
+                        const formula = color.formula.length > 30 
+                            ? color.formula.substring(0, 30) + '...' 
+                            : color.formula;
+                        infoItems.push(`配方: ${formula}`);
+                    }
+                    
+                    if (this.printOptions.includeRGB && color.rgb) {
+                        infoItems.push(`RGB: ${color.rgb.r},${color.rgb.g},${color.rgb.b}`);
+                    }
+                    
+                    if (this.printOptions.includeCMYK && color.cmyk_c != null) {
+                        infoItems.push(`CMYK: ${color.cmyk_c},${color.cmyk_m},${color.cmyk_y},${color.cmyk_k}`);
+                    }
+                    
+                    if (this.printOptions.includeHEX && color.hex_color) {
+                        infoItems.push(`HEX: ${color.hex_color}`);
+                    }
+                    
+                    if (this.printOptions.includePantone) {
+                        if (color.pantone_c) infoItems.push(`Pantone C: ${color.pantone_c}`);
+                        if (color.pantone_u) infoItems.push(`Pantone U: ${color.pantone_u}`);
+                    }
+                    
+                    if (this.printOptions.includeApplicableLayers && color.applicable_layers) {
+                        infoItems.push(`适用层: ${color.applicable_layers}`);
+                    }
+                    
+                    if (infoItems.length > 0) {
+                        html += `<div class="color-info">${infoItems.join('<br>')}</div>`;
+                    }
+                    
+                    html += `</div>`;
                 });
                 
                 html += `
                         </div>
                     </div>
                 `;
+                
+                // Add page break between categories if option is enabled
+                if (this.printOptions.pageBreakBetweenCategories) {
+                    html += `<div style="page-break-after: always;"></div>`;
+                }
             });
             
             return html;
