@@ -266,7 +266,30 @@ const ColorDictionaryComponent = {
         }
     },
     
+    watch: {
+        viewMode(val) {
+            // Save view mode preference
+            try {
+                localStorage.setItem('color-dict-view', val);
+            } catch(e) {
+                console.error('Failed to save view mode:', e);
+            }
+        },
+        
+        listSortMode(val) {
+            // Save sort mode preference
+            try {
+                localStorage.setItem('color-dict-sort', val);
+            } catch(e) {
+                console.error('Failed to save sort mode:', e);
+            }
+        }
+    },
+    
     async mounted() {
+        // Restore view preferences
+        this.restoreViewState();
+        
         // Add keyboard and click event handlers
         this.setupEventHandlers();
         
@@ -552,6 +575,24 @@ const ColorDictionaryComponent = {
             window.addEventListener('categories-updated', (event) => {
                 this.categories = event.detail || [];
             });
+        },
+        
+        restoreViewState() {
+            try {
+                // Restore view mode
+                const savedView = localStorage.getItem('color-dict-view');
+                if (savedView && ['list', 'hsl', 'wheel'].includes(savedView)) {
+                    this.viewMode = savedView;
+                }
+                
+                // Restore sort mode
+                const savedSort = localStorage.getItem('color-dict-sort');
+                if (savedSort && ['name', 'color'].includes(savedSort)) {
+                    this.listSortMode = savedSort;
+                }
+            } catch(e) {
+                console.error('Failed to restore view state:', e);
+            }
         },
         
         setupEventHandlers() {

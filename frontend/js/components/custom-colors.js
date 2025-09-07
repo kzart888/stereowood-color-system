@@ -423,18 +423,7 @@ const CustomColorsComponent = {
                 </template>
             </el-dialog>
             
-            <!-- New Advanced Color Palette Dialog -->
-            <color-palette-dialog
-                v-if="showColorPaletteDialog"
-                :visible="showColorPaletteDialog"
-                :colors="globalData.customColors?.value || []"
-                :categories="globalData.categories?.value || []"
-                title="自配色列表 - 高级选择器"
-                @select="handleColorSelect"
-                @confirm="handleColorConfirm"
-                @close="showColorPaletteDialog = false"
-                @update:visible="showColorPaletteDialog = $event"
-            />
+            <!-- Color Palette Dialog removed - now using standalone Color Dictionary page -->
         </div>
     `,
     
@@ -508,7 +497,6 @@ const CustomColorsComponent = {
             pendingFormData: null,
             
             // Color palette
-            showColorPaletteDialog: false
         };
     },
     
@@ -1529,45 +1517,8 @@ const CustomColorsComponent = {
         },
         
         // Show color palette method - now uses the new advanced dialog
-        async showColorPalette() {
-            console.log('showColorPalette called');
-            const msg = this.getMsg();
-            try {
-                // Refresh data before opening dialog
-                await this.globalData.loadCustomColors();
-                await this.globalData.loadCategories();
-                
-                console.log('Data loaded, opening dialog');
-                console.log('Custom colors:', this.globalData.customColors?.value?.length);
-                console.log('Categories:', this.globalData.categories?.value?.length);
-                
-                // Simply open the new dialog, it will handle the data internally
-                this.showColorPaletteDialog = true;
-                console.log('showColorPaletteDialog set to:', this.showColorPaletteDialog);
-                
-            } catch (error) {
-                console.error('Error in showColorPalette:', error);
-                msg.error('加载数据失败，请重试');
-            }
-        },
-        
-        // Handle color selection from the palette dialog
-        handleColorSelect(color) {
-            // Focus on the selected color in the main list
-            if (color && color.color_code) {
-                this.focusCustomColor(color.color_code);
-            }
-        },
-        
-        // Handle color confirmation from the palette dialog
-        handleColorConfirm(color) {
-            // You can add any action here when a color is confirmed
-            // For example, copying to clipboard or opening edit dialog
-            if (color) {
-                this.handleColorSelect(color);
-                this.showColorPaletteDialog = false;
-            }
-        },
+        // Color palette functionality moved to standalone Color Dictionary page
+        // Users should navigate to 自配色字典 from the main navigation
         
         // Keep all duplicates
         keepAllDuplicates(){
