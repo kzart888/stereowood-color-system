@@ -7,7 +7,7 @@ const app = createApp({
         let initTab = 'custom-colors';
         try {
             const savedTab = localStorage.getItem('sw-active-tab');
-            if (savedTab && ['custom-colors','artworks','mont-marte'].includes(savedTab)) initTab = savedTab;
+            if (savedTab && ['custom-colors','color-dictionary','artworks','mont-marte'].includes(savedTab)) initTab = savedTab;
         } catch(e) {}
         return {
             baseURL: window.location.origin,
@@ -297,6 +297,11 @@ if (typeof ColorWheelView !== 'undefined') {
 }
 if (typeof EnhancedListView !== 'undefined') {
     app.component('enhanced-list-view', EnhancedListView);
+}
+
+// 添加自配色字典组件注册
+if (typeof ColorDictionaryComponent !== 'undefined') {
+    app.component('color-dictionary-component', ColorDictionaryComponent);
 }
 
 // 添加通用操作按钮组件注册 - 暂时禁用

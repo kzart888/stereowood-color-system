@@ -58,6 +58,9 @@
                 <div v-show="activeTab==='custom-colors'">
                     <custom-colors-component ref="customColorsRef" :sort-mode="customColorsSortMode"></custom-colors-component>
                 </div>
+                <div v-show="activeTab==='color-dictionary'">
+                    <color-dictionary-component ref="colorDictionaryRef"></color-dictionary-component>
+                </div>
                 <div v-show="activeTab==='artworks'">
                     <artworks-component ref="artworksRef" :sort-mode="artworksSortMode"></artworks-component>
                 </div>
@@ -134,6 +137,8 @@
     <script src="js/components/category-manager.js"></script>
     <!-- 高级颜色选择对话框组件 -->
     <script src="js/components/color-palette-dialog.js"></script>
+    <!-- 自配色字典页面组件 -->
+    <script src="js/components/color-dictionary.js"></script>
     <!-- 计算器浮层组件 (步骤3) -->
     <script src="js/components/formula-calculator.js"></script>
     <!-- 缩略图预览工具 -->

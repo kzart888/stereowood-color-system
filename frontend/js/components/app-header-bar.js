@@ -186,6 +186,11 @@ const AppHeaderBar = {
 							<span class="text-full">自配色管理</span>
 							<span class="text-medium">自配色</span>
 						</button>
+						<button type="button" class="tab-switch" :class="{active: activeTab==='color-dictionary'}" @click="$emit('update:activetab','color-dictionary')" role="tab" :aria-selected="activeTab==='color-dictionary'">
+							<el-icon class="tab-icon"><Collection /></el-icon>
+							<span class="text-full">自配色字典</span>
+							<span class="text-medium">字典</span>
+						</button>
 						<button type="button" class="tab-switch" :class="{active: activeTab==='artworks'}" @click="$emit('update:activetab','artworks')" role="tab" :aria-selected="activeTab==='artworks'">
 							<el-icon class="tab-icon"><Picture /></el-icon>
 							<span class="text-full">作品配色管理</span>
@@ -283,11 +288,6 @@ const AppHeaderBar = {
 						<el-button size="small" @click="$emit('check-duplicates')">
 							<el-icon><CopyDocument /></el-icon>
 							<span class="text-full">查重</span>
-						</el-button>
-						<el-button size="small" @click="$emit('show-color-palette')">
-							<el-icon><Grid /></el-icon>
-							<span class="text-full">自配色列表</span>
-							<span class="text-medium">列表</span>
 						</el-button>
 					</template>
 					<template v-else-if="activeTab==='mont-marte'">

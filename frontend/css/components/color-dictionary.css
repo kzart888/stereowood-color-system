@@ -1,0 +1,377 @@
+/**
+ * Color Dictionary Component Styles
+ * 自配色字典页面样式
+ */
+
+/* === Page Container === */
+.color-dictionary-page {
+    min-height: 100vh;
+    background: var(--sw-bg-light);
+    padding: 20px;
+}
+
+/* === Header Color Info Bar === */
+.header-color-info {
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-lg);
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    transition: all var(--sw-transition-base);
+}
+
+.header-color-info.inactive {
+    opacity: 0.8;
+    background: var(--sw-bg-lighter);
+}
+
+/* Color Preview */
+.color-preview-80 {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+}
+
+.color-swatch-preview {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--sw-radius-md);
+    border: 1px solid var(--sw-border-light);
+}
+
+.empty-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--sw-bg-lighter);
+    border: 1px dashed var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    color: var(--sw-text-secondary);
+    font-size: 12px;
+}
+
+.empty-preview .el-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+    color: var(--sw-text-tertiary);
+}
+
+/* Color Details Grid */
+.color-details-grid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-row {
+    display: flex;
+    gap: 24px;
+}
+
+.detail-item {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    flex: 1;
+}
+
+.detail-item.full-width {
+    flex: none;
+    width: 100%;
+}
+
+.detail-item label {
+    font-size: 13px;
+    color: var(--sw-text-secondary);
+    flex-shrink: 0;
+}
+
+.detail-item strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+}
+
+.detail-item span {
+    font-size: 13px;
+    color: var(--sw-text-primary);
+}
+
+.empty-value {
+    color: var(--sw-text-tertiary) !important;
+    font-style: italic;
+}
+
+/* Info Actions */
+.info-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* === View Navigation === */
+.view-navigation {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.sort-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    margin-right: 16px;
+}
+
+.sort-label {
+    font-size: 13px;
+    color: var(--sw-text-secondary);
+}
+
+.help-btn {
+    margin-left: auto;
+    padding: 6px 12px;
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    font-size: 13px;
+    color: var(--sw-text-secondary);
+    cursor: pointer;
+    transition: all var(--sw-transition-base);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.help-btn:hover {
+    background: var(--sw-primary);
+    color: white;
+    border-color: var(--sw-primary);
+}
+
+/* === View Content === */
+.view-content {
+    background: var(--sw-bg-white);
+    border-radius: var(--sw-radius-lg);
+    padding: 20px;
+    min-height: 400px;
+}
+
+/* === Simplified List View === */
+.simplified-list-view {
+    width: 100%;
+}
+
+.category-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.category-row {
+    display: flex;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--sw-border-lighter);
+}
+
+.category-row:last-child {
+    border-bottom: none;
+}
+
+.category-label {
+    width: 60px;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+    padding-top: 8px;
+    text-align: right;
+}
+
+.category-colors {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* Color Chips */
+.color-chip-80 {
+    width: 80px;
+    cursor: pointer;
+    transition: all var(--sw-transition-base);
+}
+
+.color-chip-80:hover {
+    transform: translateY(-2px);
+}
+
+.color-chip-80.selected {
+    transform: scale(1.05);
+}
+
+.color-chip-80 .color-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--sw-radius-sm);
+    margin-bottom: 6px;
+    position: relative;
+    transition: all var(--sw-transition-base);
+}
+
+.color-chip-80:hover .color-preview {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.color-chip-80.selected .color-preview {
+    box-shadow: 0 0 0 3px var(--sw-primary);
+}
+
+.color-chip-80 .color-code {
+    font-size: 12px;
+    text-align: center;
+    color: var(--sw-text-secondary);
+    line-height: 1.2;
+}
+
+/* === Help Dialog Content === */
+.help-content {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.help-content h4 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: var(--sw-text-primary);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.help-content h4:first-child {
+    margin-top: 0;
+}
+
+.help-content ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.help-content li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+    color: var(--sw-text-secondary);
+}
+
+.help-content kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-family: monospace;
+    background: #f4f4f4;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.1);
+}
+
+/* === Responsive Design === */
+@media (max-width: 1200px) {
+    .detail-row {
+        flex-wrap: wrap;
+    }
+    
+    .detail-item {
+        min-width: 200px;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-color-info {
+        flex-direction: column;
+    }
+    
+    .info-actions {
+        flex-direction: row;
+    }
+    
+    .category-row {
+        flex-direction: column;
+    }
+    
+    .category-label {
+        text-align: left;
+        width: auto;
+        margin-bottom: 8px;
+    }
+    
+    .view-navigation {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .sort-toggle {
+        margin-left: 0;
+        margin-right: 0;
+        margin-top: 8px;
+    }
+    
+    .help-btn {
+        margin-left: 0;
+        margin-top: 8px;
+    }
+}
+
+/* === Loading State === */
+.color-dictionary-page .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    font-size: 14px;
+    color: var(--sw-text-secondary);
+}
+
+.color-dictionary-page .loading .el-icon {
+    margin-right: 8px;
+}
+
+/* === Print Styles === */
+@media print {
+    .header-bar,
+    .view-navigation,
+    .help-btn,
+    .info-actions {
+        display: none !important;
+    }
+    
+    .color-dictionary-page {
+        padding: 0;
+        background: white;
+    }
+    
+    .header-color-info {
+        page-break-after: always;
+    }
+    
+    .category-row {
+        page-break-inside: avoid;
+    }
+    
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
