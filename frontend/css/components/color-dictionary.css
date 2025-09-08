@@ -444,6 +444,33 @@
     }
 }
 
+/* === HSL and Wheel View Styles === */
+.hsl-view-container,
+.wheel-view-container {
+    padding: 20px;
+}
+
+.hsl-message,
+.wheel-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--sw-bg-lighter);
+    border-radius: var(--sw-radius-md);
+    margin-bottom: 20px;
+    color: var(--sw-text-secondary);
+    font-size: 14px;
+}
+
+.hsl-view-container .color-grid,
+.wheel-view-container .color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 20px;
+}
+
 /* === Responsive Design === */
 @media (max-width: 1200px) {
     .detail-row {

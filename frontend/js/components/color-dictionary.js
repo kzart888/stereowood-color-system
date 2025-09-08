@@ -1129,9 +1129,85 @@ const SimplifiedListView = {
     }
 };
 
+// Simple HSL view fallback
+const HslColorSpaceView = {
+    props: ['colors', 'selectedColor'],
+    emits: ['select', 'hover'],
+    template: `
+        <div class="hsl-view-container">
+            <div class="hsl-message">
+                <el-icon><InfoFilled /></el-icon>
+                <span>HSL导航视图开发中，请使用列表导航查看颜色</span>
+            </div>
+            <div class="color-grid">
+                <div v-for="color in colors" :key="color.id"
+                     class="color-chip-80"
+                     :class="{selected: selectedColor && selectedColor.id === color.id}"
+                     @click="$emit('select', color)"
+                     @mouseenter="$emit('hover', color)"
+                     @mouseleave="$emit('hover', null)">
+                    <div class="color-preview" 
+                         :style="{ background: getColorStyle(color) }">
+                    </div>
+                    <div class="color-code">{{ color.color_code }}</div>
+                </div>
+            </div>
+        </div>
+    `,
+    methods: {
+        getColorStyle(color) {
+            if (color.hex_color && color.hex_color !== '未填写') {
+                return color.hex_color.startsWith('#') ? color.hex_color : '#' + color.hex_color;
+            }
+            if (color.rgb_r != null && color.rgb_g != null && color.rgb_b != null) {
+                return `rgb(${color.rgb_r}, ${color.rgb_g}, ${color.rgb_b})`;
+            }
+            return '#f5f5f5';
+        }
+    }
+};
+
+// Simple wheel view fallback
+const ColorWheelView = {
+    props: ['colors', 'selectedColor'],
+    emits: ['select', 'hover'],
+    template: `
+        <div class="wheel-view-container">
+            <div class="wheel-message">
+                <el-icon><InfoFilled /></el-icon>
+                <span>色轮导航视图开发中，请使用列表导航查看颜色</span>
+            </div>
+            <div class="color-grid">
+                <div v-for="color in colors" :key="color.id"
+                     class="color-chip-80"
+                     :class="{selected: selectedColor && selectedColor.id === color.id}"
+                     @click="$emit('select', color)"
+                     @mouseenter="$emit('hover', color)"
+                     @mouseleave="$emit('hover', null)">
+                    <div class="color-preview" 
+                         :style="{ background: getColorStyle(color) }">
+                    </div>
+                    <div class="color-code">{{ color.color_code }}</div>
+                </div>
+            </div>
+        </div>
+    `,
+    methods: {
+        getColorStyle(color) {
+            if (color.hex_color && color.hex_color !== '未填写') {
+                return color.hex_color.startsWith('#') ? color.hex_color : '#' + color.hex_color;
+            }
+            if (color.rgb_r != null && color.rgb_g != null && color.rgb_b != null) {
+                return `rgb(${color.rgb_r}, ${color.rgb_g}, ${color.rgb_b})`;
+            }
+            return '#f5f5f5';
+        }
+    }
+};
+
 // Register child components
 ColorDictionaryComponent.components = {
     'simplified-list-view': SimplifiedListView,
-    'hsl-color-space-view': typeof HslColorSpaceView !== 'undefined' ? HslColorSpaceView : {},
-    'color-wheel-view': typeof ColorWheelView !== 'undefined' ? ColorWheelView : {}
+    'hsl-color-space-view': HslColorSpaceView,
+    'color-wheel-view': ColorWheelView
 };
