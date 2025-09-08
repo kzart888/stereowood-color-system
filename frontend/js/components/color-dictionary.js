@@ -23,7 +23,7 @@ const ColorDictionaryComponent = {
             </div>
             
             <!-- Header Color Info Bar -->
-            <div class="header-color-info" :class="{inactive: !selectedColor}">
+            <div class="header-color-info">
                 <div class="color-preview-80">
                     <div v-if="selectedColor" 
                          class="color-swatch-preview" 

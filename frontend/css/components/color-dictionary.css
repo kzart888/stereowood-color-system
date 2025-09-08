@@ -56,16 +56,7 @@
     transform: translateY(-1px);
 }
 
-.header-color-info.inactive {
-    background: linear-gradient(135deg, var(--sw-bg-lighter) 0%, var(--sw-bg-light) 100%);
-    border: 2px dashed var(--sw-border-lighter);
-    box-shadow: none;
-}
-
-.header-color-info.inactive:hover {
-    transform: none;
-    box-shadow: none;
-}
+/* Remove inactive state styling - header should always look the same */
 
 /* Color Preview */
 .color-preview-80 {
