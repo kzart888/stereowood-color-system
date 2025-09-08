@@ -49,6 +49,7 @@
     align-items: stretch;
     transition: all var(--sw-transition-base);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
 }
 
 .header-color-info:hover {
@@ -60,8 +61,8 @@
 
 /* Color Preview */
 .color-preview-80 {
-    width: 80px;
-    height: 80px;
+    width: 120px;
+    height: 120px;
     flex-shrink: 0;
 }
 
@@ -70,6 +71,9 @@
     height: 100%;
     border-radius: var(--sw-radius-md);
     border: 1px solid var(--sw-border-light);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .empty-preview {
@@ -79,14 +83,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--sw-bg-lighter) 0%, var(--sw-bg-light) 100%);
-    border: 2px dashed var(--sw-border-lighter);
+    background: var(--sw-bg-lighter);
+    border: 2px dashed #d9d9d9;
     border-radius: var(--sw-radius-md);
     color: var(--sw-text-tertiary);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: normal;
 }
 
 .empty-preview .el-icon {
@@ -98,22 +100,25 @@
 
 /* Color Details Grid */
 .color-details-grid {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    max-width: 600px;
 }
 
 .detail-row {
     display: flex;
-    gap: 24px;
+    gap: 20px;
+    align-items: flex-start;
 }
 
 .detail-item {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: baseline;
-    flex: 1;
+    flex: 0 0 auto;
+    min-width: 120px;
 }
 
 .detail-item.full-width {
@@ -187,11 +192,11 @@
 
 /* Info Actions */
 .info-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
     display: flex;
-    flex-direction: column;
     gap: 8px;
-    justify-content: center;
-    flex-shrink: 0;
 }
 
 /* === View Navigation === */
@@ -453,6 +458,7 @@
     }
     
     .info-actions {
+        position: static;
         flex-direction: row;
     }
     

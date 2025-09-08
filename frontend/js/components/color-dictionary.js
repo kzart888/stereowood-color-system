@@ -30,8 +30,7 @@ const ColorDictionaryComponent = {
                          :style="{background: getColorStyle(selectedColor)}">
                     </div>
                     <div v-else class="empty-preview">
-                        <el-icon><Palette /></el-icon>
-                        <span>点击选择</span>
+                        <span>请选择颜色</span>
                     </div>
                 </div>
                 
@@ -168,26 +167,26 @@ const ColorDictionaryComponent = {
                 
                 <div class="info-actions">
                     <el-button 
-                        v-if="selectedColor"
                         type="primary"
                         size="small"
                         @click="navigateToColor"
+                        :disabled="!selectedColor"
                     >
-                        <el-icon><View /></el-icon>
-                        在自配色管理中查看
-                    </el-button>
-                    <el-button 
-                        size="small"
-                        @click="printColors"
-                    >
-                        <el-icon><Printer /></el-icon>
-                        打印列表
+                        <el-icon><Edit /></el-icon>
+                        修改自配色
                     </el-button>
                 </div>
             </div>
             
             <!-- View Navigation -->
             <div class="category-switch-group view-navigation">
+                <el-button 
+                    size="small"
+                    @click="printColors"
+                >
+                    <el-icon><Printer /></el-icon>
+                    打印列表
+                </el-button>
                 <button 
                     type="button" 
                     class="category-switch" 
