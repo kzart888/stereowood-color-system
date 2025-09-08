@@ -226,22 +226,24 @@ const ColorDictionaryComponent = {
                     </button>
                 </div>
                 
-                <el-button 
-                    size="small"
-                    @click="printColors"
-                >
-                    <el-icon><Printer /></el-icon>
-                    打印列表
-                </el-button>
-                <button 
-                    type="button"
-                    class="help-btn"
-                    @click="showHelp = true"
-                    title="使用帮助"
-                >
-                    <el-icon><QuestionFilled /></el-icon>
-                    使用帮助
-                </button>
+                <div style="margin-left: auto; display: flex; gap: 8px;">
+                    <el-button 
+                        size="small"
+                        @click="printColors"
+                    >
+                        <el-icon><Printer /></el-icon>
+                        打印列表
+                    </el-button>
+                    <button 
+                        type="button"
+                        class="help-btn"
+                        @click="showHelp = true"
+                        title="使用帮助"
+                    >
+                        <el-icon><QuestionFilled /></el-icon>
+                        使用帮助
+                    </button>
+                </div>
             </div>
             
             <!-- View Content -->
