@@ -83,12 +83,12 @@ const ColorDictionaryComponent = {
                         </div>
                         <div class="detail-item">
                             <label>Pantone C:</label>
-                            <span v-if="selectedColor.pantone_c">{{ selectedColor.pantone_c }}</span>
+                            <span v-if="selectedColor.pantone_coated">{{ selectedColor.pantone_coated }}</span>
                             <span v-else class="empty-value">未填写</span>
                         </div>
                         <div class="detail-item">
                             <label>Pantone U:</label>
-                            <span v-if="selectedColor.pantone_u">{{ selectedColor.pantone_u }}</span>
+                            <span v-if="selectedColor.pantone_uncoated">{{ selectedColor.pantone_uncoated }}</span>
                             <span v-else class="empty-value">未填写</span>
                         </div>
                     </div>
