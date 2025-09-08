@@ -25,12 +25,12 @@ const ColorDictionaryComponent = {
             <!-- Header Color Info Bar -->
             <div class="header-color-info">
                 <div class="color-preview-80">
-                    <div v-if="selectedColor" 
+                    <div v-if="selectedColor && getColorStyle(selectedColor)" 
                          class="color-swatch-preview" 
                          :style="{background: getColorStyle(selectedColor)}">
                     </div>
                     <div v-else class="empty-preview">
-                        <span>请选择颜色</span>
+                        <span>{{ selectedColor ? '无色值' : '请选择颜色' }}</span>
                     </div>
                 </div>
                 
@@ -511,12 +511,19 @@ const ColorDictionaryComponent = {
                     };
                     enriched.hex = rgbToHex(rgb.r, rgb.g, rgb.b);
                 } else {
-                    // Use category default color
-                    rgb = this.getDefaultColorForCategory(color.category_id);
-                    enriched.hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                    // Don't assign default color - leave it blank
+                    rgb = null;
+                    enriched.hex = null;
                 }
                 
                 enriched.rgb = rgb;
+                
+                // Also pass through rgb_r, rgb_g, rgb_b for HSL view compatibility
+                if (color.rgb_r != null && color.rgb_g != null && color.rgb_b != null) {
+                    enriched.rgb_r = color.rgb_r;
+                    enriched.rgb_g = color.rgb_g;
+                    enriched.rgb_b = color.rgb_b;
+                }
                 
                 // Calculate HSL and LAB
                 if (rgb) {
@@ -547,15 +554,28 @@ const ColorDictionaryComponent = {
         },
         
         getColorStyle(color) {
-            if (!color) return '#f5f5f5';
+            if (!color) return null;
+            
+            // Check hex_color first (from API)
+            if (color.hex_color && color.hex_color !== '未填写' && color.hex_color !== '') {
+                return color.hex_color.startsWith('#') ? color.hex_color : '#' + color.hex_color;
+            }
+            
+            // Check enriched hex
             if (color.hex) return color.hex;
+            
+            // Check RGB object
             if (color.rgb) {
                 return `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`;
             }
+            
+            // Check individual RGB values
             if (color.rgb_r != null && color.rgb_g != null && color.rgb_b != null) {
                 return `rgb(${color.rgb_r}, ${color.rgb_g}, ${color.rgb_b})`;
             }
-            return '#808080';
+            
+            // Return null for truly blank colors
+            return null;
         },
         
         formatDate(dateStr) {
@@ -1004,7 +1024,9 @@ const SimplifiedListView = {
                              @mouseenter="$emit('hover', color)"
                              @mouseleave="$emit('hover', null)">
                             <div class="color-preview" 
-                                 :style="{ background: getColorStyle(color) }">
+                                 :class="{ 'blank-color': !getColorStyle(color) }"
+                                 :style="getColorStyle(color) ? { background: getColorStyle(color) } : {}">
+                                <span v-if="!getColorStyle(color)" class="blank-text">无</span>
                             </div>
                             <div class="color-code">{{ color.color_code }}</div>
                         </div>
@@ -1025,7 +1047,9 @@ const SimplifiedListView = {
                              @mouseenter="$emit('hover', color)"
                              @mouseleave="$emit('hover', null)">
                             <div class="color-preview" 
-                                 :style="{ background: getColorStyle(color) }">
+                                 :class="{ 'blank-color': !getColorStyle(color) }"
+                                 :style="getColorStyle(color) ? { background: getColorStyle(color) } : {}">
+                                <span v-if="!getColorStyle(color)" class="blank-text">无</span>
                             </div>
                             <div class="color-code">{{ color.color_code }}</div>
                         </div>
@@ -1117,6 +1141,9 @@ const SimplifiedListView = {
         },
         
         getColorStyle(color) {
+            if (color.hex_color && color.hex_color !== '未填写' && color.hex_color !== '') {
+                return color.hex_color.startsWith('#') ? color.hex_color : '#' + color.hex_color;
+            }
             if (color.hex) return color.hex;
             if (color.rgb) {
                 return `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`;
@@ -1124,7 +1151,7 @@ const SimplifiedListView = {
             if (color.rgb_r != null && color.rgb_g != null && color.rgb_b != null) {
                 return `rgb(${color.rgb_r}, ${color.rgb_g}, ${color.rgb_b})`;
             }
-            return '#808080';
+            return null; // Return null for blank colors
         }
     }
 };

@@ -322,6 +322,19 @@
     position: relative;
     transition: all var(--sw-transition-base);
     border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.color-chip-80 .color-preview.blank-color {
+    background: var(--sw-bg-lighter);
+    border: 2px dashed #d9d9d9;
+}
+
+.color-chip-80 .color-preview .blank-text {
+    color: var(--sw-text-tertiary);
+    font-size: 12px;
 }
 
 .color-chip-80:hover .color-preview {
