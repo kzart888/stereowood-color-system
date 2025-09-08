@@ -152,7 +152,8 @@
 
 .empty-value {
     color: var(--sw-text-tertiary) !important;
-    font-style: italic;
+    font-style: normal;
+    opacity: 0.6;
 }
 
 /* === Empty State === */
@@ -268,7 +269,6 @@
     display: flex;
     gap: 16px;
     padding: 0;
-    padding-bottom: 20px;
     border-bottom: 1px solid var(--sw-border-lighter);
 }
 

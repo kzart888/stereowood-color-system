@@ -108,8 +108,60 @@ const ColorDictionaryComponent = {
                     </div>
                     </template>
                     <template v-else>
-                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--sw-text-tertiary); font-size: 14px;">
-                            <span>请从下方列表中选择一个颜色查看详细信息</span>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>名称:</label>
+                                <span class="empty-value">未选择</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>分类:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>更新时间:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                        </div>
+                    
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>RGB:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>CMYK:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>HEX:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                        </div>
+                    
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>HSL:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Pantone C:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Pantone U:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                        </div>
+                    
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>配方:</label>
+                                <span class="empty-value">空</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>适用层:</label>
+                                <span class="empty-value">空</span>
+                            </div>
                         </div>
                     </template>
                 </div>
