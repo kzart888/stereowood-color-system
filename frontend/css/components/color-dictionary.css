@@ -7,7 +7,7 @@
 .color-dictionary-page {
     min-height: 100vh;
     background: var(--sw-bg-light);
-    padding: 20px;
+    padding: 8px;
     position: relative;
 }
 
@@ -42,8 +42,8 @@
     background: var(--sw-bg-white);
     border: 1px solid var(--sw-border-light);
     border-radius: var(--sw-radius-md);
-    padding: 16px;
-    margin-bottom: 20px;
+    padding: 8px;
+    margin-bottom: 4px;
     display: flex;
     gap: 16px;
     align-items: stretch;
@@ -207,7 +207,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 4px;
     flex-wrap: wrap;
 }
 
@@ -249,7 +249,7 @@
 .view-content {
     background: var(--sw-bg-white);
     border-radius: var(--sw-radius-lg);
-    padding: 20px;
+    padding: 12px;
     min-height: 400px;
 }
 
@@ -267,6 +267,7 @@
 .category-row {
     display: flex;
     gap: 16px;
+    padding: 0;
     padding-bottom: 20px;
     border-bottom: 1px solid var(--sw-border-lighter);
 }
@@ -281,6 +282,11 @@
     font-size: 14px;
     font-weight: 600;
     color: var(--sw-text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
     padding-top: 8px;
     text-align: right;
 }
@@ -313,7 +319,7 @@
     width: 80px;
     height: 80px;
     border-radius: var(--sw-radius-sm);
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     position: relative;
     transition: all var(--sw-transition-base);
     border: 2px solid transparent;
@@ -339,10 +345,10 @@
 }
 
 .color-chip-80 .color-code {
-    font-size: 12px;
+    font-size: 14px;
     text-align: center;
     color: var(--sw-text-secondary);
-    line-height: 1.2;
+    line-height: 1.0;
 }
 
 /* === Help Dialog Content === */
@@ -467,6 +473,8 @@
         text-align: left;
         width: auto;
         margin-bottom: 8px;
+        writing-mode: initial;
+        text-orientation: initial;
     }
     
     .view-navigation {
