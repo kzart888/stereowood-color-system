@@ -283,6 +283,9 @@
     justify-content: center;
     writing-mode: vertical-rl;
     text-orientation: mixed;
+    background: var(--sw-bg-lighter);
+    border-radius: var(--sw-radius-sm);
+    padding: 8px 0;
     padding-top: 8px;
     text-align: right;
 }
