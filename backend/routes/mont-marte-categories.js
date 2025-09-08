@@ -124,25 +124,43 @@ router.put('/mont-marte-categories/reorder', (req, res) => {
   });
 });
 
-// PUT /api/mont-marte-categories/:id - Rename category
+// PUT /api/mont-marte-categories/:id - Update category name and/or code
 router.put('/mont-marte-categories/:id', (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name, code } = req.body;
   
   if (!name) {
     return res.status(400).json({ error: '分类名称不能为空' });
   }
   
+  // Build update query dynamically based on provided fields
+  let updateFields = ['name = ?'];
+  let updateValues = [name];
+  
+  if (code !== undefined) {
+    updateFields.push('code = ?');
+    updateValues.push(code.toUpperCase());
+  }
+  
+  updateFields.push('updated_at = CURRENT_TIMESTAMP');
+  updateValues.push(id);
+  
+  const updateQuery = `UPDATE mont_marte_categories SET ${updateFields.join(', ')} WHERE id = ?`;
+  
   db.run(
-    'UPDATE mont_marte_categories SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-    [name, id],
+    updateQuery,
+    updateValues,
     function (err) {
       if (err) {
-        res.status(500).json({ error: err.message });
+        if (err.message.includes('UNIQUE')) {
+          res.status(400).json({ error: '分类代码已存在，请使用其他代码' });
+        } else {
+          res.status(500).json({ error: err.message });
+        }
       } else if (this.changes === 0) {
         res.status(404).json({ error: '分类不存在' });
       } else {
-        res.json({ success: true, message: '分类名称已更新' });
+        res.json({ success: true, message: '分类已更新' });
       }
     }
   );

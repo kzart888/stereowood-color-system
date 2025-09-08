@@ -7,7 +7,7 @@
 /* === Filter Row === */
 .filter-row {
     background: var(--sw-bg-white);
-    padding: 12px;
+    padding: 8px;
     margin: 6px;
     border-radius: var(--sw-radius-md);
     display: flex;

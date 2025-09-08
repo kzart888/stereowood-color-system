@@ -369,8 +369,11 @@ async function runMigrations() {
       WHERE category IS NOT NULL AND category_id IS NULL
     `);
     
-    // 7. Fix mis-categorized custom colors (those that don't match their category prefix)
-    // Get the OT category id
+    // 7. DISABLED: Auto-categorization based on prefix
+    // This was causing issues with custom category codes like "BW" for "黑白灰色系"
+    // Users should have full control over their categorization
+    // Commenting out to prevent automatic recategorization
+    /*
     const otCategoryId = await new Promise((resolve, reject) => {
       db.get(`SELECT id FROM color_categories WHERE code = 'OT'`, (err, row) => {
         if (err) reject(err);
@@ -393,6 +396,7 @@ async function runMigrations() {
         )
       `, [otCategoryId]);
     }
+    */
     
   } catch (e) {
     console.error('数据库迁移失败:', e);

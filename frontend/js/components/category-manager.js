@@ -28,21 +28,36 @@ const CategoryManagerComponent = {
                             ref="newCategoryInput"
                             :class="{ 'is-error': validationError }"
                         />
-                        <div v-if="validationError" class="validation-error-text">
-                            {{ validationError }}
-                        </div>
+                    </el-form-item>
+                    <el-form-item 
+                        label="代码:"
+                        :error="codeValidationError"
+                    >
+                        <el-input
+                            v-model="newCategoryCode"
+                            placeholder="2-4位字母/数字"
+                            :maxlength="4"
+                            style="width: 120px"
+                            :class="{ 'is-error': codeValidationError }"
+                        />
+                        <el-tooltip content="如: BU, YW, BW001等" placement="top">
+                            <el-icon style="margin-left: 4px; color: #909399;"><InfoFilled /></el-icon>
+                        </el-tooltip>
                     </el-form-item>
                     <el-form-item>
                         <el-button 
                             type="primary" 
                             @click="addCategory"
                             :loading="adding"
-                            :disabled="!newCategoryName.trim() || !!validationError"
+                            :disabled="!newCategoryName.trim() || !!validationError || !!codeValidationError"
                         >
                             <el-icon><Plus /></el-icon>
                             添加分类
                         </el-button>
                     </el-form-item>
+                    <div v-if="validationError || codeValidationError" class="validation-error-text">
+                        {{ validationError || codeValidationError }}
+                    </div>
                 </el-form>
             </div>
 
@@ -122,9 +137,25 @@ const CategoryManagerComponent = {
                     <el-table-column
                         prop="code"
                         label="代码"
-                        width="80"
+                        width="120"
                         align="center"
-                    />
+                    >
+                        <template #default="{ row }">
+                            <div v-if="editingId === row.id" class="inline-edit">
+                                <el-input
+                                    v-model="editingCode"
+                                    size="small"
+                                    @keyup.enter="!editValidationError && saveRename(row)"
+                                    @keyup.esc="cancelEdit"
+                                    :maxlength="4"
+                                    :class="{ 'is-error': codeEditValidationError }"
+                                    placeholder="2-4位"
+                                    style="width: 80px"
+                                />
+                            </div>
+                            <span v-else>{{ row.code }}</span>
+                        </template>
+                    </el-table-column>
 
                     <!-- Item Count Column -->
                     <el-table-column
@@ -203,13 +234,17 @@ const CategoryManagerComponent = {
             adding: false,
             saving: false,
             newCategoryName: '',
+            newCategoryCode: '',
             editingId: null,
             editingName: '',
+            editingCode: '',
             draggedIndex: null,
             sortableCategories: [],
             dropTargetIndex: null,
             validationError: '',
-            editValidationError: ''
+            codeValidationError: '',
+            editValidationError: '',
+            codeEditValidationError: ''
         };
     },
 
@@ -248,10 +283,20 @@ const CategoryManagerComponent = {
             this.validateCategoryName(val);
         },
         
+        newCategoryCode(val) {
+            this.validateCategoryCode(val);
+        },
+        
         // Real-time validation for edit category name
         editingName(val) {
             if (this.editingId) {
                 this.validateEditName(val);
+            }
+        },
+        
+        editingCode(val) {
+            if (this.editingId) {
+                this.validateEditCode(val);
             }
         }
     },
@@ -293,6 +338,45 @@ const CategoryManagerComponent = {
             return true;
         },
         
+        validateCategoryCode(code) {
+            const trimmedCode = (code || '').trim().toUpperCase();
+            
+            if (!trimmedCode) {
+                this.codeValidationError = '';
+                return true; // Code is optional, will be auto-generated
+            }
+            
+            if (trimmedCode.length < 2) {
+                this.codeValidationError = '代码至少需要2个字符';
+                return false;
+            }
+            
+            if (trimmedCode.length > 4) {
+                this.codeValidationError = '代码不能超过4个字符';
+                return false;
+            }
+            
+            // Allow letters, numbers, and Chinese characters
+            const validCode = /^[A-Z0-9一-龥]+$/;
+            if (!validCode.test(trimmedCode)) {
+                this.codeValidationError = '代码只能包含字母、数字或中文';
+                return false;
+            }
+            
+            // Check for duplicate codes
+            const isDuplicate = this.sortableCategories.some(cat => 
+                cat.code === trimmedCode
+            );
+            
+            if (isDuplicate) {
+                this.codeValidationError = '代码已存在';
+                return false;
+            }
+            
+            this.codeValidationError = '';
+            return true;
+        },
+        
         validateEditName(name) {
             const trimmedName = name.trim();
             const currentCategory = this.sortableCategories.find(cat => cat.id === this.editingId);
@@ -330,6 +414,46 @@ const CategoryManagerComponent = {
             return true;
         },
         
+        validateEditCode(code) {
+            const trimmedCode = (code || '').trim().toUpperCase();
+            const currentRow = this.sortableCategories.find(cat => cat.id === this.editingId);
+            
+            if (!trimmedCode) {
+                this.codeEditValidationError = '代码不能为空';
+                return false;
+            }
+            
+            if (trimmedCode.length < 2) {
+                this.codeEditValidationError = '代码至少需要2个字符';
+                return false;
+            }
+            
+            if (trimmedCode.length > 4) {
+                this.codeEditValidationError = '代码不能超过4个字符';
+                return false;
+            }
+            
+            // Allow letters, numbers, and Chinese characters
+            const validCode = /^[A-Z0-9一-龥]+$/;
+            if (!validCode.test(trimmedCode)) {
+                this.codeEditValidationError = '代码只能包含字母、数字或中文';
+                return false;
+            }
+            
+            // Check for duplicate codes (excluding current)
+            const isDuplicate = this.sortableCategories.some(cat => 
+                cat.code === trimmedCode && cat.id !== this.editingId
+            );
+            
+            if (isDuplicate) {
+                this.codeEditValidationError = '代码已存在';
+                return false;
+            }
+            
+            this.codeEditValidationError = '';
+            return true;
+        },
+        
         handleClose() {
             this.dialogVisible = false;
             this.$emit('update:visible', false);
@@ -338,12 +462,16 @@ const CategoryManagerComponent = {
 
         resetForm() {
             this.newCategoryName = '';
+            this.newCategoryCode = '';
             this.editingId = null;
             this.editingName = '';
+            this.editingCode = '';
             this.draggedIndex = null;
             this.dropTargetIndex = null;
             this.validationError = '';
+            this.codeValidationError = '';
             this.editValidationError = '';
+            this.codeEditValidationError = '';
         },
 
         async loadCategories() {
@@ -364,19 +492,18 @@ const CategoryManagerComponent = {
 
         async addCategory() {
             const name = this.newCategoryName.trim();
+            const code = this.newCategoryCode.trim().toUpperCase();
+            
             if (!name) {
                 this.$message.warning('请输入分类名称');
                 return;
             }
 
-            if (name.length < 2 || name.length > 20) {
-                this.$message.warning('分类名称长度应在2-20个字符之间');
+            if (!this.validateCategoryName(name)) {
                 return;
             }
-
-            // Check for duplicate names
-            if (this.sortableCategories.some(cat => cat.name === name)) {
-                this.$message.warning('分类名称已存在');
+            
+            if (code && !this.validateCategoryCode(code)) {
                 return;
             }
 
@@ -384,13 +511,19 @@ const CategoryManagerComponent = {
             try {
                 const nextOrder = Math.max(...this.sortableCategories.map(c => c.display_order || 0)) + 1;
                 
+                const payload = { 
+                    name,
+                    display_order: nextOrder
+                };
+                
+                if (code) {
+                    payload.code = code;
+                }
+                
                 const response = await fetch(this.apiEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name,
-                        display_order: nextOrder
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 const result = await response.json();
@@ -401,6 +534,7 @@ const CategoryManagerComponent = {
 
                 this.$message.success('分类添加成功');
                 this.newCategoryName = '';
+                this.newCategoryCode = '';
                 this.$emit('updated');
                 await this.loadCategories();
             } catch (error) {
@@ -413,6 +547,7 @@ const CategoryManagerComponent = {
         startEdit(row) {
             this.editingId = row.id;
             this.editingName = row.name;
+            this.editingCode = row.code;
             this.$nextTick(() => {
                 if (this.$refs.editInput) {
                     this.$refs.editInput.focus();
@@ -423,24 +558,31 @@ const CategoryManagerComponent = {
         cancelEdit() {
             this.editingId = null;
             this.editingName = '';
+            this.editingCode = '';
+            this.editValidationError = '';
+            this.codeEditValidationError = '';
         },
 
         async saveRename(row) {
             const newName = this.editingName.trim();
+            const newCode = this.editingCode.trim().toUpperCase();
             
             if (!newName) {
                 this.$message.warning('分类名称不能为空');
                 return;
             }
+            
+            if (!newCode) {
+                this.$message.warning('代码不能为空');
+                return;
+            }
 
-            if (newName === row.name) {
+            if (newName === row.name && newCode === row.code) {
                 this.cancelEdit();
                 return;
             }
 
-            // Check for duplicate names
-            if (this.sortableCategories.some(cat => cat.id !== row.id && cat.name === newName)) {
-                this.$message.warning('分类名称已存在');
+            if (!this.validateEditName(newName) || !this.validateEditCode(newCode)) {
                 return;
             }
 
@@ -449,21 +591,24 @@ const CategoryManagerComponent = {
                 const response = await fetch(`${this.apiEndpoint}/${row.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newName })
+                    body: JSON.stringify({ 
+                        name: newName,
+                        code: newCode
+                    })
                 });
 
                 const result = await response.json();
                 
                 if (!response.ok) {
-                    throw new Error(result.error || 'Failed to rename category');
+                    throw new Error(result.error || 'Failed to update category');
                 }
 
-                this.$message.success('分类重命名成功');
+                this.$message.success('分类更新成功');
                 this.cancelEdit();
                 this.$emit('updated');
                 await this.loadCategories();
             } catch (error) {
-                this.$message.error('重命名失败: ' + error.message);
+                this.$message.error('更新失败: ' + error.message);
             } finally {
                 this.saving = false;
             }

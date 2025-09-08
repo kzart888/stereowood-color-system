@@ -64,6 +64,38 @@
     font-weight: 600;
 }
 
+/* Column Width Adjustments */
+.category-manager-dialog .el-table .el-table__cell:nth-child(1) {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+}
+
+/* Name column - reduced width */
+.category-manager-dialog .el-table .el-table__cell:nth-child(2) {
+    width: 30% !important;
+    min-width: 200px !important;
+}
+
+/* Code column - increased width for edit controls */
+.category-manager-dialog .el-table .el-table__cell:nth-child(3) {
+    width: 20% !important;
+    min-width: 150px !important;
+}
+
+/* Count column */
+.category-manager-dialog .el-table .el-table__cell:nth-child(4) {
+    width: 60px !important;
+    min-width: 60px !important;
+    max-width: 80px !important;
+}
+
+/* Actions column */
+.category-manager-dialog .el-table .el-table__cell:nth-child(5) {
+    flex: 1;
+    min-width: 140px !important;
+}
+
 /* Drag Handle Styles */
 .drag-handle {
     display: inline-block;
@@ -179,12 +211,28 @@
 .inline-edit {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .inline-edit .el-input {
     flex: 1;
-    min-width: 120px;
+    min-width: 80px;
+    max-width: calc(100% - 90px);
+}
+
+.inline-edit .el-button {
+    padding: 3px 8px;
+    font-size: 12px;
+}
+
+.inline-edit .el-button + .el-button {
+    margin-left: 4px;
+}
+
+/* Code column inline edit special handling */
+.el-table__cell:nth-child(3) .inline-edit .el-input {
+    min-width: 60px;
+    max-width: calc(100% - 90px);
 }
 
 /* Action Buttons */

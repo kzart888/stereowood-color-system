@@ -21,16 +21,19 @@ const ArtworksComponent = {
         <div v-if="artworks.length === 0" class="empty-message">暂无作品，点击右上角"新作品"添加</div>
 
         <!-- Filter Row -->
+        <!-- 注释：分类过滤功能暂未开发 -->
         <div class="category-switch-group filter-row" v-if="artworks.length > 0">
           <button v-for="size in sizeFilters" :key="size"
                   :class="{active: selectedSizes.includes(size)}"
-                  @click="toggleSizeFilter(size)">
+                  :disabled="true"
+                  style="cursor: not-allowed; opacity: 0.5;">
             {{ size }}
           </button>
           <div class="filter-separator"></div>
           <button v-for="shape in shapeFilters" :key="shape"
                   :class="{active: selectedShapes.includes(shape)}"
-                  @click="toggleShapeFilter(shape)">
+                  :disabled="true"
+                  style="cursor: not-allowed; opacity: 0.5;">
             {{ shape }}
           </button>
         </div>

@@ -347,42 +347,6 @@ const ColorDictionaryComponent = {
                     </ul>
                 </div>
             </el-dialog>
-            
-            <!-- Print Options Dialog -->
-            <el-dialog
-                v-model="showPrintOptions"
-                title="打印选项"
-                width="500px"
-                append-to-body
-            >
-                <div class="print-options-form">
-                    <h4>选择要包含的信息</h4>
-                    <el-checkbox v-model="printOptions.includeFormulas">包含配方</el-checkbox>
-                    <el-checkbox v-model="printOptions.includeRGB">包含RGB值</el-checkbox>
-                    <el-checkbox v-model="printOptions.includeCMYK">包含CMYK值</el-checkbox>
-                    <el-checkbox v-model="printOptions.includeHEX">包含HEX值</el-checkbox>
-                    <el-checkbox v-model="printOptions.includePantone">包含Pantone值</el-checkbox>
-                    <el-checkbox v-model="printOptions.includeApplicableLayers">包含适用层</el-checkbox>
-                    
-                    <h4 style="margin-top: 20px;">布局设置</h4>
-                    <div class="form-item">
-                        <label>每页列数：</label>
-                        <el-input-number 
-                            v-model="printOptions.columnsPerPage" 
-                            :min="3" 
-                            :max="8" 
-                            :step="1"
-                        />
-                    </div>
-                    <el-checkbox v-model="printOptions.pageBreakBetweenCategories">
-                        分类之间分页
-                    </el-checkbox>
-                </div>
-                <template #footer>
-                    <el-button @click="showPrintOptions = false">取消</el-button>
-                    <el-button type="primary" @click="confirmPrint">确认打印</el-button>
-                </template>
-            </el-dialog>
         </div>
     `,
     
@@ -487,37 +451,30 @@ const ColorDictionaryComponent = {
             this.enrichedColors = this.colors.map(color => {
                 const enriched = { ...color };
                 
-                // Calculate RGB if needed
-                let rgb = null;
-                if (color.hex_color && color.hex_color !== '未填写' && color.hex_color !== '') {
-                    const hex = color.hex_color.startsWith('#') ? color.hex_color : '#' + color.hex_color;
-                    rgb = hexToRgb(hex);
-                } else if (color.rgb_r != null && color.rgb_g != null && color.rgb_b != null) {
-                    rgb = {
+                // Only calculate what's actually needed
+                if (color.rgb_r != null && color.rgb_g != null && color.rgb_b != null) {
+                    // Has RGB values - calculate hex and HSL
+                    enriched.hex = rgbToHex(color.rgb_r, color.rgb_g, color.rgb_b);
+                    enriched.hsl = rgbToHsl(color.rgb_r, color.rgb_g, color.rgb_b);
+                    enriched.rgb = {
                         r: parseInt(color.rgb_r) || 0,
                         g: parseInt(color.rgb_g) || 0,
                         b: parseInt(color.rgb_b) || 0
                     };
-                    enriched.hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                } else if (color.hex_color && color.hex_color !== '未填写' && color.hex_color !== '') {
+                    // Has hex color - calculate RGB and HSL
+                    const hex = color.hex_color.startsWith('#') ? color.hex_color : '#' + color.hex_color;
+                    const rgb = hexToRgb(hex);
+                    if (rgb) {
+                        enriched.rgb = rgb;
+                        enriched.hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+                        enriched.hex = hex;
+                    }
                 } else {
-                    // Don't assign default color - leave it blank
-                    rgb = null;
+                    // No color data - leave blank
                     enriched.hex = null;
-                }
-                
-                enriched.rgb = rgb;
-                
-                // Also pass through rgb_r, rgb_g, rgb_b for HSL view compatibility
-                if (color.rgb_r != null && color.rgb_g != null && color.rgb_b != null) {
-                    enriched.rgb_r = color.rgb_r;
-                    enriched.rgb_g = color.rgb_g;
-                    enriched.rgb_b = color.rgb_b;
-                }
-                
-                // Calculate HSL and LAB
-                if (rgb) {
-                    enriched.hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-                    enriched.lab = rgbToLab(rgb.r, rgb.g, rgb.b);
+                    enriched.hsl = null;
+                    enriched.rgb = null;
                 }
                 
                 return enriched;
@@ -1602,7 +1559,6 @@ const WheelDictionaryView = {
         return {
             proximityRange: 15,
             showOnlyWithRGB: false,
-            wheelCanvas: null,
             ctx: null,
             centerX: 300,
             centerY: 300,
