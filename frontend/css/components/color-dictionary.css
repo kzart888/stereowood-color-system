@@ -273,7 +273,7 @@
 }
 
 .category-label {
-    width: 60px;
+    width: 40px;
     flex-shrink: 0;
     font-size: 14px;
     font-weight: 600;
@@ -283,7 +283,7 @@
     justify-content: center;
     writing-mode: vertical-rl;
     text-orientation: mixed;
-    background: var(--sw-bg-lighter);
+    background: #f0f0f0;
     border-radius: var(--sw-radius-sm);
     padding: 8px 0;
     padding-top: 8px;
@@ -457,31 +457,408 @@
     }
 }
 
-/* === HSL and Wheel View Styles === */
-.hsl-view-container,
-.wheel-view-container {
-    padding: 20px;
+/* === HSL View Styles === */
+.hsl-color-space-view {
+    padding: 0;
+    /* Ensure enough width for the 520px grid */
+    min-width: 560px;
+    overflow-x: auto;
 }
 
-.hsl-message,
-.wheel-message {
+/* Hue Controls */
+.hue-slider-container {
+    margin-bottom: 12px;
+}
+
+.hue-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: var(--sw-bg-lighter);
-    border-radius: var(--sw-radius-md);
-    margin-bottom: 20px;
-    color: var(--sw-text-secondary);
-    font-size: 14px;
+    justify-content: space-between;
+    margin-bottom: 8px;
 }
 
-.hsl-view-container .color-grid,
-.wheel-view-container .color-grid {
+.hue-controls label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--sw-text-primary);
+}
+
+.hue-presets {
+    display: flex;
+    gap: 8px;
+}
+
+.hue-preset-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--sw-transition-base);
+}
+
+.hue-preset-btn:hover {
+    transform: scale(1.2);
+    border-color: var(--sw-primary);
+}
+
+.hue-slider {
+    width: 100%;
+    height: 20px;
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+}
+
+.hue-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #333;
+    cursor: pointer;
+}
+
+.hue-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #333;
+    cursor: pointer;
+}
+
+/* Grid Controls */
+.grid-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.grid-controls label {
+    font-size: 13px;
+    color: var(--sw-text-secondary);
+}
+
+.grid-info {
+    font-size: 13px;
+    color: var(--sw-text-tertiary);
+    padding: 4px 8px;
+    background: var(--sw-bg-lighter);
+    border-radius: var(--sw-radius-sm);
+}
+
+/* SL Grid */
+.sl-grid-container {
+    position: relative;
+    margin-bottom: 30px;
+    /* Ensure container can hold the 520px grid */
+    min-width: 530px;
+    overflow: visible;
+}
+
+.sl-grid {
+    display: grid;
+    /* No gap - cells fill entire grid */
+    gap: 0;
+    /* Fixed size at 130% scale (400px * 1.3 = 520px) */
+    width: 520px;
+    height: 520px;
+    border: 2px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    overflow: hidden;
+    background: var(--sw-bg-white);
+}
+
+.grid-row {
+    display: contents;
+}
+
+.grid-cell {
+    position: relative;
+    /* Cells fill their grid area completely */
+    width: 100%;
+    height: 100%;
+    /* Small border to see cell boundaries */
+    border: 0.5px solid rgba(0, 0, 0, 0.1);
+    transition: all var(--sw-transition-fast);
+    cursor: pointer;
+}
+
+.grid-cell:hover {
+    /* Highlight on hover without changing size */
+    z-index: 10;
+    box-shadow: inset 0 0 0 2px rgba(64, 158, 255, 0.6);
+}
+
+.grid-cell.has-colors {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Container for dots within a cell */
+.cell-dots-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    pointer-events: none; /* Allow clicks to pass through to dots */
+}
+
+/* Individual color dots in grid cells */
+.cell-color-dot {
+    position: absolute;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    pointer-events: all; /* Make dots clickable */
+}
+
+.cell-color-dot:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+}
+
+.cell-color-dot.selected {
+    box-shadow: 0 0 0 3px var(--sw-primary), 0 2px 6px rgba(0, 0, 0, 0.4);
+    transform: scale(1.15);
+    z-index: 11;
+}
+
+.color-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 10px;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-weight: bold;
+}
+
+/* Grid Labels */
+.grid-labels {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.label-y {
+    position: absolute;
+    left: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 12px;
+    color: var(--sw-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.label-x {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: var(--sw-text-secondary);
+}
+
+/* Hue Colors Section */
+.hue-colors {
+    margin-top: 8px;
+    padding: 8px;
+}
+
+.hue-colors-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.hue-colors-header h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+    margin: 0;
+}
+
+.color-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
-    margin-top: 20px;
+    gap: 12px;
+}
+
+/* === Wheel View Styles === */
+.color-wheel-view {
+    padding: 8px;
+}
+
+.wheel-container {
+    position: relative;
+    width: 600px;
+    height: 600px;
+    padding: 0;
+    margin: 0 auto 8px;
+}
+
+.wheel-canvas {
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+}
+
+.wheel-colors-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.wheel-color-dot {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    pointer-events: all;
+    transform: translate(-50%, -50%);
+    transition: all var(--sw-transition-base);
+}
+
+.wheel-color-dot:hover {
+    transform: translate(-50%, -50%) scale(1.5);
+    z-index: 10;
+}
+
+.wheel-color-dot.selected {
+    transform: translate(-50%, -50%) scale(2);
+    border-color: var(--sw-primary);
+    border-width: 3px;
+    z-index: 20;
+}
+
+.wheel-color-dot.blank {
+    background: var(--sw-bg-lighter) !important;
+    border: 2px dashed #999;
+}
+
+.blank-dot {
+    font-size: 10px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.wheel-controls {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: var(--sw-bg-lighter);
+    border-radius: var(--sw-radius-md);
+}
+
+.wheel-controls .control-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 4px;
+}
+
+.wheel-controls .control-row:last-child {
+    margin-bottom: 0;
+}
+
+.wheel-controls label {
+    font-size: 13px;
+    color: var(--sw-text-secondary);
+    min-width: 120px;
+    margin: 0;
+}
+
+.wheel-controls .el-slider {
+    flex: 1;
+    margin: 0;
+}
+
+.wheel-controls .el-checkbox {
+    margin: 0;
+}
+
+.wheel-controls .stats {
+    margin: 0;
+    padding: 8px;
+    border-top: 1px solid var(--sw-border-lighter);
+    font-size: 13px;
+    color: var(--sw-text-tertiary);
+}
+
+/* Click indicator on wheel */
+.click-indicator {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ff0000;
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: pulse 0.5s ease-out;
+    transition: none;
+}
+
+.click-indicator.dragging {
+    border-color: #ff6600;
+    box-shadow: 0 0 10px rgba(255, 102, 0, 0.5);
+}
+
+.click-indicator::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 1px;
+    background: #ff0000;
+    transform: translate(-50%, -50%);
+}
+
+.click-indicator::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1px;
+    height: 30px;
+    background: #ff0000;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1.2);
+    }
 }
 
 /* === Responsive Design === */
@@ -546,6 +923,68 @@
 
 .color-dictionary-page .loading .el-icon {
     margin-right: 8px;
+}
+
+/* === Matched Colors Section === */
+.matched-colors-section {
+    margin-top: 8px;
+    padding: 8px;
+    background: var(--sw-bg-lighter);
+    border-radius: var(--sw-radius-md);
+    border: 1px solid var(--sw-border-light);
+}
+
+.matched-colors-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sw-text-primary);
+}
+
+.matched-colors-section .color-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.matched-colors-section .color-chip-80 {
+    position: relative;
+    background: var(--sw-bg-white);
+    border: 2px solid var(--sw-primary-light);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.matched-colors-section .delta-e-value {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--sw-primary);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Highlight matched colors on wheel */
+.wheel-color-dot.matched {
+    border-color: var(--sw-primary);
+    box-shadow: 0 0 0 3px var(--sw-primary-light);
+    z-index: 15;
+}
+
+/* Wheel canvas cursor */
+.wheel-canvas {
+    cursor: crosshair;
+}
+
+.wheel-canvas:active {
+    cursor: move;
+}
+
+.wheel-container.dragging .wheel-canvas {
+    cursor: move !important;
 }
 
 /* === Print Styles === */

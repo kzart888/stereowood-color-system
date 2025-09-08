@@ -32,6 +32,26 @@
     box-shadow: 0 0 0 2px rgba(144, 147, 153, 0.15);
 }
 
+/* Highlight animation for navigation from color dictionary */
+.color-card.highlight-animation {
+    animation: highlightPulse 2s ease-in-out;
+}
+
+@keyframes highlightPulse {
+    0%, 100% {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transform: scale(1);
+    }
+    25%, 75% {
+        box-shadow: 0 0 20px rgba(64, 158, 255, 0.8), 0 0 40px rgba(64, 158, 255, 0.4);
+        transform: scale(1.05);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(64, 158, 255, 1), 0 0 60px rgba(64, 158, 255, 0.6);
+        transform: scale(1.08);
+    }
+}
+
 /* 颜色预览图 */
 .color-image {
     width: 100%;

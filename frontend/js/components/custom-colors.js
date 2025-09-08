@@ -37,7 +37,7 @@ const CustomColorsComponent = {
                 
                 <!-- Grid Container for Cards -->
                 <div class="color-cards-grid">
-                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id)">
+                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :data-color-id="color.id" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id)">
                     <div class="artwork-header" style="display:flex; padding:8px; align-items:center; justify-content:space-between;">
                         <div style="display:flex; align-items:center;">
                             <div class="artwork-title" style="width:88px; flex-shrink:0;">
