@@ -180,13 +180,6 @@ const ColorDictionaryComponent = {
             
             <!-- View Navigation -->
             <div class="category-switch-group view-navigation">
-                <el-button 
-                    size="small"
-                    @click="printColors"
-                >
-                    <el-icon><Printer /></el-icon>
-                    打印列表
-                </el-button>
                 <button 
                     type="button" 
                     class="category-switch" 
@@ -233,6 +226,13 @@ const ColorDictionaryComponent = {
                     </button>
                 </div>
                 
+                <el-button 
+                    size="small"
+                    @click="printColors"
+                >
+                    <el-icon><Printer /></el-icon>
+                    打印列表
+                </el-button>
                 <button 
                     type="button"
                     class="help-btn"
