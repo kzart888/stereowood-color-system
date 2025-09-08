@@ -1,11 +1,27 @@
 /**
  * Color Dictionary Component
- * 独立的颜色字典页面，提供三种视图浏览所有自配色
+ * @component ColorDictionary
+ * @description Standalone page for browsing and selecting colors
+ * @since v1.0.0
+ * 
+ * Features:
+ * - Three view modes: List, HSL Grid, Color Wheel
+ * - Category filtering and synchronization
+ * - Advanced print options with customizable layout
+ * - Keyboard navigation support
+ * - Lazy loading for performance optimization
+ * - Real-time sync with custom colors database
  */
 
 const ColorDictionaryComponent = {
     template: `
         <div class="color-dictionary-page">
+            <!-- Loading Overlay -->
+            <div v-if="loading" class="loading-overlay">
+                <el-icon class="is-loading"><Loading /></el-icon>
+                <span class="loading-text">加载颜色数据中...</span>
+            </div>
+            
             <!-- Header Color Info Bar -->
             <div class="header-color-info" :class="{inactive: !selectedColor}">
                 <div class="color-preview-80">
@@ -203,6 +219,7 @@ const ColorDictionaryComponent = {
                     :selected-color-id="selectedColorId"
                     :sort-mode="listSortMode"
                     @select="handleColorSelect"
+                    @hover="handleColorHover"
                 />
                 
                 <!-- HSL View -->
@@ -256,9 +273,16 @@ const ColorDictionaryComponent = {
                         <li>鼠标悬停查看颜色信息</li>
                     </ul>
                     
-                    <h4>快捷键</h4>
+                    <h4>键盘快捷键</h4>
                     <ul>
                         <li><kbd>ESC</kbd> - 取消当前选择</li>
+                        <li><kbd>1</kbd> - 切换到列表导航</li>
+                        <li><kbd>2</kbd> - 切换到HSL导航</li>
+                        <li><kbd>3</kbd> - 切换到色轮导航</li>
+                        <li><kbd>←</kbd> <kbd>→</kbd> - 在列表中左右移动选择</li>
+                        <li><kbd>↑</kbd> <kbd>↓</kbd> - 在列表中上下移动选择（跳行）</li>
+                        <li><kbd>Enter</kbd> - 在自配色管理中查看选中的颜色</li>
+                        <li><kbd>Ctrl/Cmd + P</kbd> - 打印颜色列表</li>
                         <li>点击空白处 - 取消当前选择</li>
                     </ul>
                     
@@ -375,10 +399,19 @@ const ColorDictionaryComponent = {
         // Sync categories and colors with custom colors page
         this.syncCategories();
         this.syncColors();
+        
+        // Setup lazy loading for images (performance optimization)
+        this.$nextTick(() => {
+            this.setupLazyLoading();
+        });
     },
     
     beforeUnmount() {
         this.removeEventHandlers();
+        // Cleanup image observer
+        if (this._imageObserver) {
+            this._imageObserver.disconnect();
+        }
     },
     
     methods: {
@@ -756,13 +789,119 @@ const ColorDictionaryComponent = {
             }
         },
         
+        setupLazyLoading() {
+            // Lazy load images for performance
+            const imageObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        if (img.dataset.src && !img.src) {
+                            img.src = img.dataset.src;
+                            img.onload = () => {
+                                img.classList.add('loaded');
+                            };
+                        }
+                        imageObserver.unobserve(img);
+                    }
+                });
+            }, {
+                rootMargin: '50px'
+            });
+            
+            // Observe all lazy images
+            this.$nextTick(() => {
+                const lazyImages = this.$el.querySelectorAll('img[data-src]');
+                lazyImages.forEach(img => imageObserver.observe(img));
+            });
+            
+            // Store observer for cleanup
+            this._imageObserver = imageObserver;
+        },
+        
         setupEventHandlers() {
-            // ESC key handler
+            // Keyboard navigation handler
             this.handleKeyDown = (event) => {
+                // ESC key - deselect
                 if (event.key === 'Escape' && this.selectedColorId) {
                     event.preventDefault();
                     event.stopPropagation();
                     this.selectedColorId = null;
+                    return;
+                }
+                
+                // Ctrl/Cmd + P for printing
+                if (event.key === 'p' && (event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    this.printColors();
+                    return;
+                }
+                
+                // View switching with number keys
+                if (event.key === '1' && !event.ctrlKey && !event.metaKey) {
+                    event.preventDefault();
+                    this.viewMode = 'list';
+                    return;
+                }
+                if (event.key === '2' && !event.ctrlKey && !event.metaKey) {
+                    event.preventDefault();
+                    this.viewMode = 'hsl';
+                    return;
+                }
+                if (event.key === '3' && !event.ctrlKey && !event.metaKey) {
+                    event.preventDefault();
+                    this.viewMode = 'wheel';
+                    return;
+                }
+                
+                // Arrow key navigation (only in list view)
+                if (this.viewMode === 'list' && this.enrichedColors.length > 0) {
+                    const handleArrowNavigation = () => {
+                        const currentIndex = this.enrichedColors.findIndex(c => c.id === this.selectedColorId);
+                        let newIndex = -1;
+                        
+                        switch(event.key) {
+                            case 'ArrowRight':
+                                event.preventDefault();
+                                newIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, this.enrichedColors.length - 1);
+                                break;
+                            case 'ArrowLeft':
+                                event.preventDefault();
+                                newIndex = currentIndex === -1 ? 0 : Math.max(currentIndex - 1, 0);
+                                break;
+                            case 'ArrowDown':
+                                event.preventDefault();
+                                // Move down by approximate row width (10 items)
+                                newIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 10, this.enrichedColors.length - 1);
+                                break;
+                            case 'ArrowUp':
+                                event.preventDefault();
+                                // Move up by approximate row width (10 items)
+                                newIndex = currentIndex === -1 ? 0 : Math.max(currentIndex - 10, 0);
+                                break;
+                            case 'Enter':
+                                if (this.selectedColorId) {
+                                    event.preventDefault();
+                                    // Navigate to color in management page
+                                    this.navigateToColor();
+                                }
+                                return;
+                        }
+                        
+                        if (newIndex >= 0 && newIndex < this.enrichedColors.length) {
+                            this.selectedColorId = this.enrichedColors[newIndex].id;
+                            // Scroll into view if needed
+                            this.$nextTick(() => {
+                                const element = this.$el.querySelector(`.color-chip-80[data-color-id="${this.selectedColorId}"]`);
+                                if (element) {
+                                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            });
+                        }
+                    };
+                    
+                    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Enter'].includes(event.key)) {
+                        handleArrowNavigation();
+                    }
                 }
             };
             window.addEventListener('keydown', this.handleKeyDown);
@@ -806,7 +945,11 @@ const SimplifiedListView = {
                              :key="color.id"
                              class="color-chip-80"
                              :class="{ selected: color.id === selectedColorId }"
-                             @click="$emit('select', color)">
+                             :data-color-id="color.id"
+                             tabindex="0"
+                             @click="$emit('select', color)"
+                             @mouseenter="$emit('hover', color)"
+                             @mouseleave="$emit('hover', null)">
                             <div class="color-preview" 
                                  :style="{ background: getColorStyle(color) }">
                             </div>
@@ -823,7 +966,11 @@ const SimplifiedListView = {
                              :key="color.id"
                              class="color-chip-80"
                              :class="{ selected: color.id === selectedColorId }"
-                             @click="$emit('select', color)">
+                             :data-color-id="color.id"
+                             tabindex="0"
+                             @click="$emit('select', color)"
+                             @mouseenter="$emit('hover', color)"
+                             @mouseleave="$emit('hover', null)">
                             <div class="color-preview" 
                                  :style="{ background: getColorStyle(color) }">
                             </div>

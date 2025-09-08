@@ -26,7 +26,8 @@ const AppHeaderBar = {
 		'global-search-input',
 		'search-select',
 		'open-search-dropdown',
-		'close-search-dropdown'
+		'close-search-dropdown',
+		'show-help'
 	],
 	data() {
 		return {
@@ -308,6 +309,11 @@ const AppHeaderBar = {
 							</el-button>
 						</span>
 					</template>
+					<!-- Global Help Button -->
+					<el-button size="small" @click="$emit('show-help')" class="help-btn">
+						<el-icon><QuestionFilled /></el-icon>
+						<span class="text-full">帮助</span>
+					</el-button>
 				</div>
 			</div>
 		</div>

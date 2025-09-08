@@ -4,6 +4,47 @@
  * @module components/artworks
  */
 
+/* === Filter Row === */
+.filter-row {
+    background: var(--sw-bg-white);
+    padding: 12px;
+    margin: 6px;
+    border-radius: var(--sw-radius-md);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-row button {
+    padding: 6px 12px;
+    border: 1px solid var(--sw-border-light);
+    background: var(--sw-bg-white);
+    border-radius: var(--sw-radius-sm);
+    font-size: 13px;
+    color: var(--sw-text-secondary);
+    cursor: pointer;
+    transition: all var(--sw-transition-base);
+}
+
+.filter-row button:hover {
+    background: var(--sw-bg-lighter);
+    border-color: var(--sw-primary-light);
+}
+
+.filter-row button.active {
+    background: var(--sw-primary);
+    color: white;
+    border-color: var(--sw-primary);
+}
+
+.filter-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--sw-border-light);
+    margin: 0 8px;
+}
+
 /* === 作品卡片容器 === */
 .artwork-bar {
     background: var(--sw-bg-white);

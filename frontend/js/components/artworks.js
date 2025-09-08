@@ -18,7 +18,22 @@ const ArtworksComponent = {
       </div>
 
       <div v-else>
-        <div v-if="artworks.length === 0" class="empty-message">暂无作品，点击右上角“新作品”添加</div>
+        <div v-if="artworks.length === 0" class="empty-message">暂无作品，点击右上角"新作品"添加</div>
+
+        <!-- Filter Row -->
+        <div class="category-switch-group filter-row" v-if="artworks.length > 0">
+          <button v-for="size in sizeFilters" :key="size"
+                  :class="{active: selectedSizes.includes(size)}"
+                  @click="toggleSizeFilter(size)">
+            {{ size }}
+          </button>
+          <div class="filter-separator"></div>
+          <button v-for="shape in shapeFilters" :key="shape"
+                  :class="{active: selectedShapes.includes(shape)}"
+                  @click="toggleShapeFilter(shape)">
+            {{ shape }}
+          </button>
+        </div>
 
         <!-- 母bar：作品 -->
   <div v-for="art in paginatedArtworks" :key="art.id" class="artwork-bar" :data-art-id="art.id" :data-focus-single="art._swFocusSingle ? 'true' : null">
@@ -579,6 +594,12 @@ const ArtworksComponent = {
   , highlightColorCode: ''
   , _highlightTimer: null
   , _schemeRefs: new Map()
+  , // Filter options
+    sizeFilters: ['巨尺寸', '大尺寸', '中尺寸', '小尺寸'],
+    selectedSizes: [],
+    shapeFilters: ['正方形', '长方形', '圆形', '不规则形'],
+    selectedShapes: [],
+    showHelp: false
     };
   },
   computed: {
@@ -587,7 +608,29 @@ const ArtworksComponent = {
   baseURL() { return window.location.origin; },
     // 回退：直接使用注入的 artworks 原始数组并按 sortMode 排序（暂不做搜索过滤）
     artworks() {
-      const raw = (this.globalData.artworks?.value || []).slice();
+      let raw = (this.globalData.artworks?.value || []).slice();
+      
+      // Apply filters
+      if (this.selectedSizes.length > 0 || this.selectedShapes.length > 0) {
+        raw = raw.filter(art => {
+          // Extract size and shape from title
+          const title = art.title || '';
+          let matchesSize = this.selectedSizes.length === 0;
+          let matchesShape = this.selectedShapes.length === 0;
+          
+          // Check size filter
+          if (this.selectedSizes.length > 0) {
+            matchesSize = this.selectedSizes.some(size => title.includes(size));
+          }
+          
+          // Check shape filter  
+          if (this.selectedShapes.length > 0) {
+            matchesShape = this.selectedShapes.some(shape => title.includes(shape));
+          }
+          
+          return matchesSize && matchesShape;
+        });
+      }
       // 排序
       if (this.sortMode === 'name') {
         raw.sort((a,b)=>this.$helpers.formatArtworkTitle(a).localeCompare(this.$helpers.formatArtworkTitle(b)));
@@ -741,6 +784,24 @@ const ArtworksComponent = {
     }
   },
   methods: {
+    toggleSizeFilter(size) {
+      const idx = this.selectedSizes.indexOf(size);
+      if (idx === -1) {
+        this.selectedSizes.push(size);
+      } else {
+        this.selectedSizes.splice(idx, 1);
+      }
+      this.currentPage = 1; // Reset to first page
+    },
+    toggleShapeFilter(shape) {
+      const idx = this.selectedShapes.indexOf(shape);
+      if (idx === -1) {
+        this.selectedShapes.push(shape);
+      } else {
+        this.selectedShapes.splice(idx, 1);
+      }
+      this.currentPage = 1; // Reset to first page
+    },
     dupCountFor(scheme, layer) {
       const l = Number(layer);
       if (!Number.isFinite(l)) return 0;

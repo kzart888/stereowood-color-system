@@ -8,6 +8,33 @@
     min-height: 100vh;
     background: var(--sw-bg-light);
     padding: 20px;
+    position: relative;
+}
+
+/* === Loading Overlay === */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.loading-overlay .el-icon {
+    font-size: 32px;
+    color: var(--sw-primary);
+    margin-bottom: 16px;
+}
+
+.loading-overlay .loading-text {
+    font-size: 14px;
+    color: var(--sw-text-secondary);
 }
 
 /* === Header Color Info Bar === */
@@ -274,10 +301,12 @@
 
 .color-chip-80:hover {
     transform: translateY(-2px);
+    z-index: 10;
 }
 
 .color-chip-80.selected {
     transform: scale(1.05);
+    z-index: 20;
 }
 
 .color-chip-80 .color-preview {
@@ -287,14 +316,26 @@
     margin-bottom: 6px;
     position: relative;
     transition: all var(--sw-transition-base);
+    border: 2px solid transparent;
 }
 
 .color-chip-80:hover .color-preview {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-color: rgba(64, 158, 255, 0.3);
 }
 
 .color-chip-80.selected .color-preview {
     box-shadow: 0 0 0 3px var(--sw-primary);
+    border-color: var(--sw-primary);
+}
+
+/* Keyboard navigation focus */
+.color-chip-80:focus {
+    outline: none;
+}
+
+.color-chip-80:focus-visible .color-preview {
+    box-shadow: 0 0 0 2px var(--sw-primary), 0 0 0 4px rgba(64, 158, 255, 0.2);
 }
 
 .color-chip-80 .color-code {

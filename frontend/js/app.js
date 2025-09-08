@@ -36,7 +36,65 @@ const app = createApp({
             artworks: [],
             montMarteColors: [],
             suppliers: [],
-            purchaseLinks: []
+            purchaseLinks: [],
+            // Global help state
+            showGlobalHelp: false,
+            helpContent: {
+                'custom-colors': `
+                    <h4>自配色管理</h4>
+                    <ul>
+                        <li>添加新的自配色配方</li>
+                        <li>编辑现有颜色信息</li>
+                        <li>查看颜色历史记录</li>
+                        <li>检测重复配方</li>
+                    </ul>
+                    <h4>快捷键</h4>
+                    <ul>
+                        <li><kbd>Ctrl</kbd>+<kbd>F</kbd> - 打开全局搜索</li>
+                        <li><kbd>ESC</kbd> - 清空搜索结果</li>
+                    </ul>
+                `,
+                'color-dictionary': `
+                    <h4>自配色字典</h4>
+                    <ul>
+                        <li>按类别浏览所有自配色</li>
+                        <li>快速查看颜色详情</li>
+                        <li>打印颜色列表</li>
+                    </ul>
+                    <h4>快捷键</h4>
+                    <ul>
+                        <li><kbd>1</kbd> - 切换到列表视图</li>
+                        <li><kbd>2</kbd> - 切换到色轮视图</li>
+                        <li><kbd>3</kbd> - 切换到统计视图</li>
+                        <li><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> - 键盘导航</li>
+                        <li><kbd>Enter</kbd> - 选中当前颜色</li>
+                        <li><kbd>Ctrl</kbd>+<kbd>P</kbd> - 打印</li>
+                    </ul>
+                `,
+                'artworks': `
+                    <h4>作品配色管理</h4>
+                    <ul>
+                        <li>创建和管理作品</li>
+                        <li>为作品添加配色方案</li>
+                        <li>管理层号到颜色的映射</li>
+                        <li>使用过滤器筛选作品</li>
+                    </ul>
+                    <h4>过滤器</h4>
+                    <ul>
+                        <li>尺寸筛选：巨尺寸/大尺寸/中尺寸/小尺寸</li>
+                        <li>形状筛选：正方形/长方形/圆形/不规则形</li>
+                    </ul>
+                `,
+                'mont-marte': `
+                    <h4>颜色原料管理</h4>
+                    <ul>
+                        <li>管理基础颜料信息</li>
+                        <li>添加供应商信息</li>
+                        <li>维护采购链接</li>
+                        <li>作为自配色的参考</li>
+                    </ul>
+                `
+            }
         };
     },
     provide() {
@@ -188,6 +246,7 @@ const app = createApp({
         },
         focusArtworkScheme(p){ if(!p||!p.artworkId||!p.schemeId) return; this.setActiveTabPersist('artworks'); this._suppressNextRestore=true; const TRY_MAX=20; let tries=0; const attempt=()=>{ const comp=this.$refs.artworksRef; if(comp&&comp.focusSchemeUsage){ if(comp.hasScheme && !comp.hasScheme(p.schemeId)){ if(tries++<TRY_MAX) return setTimeout(attempt,120); return;} comp.focusSchemeUsage({ artworkId:p.artworkId, schemeId:p.schemeId, layers:Array.isArray(p.layers)?p.layers.slice():[], colorCode:p.colorCode }); } else if(tries++<TRY_MAX) setTimeout(attempt,120); }; this.$nextTick(attempt); },
         setActiveTabPersist(tab){ if(!['custom-colors','artworks','mont-marte','color-dictionary'].includes(tab)) return; this.activeTab=tab; try{ localStorage.setItem('sw-active-tab', tab);}catch(e){} window.scrollTo(0,0); },
+        showHelp(){ this.showGlobalHelp=true; },
         registerDataset(type, items){ if(!type||!Array.isArray(items)) return; if(type==='customColors'){ this._searchIndex.customColors=items.slice(); this._indexReady.customColors=true;} else if(type==='artworks'){ this._searchIndex.artworks=items.slice(); this._indexReady.artworks=true;} else if(type==='schemes'){ this._searchIndex.schemes=items.slice(); } else if(type==='rawMaterials'){ this._searchIndex.rawMaterials=items.slice(); this._indexReady.rawMaterials=true;} },
         _buildColorFormulaIndex(){
             // 建立当前自配色 formula 哈希索引以供后续 diff

@@ -46,7 +46,16 @@
                 @add-raw-material="$refs.montMarteRef && $refs.montMarteRef.openDialog && $refs.montMarteRef.openDialog()"
                 @check-duplicates="$refs.customColorsRef && $refs.customColorsRef.runDuplicateCheck && $refs.customColorsRef.runDuplicateCheck()"
                 @show-color-palette="$refs.customColorsRef && $refs.customColorsRef.showColorPalette && $refs.customColorsRef.showColorPalette()"
+                @show-help="showHelp"
             ></app-header-bar>
+
+            <!-- Global Help Dialog -->
+            <el-dialog v-model="showGlobalHelp" title="使用帮助" width="600px">
+                <div v-html="helpContent[activeTab]"></div>
+                <template #footer>
+                    <el-button @click="showGlobalHelp=false">关闭</el-button>
+                </template>
+            </el-dialog>
 
             <!-- 全局搜索栏（仅作用于作品/方案） -->
             <!-- 回退阶段暂时移除搜索功能 UI -->
