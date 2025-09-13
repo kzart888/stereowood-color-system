@@ -10,13 +10,13 @@ services:
       - NODE_ENV=production
       - DB_FILE=/data/database.db
     ports:
-      - "${HOST_PORT:-9099}:9099"
+      - "${HOST_PORT:-9099}:${PORT:-9099}"
     volumes:
       - stereowood-data:/data
       - stereowood-uploads:/app/uploads
       - stereowood-backups:/app/backups
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9099/health"]
+      test: ["CMD", "sh", "-c", "wget -qO- http://127.0.0.1:${PORT:-9099}/health"]
       interval: 30s
       timeout: 5s
       retries: 3

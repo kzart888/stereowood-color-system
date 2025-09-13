@@ -24,7 +24,7 @@ const { initDatabase, runMigrations } = require('./db/migrations'); // 数据库
 const routes = require('./routes');                  // 所有API路由
 
 const app = express();
-const PORT = 9099;
+const PORT = process.env.PORT || 9099;
 
 // ========== 中间件配置 ==========
 app.use(cors());                                     // 允许跨域请求

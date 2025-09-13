@@ -200,7 +200,7 @@ Base URL: `http://localhost:9099/api`
 
 ### Deployment Notes
 
-- **Port**: Always 9099 (hardcoded in multiple places)
+- **Port**: Configurable via `PORT` environment variable (default: 9099)
 - **Database**: SQLite file at `backend/color_management.db`
 - **Volumes Required**: `/data` for database, `/app/backend/uploads` for images
 - **Node Version**: >=14.0.0 required
