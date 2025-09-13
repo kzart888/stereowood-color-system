@@ -2,9 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🔄 ACTIVE REFACTORING PROCESS (Started: 2025-01-13)
+
+### CRITICAL: Follow These Rules During Refactoring
+1. **Always refer to REFACTORING_PLAN.md** for each phase and step
+2. **Commit after each completed step** with descriptive messages
+3. **Test with Playwright MCP** when functionality changes
+4. **Archive old code** - never delete, move to `/archives/` directory
+5. **Update this file** when major milestones are reached
+
+### Current Phase: Phase 0 - Safety & Foundation
+- [ ] Archive system setup
+- [ ] Testing infrastructure
+- [ ] Performance baseline
+
 ## Project Overview
 
-STEREOWOOD Color Management System - A simplified web application for managing color formulas and artwork schemes in a small factory setting (3-5 users). Built for easy maintenance by a 2-person team.
+STEREOWOOD Color Management System - A web application for managing color formulas and artwork schemes in a factory setting (3-5 users).
 
 ## Work Routine & Git Practices
 
@@ -86,20 +100,12 @@ docker ps
 docker logs stereowood
 ```
 
-## Current State (v0.8.2 - 2025-01-03)
+## Current State (v0.8.2)
 
-### Major Recent Changes
-- **Backend**: Completely refactored from 1090-line monolithic server.js to 100-line modular version
-- **Routes**: All API routes now properly connected via `backend/routes/index.js`
-- **UI Fixes**: Fixed table cell layouts and formula chips display
-- **Cleanup**: Removed 3400+ lines of obsolete code
-
-### Codebase Cleanup Completed (2025-01-03)
-- **Removed duplicate files**: colors.js, materials.js routes; MaterialService.js, FormulaService.js
-- **Consolidated packages**: Single package.json at root, deleted backend/node_modules
-- **Cleaned directories**: Removed frontend/js/components.backup/, duplicate uploads folder
-- **Simplified documentation**: Reduced from 21 files to 3 essential docs (README, CLAUDE.md, OPERATIONS.md)
-- **Total reduction**: ~30% fewer files, ~170MB saved, documentation reduced from 7,000 to 500 lines
+- **Backend**: Modularized with routes/, db/, services/ layers
+- **Frontend**: Monolithic components (1800+ lines each) to be refactored
+- **Database**: SQLite with WAL mode, proper indexes needed
+- **Testing**: 0% coverage - to be implemented in Phase 0
 
 ## Architecture Overview
 
@@ -174,12 +180,6 @@ Base URL: `http://localhost:9099/api`
 4. **Formula Parsing**: Custom parser for color formulas with material and quantity extraction
 5. **Cascade Updates**: When Mont-Marte colors are renamed, formulas are automatically updated
 
-### Current System State (v0.8.0)
-
-- **Backend**: Fully modularized into db/, services/, and routes/ layers
-- **Frontend**: Large component files retained for stability (custom-colors.js: 1269 lines, artworks.js: 1024 lines)
-- **Performance**: Real-time data fetching without caching for immediate UI updates
-- **Images**: Direct storage without compression for quality preservation
 
 ### Security Considerations
 
@@ -188,35 +188,6 @@ Base URL: `http://localhost:9099/api`
 - SQLite with proper PRAGMA settings for data integrity
 - No authentication (internal factory use only)
 
-### File Structure Overview
-
-```
-STEREOWOOD Color System/
-├── backend/
-│   ├── server.js           # Main entry, Express setup
-│   ├── db/                 # Database layer
-│   │   ├── index.js        # DB connection with PRAGMA settings
-│   │   ├── migrations.js   # Schema initialization
-│   │   └── queries/        # SQL query modules
-│   ├── routes/             # API routes (modularized)
-│   │   ├── custom-colors.js
-│   │   ├── artworks.js
-│   │   ├── mont-marte-colors.js
-│   │   └── categories.js
-│   ├── services/           # Business logic layer
-│   └── uploads/            # Image storage directory
-├── frontend/
-│   ├── index.html          # Single-page app entry
-│   ├── js/
-│   │   ├── app.js          # Vue app initialization
-│   │   ├── components/     # Vue components (large stable files)
-│   │   └── api/api.js      # Centralized API client
-│   └── css/                # Fully modularized styles
-│       ├── base/           # Variables and resets
-│       ├── components/     # Component-specific styles
-│       └── layout/         # Layout styles
-└── docs/                   # Comprehensive documentation
-```
 
 ### Critical Implementation Details
 
@@ -235,36 +206,6 @@ STEREOWOOD Color System/
 - **Node Version**: >=14.0.0 required
 - **Production ENV**: Set `NODE_ENV=production` and `DB_FILE=/data/color_management.db`
 
-## Common Troubleshooting
-
-### Database Issues
-```bash
-# Check if database exists
-dir backend\color_management.db
-
-# Reset database (WARNING: deletes all data)
-del backend\color_management.db
-npm start  # Will auto-create new database with migrations
-```
-
-### API Testing
-```bash
-# Test API endpoints manually (Windows PowerShell)
-# Get all custom colors
-curl http://localhost:9099/api/custom-colors
-
-# Get specific color
-curl http://localhost:9099/api/custom-colors/1
-
-# Test artwork endpoints
-curl http://localhost:9099/api/artworks
-```
-
-### Image Upload Issues
-- Check `backend/uploads/` directory exists and has write permissions
-- Supported formats: jpg, jpeg, png, gif, webp
-- Max file size: No explicit limit set (handled by multer defaults)
-- Images stored as: `uploads/{timestamp}-{originalname}`
 
 ## Key Business Logic
 
@@ -284,3 +225,26 @@ curl http://localhost:9099/api/artworks
 - Categories are hardcoded: 蓝(1), 黄(2), 红(3), 绿(4), 紫(5), 色精(6)
 - Category changes cascade to all related colors
 - No soft deletes - all deletions are permanent
+
+---
+
+## Quick Reference for Refactoring
+
+### Key Files to Focus On
+- **Monolithic Components**: `custom-colors.js` (1822 lines), `artworks.js` (1583 lines), `color-dictionary.js` (1891 lines)
+- **Performance Issue**: `pantone-colors-full.js` (1.13 MB loaded on every page)
+- **Duplicate Utils**: `color-converter.js` vs `colorConversion.js`
+
+### Testing with Playwright MCP
+```javascript
+// Use mcp__playwright commands for testing
+mcp__playwright__browser_navigate({ url: "http://localhost:9099" })
+mcp__playwright__browser_snapshot()  // Get page state
+mcp__playwright__browser_click({ element: "button", ref: "..." })
+```
+
+### Remember During Refactoring
+1. Archive before changing: `cp -r frontend/js/components archives/v0.8.2-baseline/`
+2. Test after each change: Run E2E tests with Playwright MCP
+3. Commit frequently: Use descriptive messages with proper prefixes
+4. Update this file: Mark completed phases and update current status
