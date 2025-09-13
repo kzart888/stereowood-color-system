@@ -69,9 +69,11 @@ app.use('/api', routes);
 // ========== System Config Endpoint ==========
 // Expose application mode to frontend
 app.get('/api/config', (req, res) => {
+  // Use NODE_ENV to determine mode, and set test mode items to 2 for development
+  const isDevelopment = process.env.NODE_ENV === 'development';
   res.json({
-    mode: process.env.MODE || 'production',
-    testModeItemsPerPage: parseInt(process.env.TEST_MODE_ITEMS_PER_PAGE) || 3,
+    mode: isDevelopment ? 'test' : 'production',
+    testModeItemsPerPage: isDevelopment ? 2 : (parseInt(process.env.TEST_MODE_ITEMS_PER_PAGE) || 12),
     features: {
       formulaCalculator: process.env.ENABLE_FORMULA_CALCULATOR === 'true',
       artworkManagement: process.env.ENABLE_ARTWORK_MANAGEMENT === 'true',

@@ -195,6 +195,7 @@ const CustomColorsComponent = {
                     <div class="items-per-page">
                         <span>每页显示：</span>
                         <el-select v-model="itemsPerPage" @change="onItemsPerPageChange" size="small">
+                            <el-option v-if="isDevelopmentMode" :value="2" label="2 项" />
                             <el-option :value="12" label="12 项" />
                             <el-option :value="24" label="24 项" />
                             <el-option :value="48" label="48 项" />
@@ -503,6 +504,13 @@ const CustomColorsComponent = {
     computed: {
         formulaUtils() {
             return window.formulaUtils || { segments: (f) => f ? f.split(/\s+/) : [] };
+        },
+
+        isDevelopmentMode() {
+            return this.globalData &&
+                   this.globalData.appConfig &&
+                   this.globalData.appConfig.value &&
+                   this.globalData.appConfig.value.mode === 'test';
         },
         
         baseURL() {
