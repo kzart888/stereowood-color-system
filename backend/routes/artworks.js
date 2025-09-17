@@ -1,26 +1,17 @@
 /**
  * 作品路由模块
  * 职责：处理 /api/artworks/* 相关的HTTP请求
- * 依赖：ArtworkService, multer
+ * 依赖：ArtworkService, createUploadHandler
  * @module routes/artworks
  */
 
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const ArtworkService = require('../services/ArtworkService');
+const { createUploadHandler } = require('../utils/upload');
 
-// 文件上传配置
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '..', 'uploads'))
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
-    }
-});
-const upload = multer({ storage: storage });
+// Reuse the shared upload handler so image naming stays consistent system-wide
+const upload = createUploadHandler();
 
 /**
  * GET /api/artworks
