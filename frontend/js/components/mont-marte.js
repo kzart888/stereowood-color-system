@@ -467,8 +467,10 @@ const MontMarteComponent = {
         },
         // 返回引用该原料的自配色编号列表（去重、按字母/数字排序）
         rawUsageCodes(color) {
-            if (!color || !color.name) return [];
-            const target = color.name.trim();
+            const sourceName = color ? color.name : '';
+            const target = typeof sourceName === 'string'
+                ? sourceName.trim()
+                : (sourceName == null ? '' : String(sourceName).trim());
             if (!target) return [];
             const customList = (this.globalData.customColors?.value) || [];
             const set = new Set();
@@ -598,7 +600,7 @@ const MontMarteComponent = {
         async onSupplierChange(val) {
             // 仅当为“新输入的字符串”时触发创建
             if (typeof val !== 'string') return;
-            const name = val.trim();
+            const name = typeof val.trim === 'function' ? val.trim() : String(val || '').trim();
             if (!name) { this.form.supplier_id = null; return; }
             try {
                 this.supplierBusy = true;
@@ -642,7 +644,7 @@ const MontMarteComponent = {
 
         async onPurchaseChange(val) {
             if (typeof val !== 'string') return;
-            const url = val.trim();
+            const url = typeof val.trim === 'function' ? val.trim() : String(val || '').trim();
             if (!url) { this.form.purchase_link_id = null; return; }
             try {
                 this.purchaseBusy = true;
@@ -712,8 +714,15 @@ const MontMarteComponent = {
             this.saving = true;
             try {
                 const fd = new FormData();
-                fd.append('name', this.form.name.trim());
-                fd.append('category', this.form.category || '');
+                const formName = typeof this.form.name === 'string' ? this.form.name.trim() : String(this.form.name || '').trim();
+                fd.append('name', formName);
+                const categoryText = typeof this.form.category === 'string' ? this.form.category.trim() : '';
+                if (categoryText) {
+                    fd.append('category', categoryText);
+                }
+                if (this.form.category_id != null) {
+                    fd.append('category_id', this.form.category_id);
+                }
                 if (this.form.supplier_id) fd.append('supplier_id', this.form.supplier_id);
                 if (this.form.purchase_link_id) fd.append('purchase_link_id', this.form.purchase_link_id);
                 if (this.form.imageFile) fd.append('image', this.form.imageFile);

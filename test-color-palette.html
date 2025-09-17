@@ -6,7 +6,22 @@
     <title>Test Color Palette Dialog</title>
     
     <!-- Vue 3 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script>
+        if (!window.Vue || typeof window.Vue.createApp !== 'function') {
+            document.write('<script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"><\/script>');
+        }
+    </script>
+    <script>
+        if (!window.Vue || typeof window.Vue.createApp !== 'function') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"><\/script>');
+        }
+    </script>
+    <script>
+        if (!window.Vue || typeof window.Vue.createApp !== 'function') {
+            console.error('[Bootstrap] Failed to load Vue for test harness.');
+        }
+    </script>
     
     <!-- Element Plus -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.14/index.min.css">

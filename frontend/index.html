@@ -7,7 +7,22 @@
     
     <!-- 外部依赖库 -->
     <!-- Vue 3.3.4 - 核心框架 (生产版本) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script>
+        if (!window.Vue || typeof window.Vue.createApp !== 'function') {
+            document.write('<script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"><\/script>');
+        }
+    </script>
+    <script>
+        if (!window.Vue || typeof window.Vue.createApp !== 'function') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"><\/script>');
+        }
+    </script>
+    <script>
+        if (!window.Vue || typeof window.Vue.createApp !== 'function') {
+            console.error('[Bootstrap] Failed to load Vue from configured CDNs.');
+        }
+    </script>
     
     <!-- Element Plus 2.3.14 - UI组件库 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.14/index.min.css">

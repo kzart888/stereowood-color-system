@@ -1,5 +1,10 @@
 // Category Manager Component
 // Reusable component for managing categories in both custom colors and Mont-Marte materials
+function safeTrim(value) {
+    if (value === undefined || value === null) return '';
+    return typeof value === 'string' ? value.trim() : String(value).trim();
+}
+
 const CategoryManagerComponent = {
     name: 'CategoryManager',
     template: `
@@ -304,7 +309,7 @@ const CategoryManagerComponent = {
     methods: {
         // Validation methods
         validateCategoryName(name) {
-            const trimmedName = name.trim();
+            const trimmedName = safeTrim(name);
             
             if (!trimmedName) {
                 this.validationError = '';
@@ -339,7 +344,7 @@ const CategoryManagerComponent = {
         },
         
         validateCategoryCode(code) {
-            const trimmedCode = (code || '').trim().toUpperCase();
+            const trimmedCode = safeTrim(code).toUpperCase();
             
             if (!trimmedCode) {
                 this.codeValidationError = '';
@@ -378,7 +383,7 @@ const CategoryManagerComponent = {
         },
         
         validateEditName(name) {
-            const trimmedName = name.trim();
+            const trimmedName = safeTrim(name);
             const currentCategory = this.sortableCategories.find(cat => cat.id === this.editingId);
             
             if (!trimmedName) {
@@ -415,7 +420,7 @@ const CategoryManagerComponent = {
         },
         
         validateEditCode(code) {
-            const trimmedCode = (code || '').trim().toUpperCase();
+            const trimmedCode = safeTrim(code).toUpperCase();
             const currentRow = this.sortableCategories.find(cat => cat.id === this.editingId);
             
             if (!trimmedCode) {
@@ -491,8 +496,8 @@ const CategoryManagerComponent = {
         },
 
         async addCategory() {
-            const name = this.newCategoryName.trim();
-            const code = this.newCategoryCode.trim().toUpperCase();
+            const name = safeTrim(this.newCategoryName);
+            const code = safeTrim(this.newCategoryCode).toUpperCase();
             
             if (!name) {
                 this.$message.warning('请输入分类名称');
@@ -564,8 +569,8 @@ const CategoryManagerComponent = {
         },
 
         async saveRename(row) {
-            const newName = this.editingName.trim();
-            const newCode = this.editingCode.trim().toUpperCase();
+            const newName = safeTrim(this.editingName);
+            const newCode = safeTrim(this.editingCode).toUpperCase();
             
             if (!newName) {
                 this.$message.warning('分类名称不能为空');

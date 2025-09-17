@@ -1,6 +1,17 @@
 // 主应用入口文件
 // 负责：1.创建Vue应用实例 2.注册组件 3.管理全局数据 4.初始化数据加载
-const { createApp } = Vue;
+const VueGlobal = window.Vue;
+if (!VueGlobal || typeof VueGlobal.createApp !== 'function') {
+    console.error('[Bootstrap] Vue failed to load. Application cannot be initialised.');
+    document.addEventListener('DOMContentLoaded', () => {
+        const mount = document.getElementById('app');
+        if (mount) {
+            mount.innerHTML = '<div class="app-init-error">无法加载应用所需的 Vue 框架，请检查网络连接后重试。</div>';
+        }
+    });
+    throw new Error('Vue global build unavailable');
+}
+const { createApp } = VueGlobal;
 
 const app = createApp({
     data() {

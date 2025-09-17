@@ -165,6 +165,20 @@
     box-shadow: 0 8px 25px rgba(111,66,193,0.4);
 }
 
+.app-init-error {
+    padding: 32px;
+    margin: 40px auto;
+    max-width: 480px;
+    text-align: center;
+    color: var(--sw-danger);
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    font-size: 16px;
+    line-height: 1.6;
+}
+
 /* === 图片缩略图通用样式 === */
 .sw-thumbnail {
     width: var(--sw-thumb-size);
