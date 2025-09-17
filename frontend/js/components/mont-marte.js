@@ -3,138 +3,102 @@
 // 定义全局变量 MontMarteComponent，被 app.js 引用并注册
 
 const MontMarteComponent = {
+        mixins: [window.CommonPaginationMixin],
+        components: {
+            'category-switch-group': window.CategorySwitchGroup,
+            'paginated-card-grid': window.PaginatedCardGrid
+        },
         props: {
             sortMode: { type: String, default: 'time' } // time | name
         },
         template: `
                 <div>
-                        <div class="category-switch-group" role="tablist" aria-label="原料类别筛选">
-                            <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
-                            <button v-for="cat in montMarteCategories" :key="cat.id" type="button" class="category-switch" :class="{active: activeCategory===cat.id}" @click="activeCategory=cat.id" role="tab" :aria-selected="activeCategory===cat.id">{{ cat.name }}</button>
-                            <button 
-                                type="button"
-                                class="category-settings-btn"
-                                @click="showCategoryManager = true"
-                                title="管理分类"
-                            >
-                                <el-icon><Setting /></el-icon>
-                            </button>
-                        </div>
-                        <div v-if="loading" class="loading">
-                                <el-icon class="is-loading"><Loading /></el-icon> 加载中...
-                        </div>
-                        <div v-else>
-                                <div v-if="montMarteColors.length === 0" class="empty-message">暂无原料，点击右上角"新原料"添加</div>
-                                
-                                <!-- Grid Container for Cards -->
-                                <div class="color-cards-grid">
-                                    <div v-for="color in paginatedColors" :key="color.id" class="artwork-bar" :data-raw-id="color.id" :class="{'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id)">
-                                    <div class="artwork-header">
-                                        <div class="artwork-title">{{ color.name }}</div>
-                                        <div class="color-actions">
-                                                <el-button size="small" type="primary" @click="editColor(color)">
-                                                    <el-icon><Edit /></el-icon> 修改
-                                                </el-button>
-                                                <template v-if="rawUsageCodes(color).length">
-                                                    <el-tooltip content="该颜色原料已被引用，无法删除" placement="top">
-                                                        <span>
-                                                            <el-button size="small" type="danger" disabled>
-                                                                <el-icon><Delete /></el-icon> 删除
-                                                            </el-button>
-                                                        </span>
-                                                    </el-tooltip>
-                                                </template>
-                                                <el-button v-else size="small" type="danger" @click="deleteColor(color)">
-                                                    <el-icon><Delete /></el-icon> 删除
-                                                </el-button>
-                                        </div>
+                        <paginated-card-grid
+                            :loading="loading"
+                            :items="paginatedColors"
+                            :filtered-count="filteredColors.length"
+                            :start-item="startItem"
+                            :end-item="endItem"
+                            :visible-pages="visiblePages"
+                            :current-page="currentPage"
+                            :total-pages="totalPages"
+                            :items-per-page="itemsPerPage"
+                            :items-per-page-options="itemsPerPageOptions"
+                            empty-message='暂无原料，点击右上角"新原料"添加'
+                            :card-class-fn="montMarteCardClass"
+                            :card-props-fn="montMarteCardProps"
+                            :item-key-fn="montMarteCardKey"
+                            @go-to-page="goToPage"
+                            @update:itemsPerPage="handleItemsPerPageChange"
+                            @card-click="toggleColorSelection"
+                        >
+                            <template #category-switch>
+                                <category-switch-group
+                                    :active-category="activeCategory"
+                                    :categories="montMarteCategories"
+                                    aria-label="原料类别筛选"
+                                    show-settings-button
+                                    settings-title="管理分类"
+                                    @update:activeCategory="activeCategory = $event"
+                                    @open-settings="showCategoryManager = true"
+                                >
+                                    <template #category="{ category }">
+                                        {{ category.name }}
+                                    </template>
+                                </category-switch-group>
+                            </template>
+
+                            <template #empty>
+                                <div class="empty-message">暂无原料，点击右上角"新原料"添加</div>
+                            </template>
+
+                            <template #default="{ item }">
+                                <div class="artwork-header">
+                                    <div class="artwork-title">{{ item.name }}</div>
+                                    <div class="color-actions">
+                                        <el-button size="small" type="primary" @click.stop="editColor(item)">
+                                            <el-icon><Edit /></el-icon> 修改
+                                        </el-button>
+                                        <template v-if="rawUsageCodes(item).length">
+                                            <el-tooltip content="该颜色原料已被引用，无法删除" placement="top">
+                                                <span>
+                                                    <el-button size="small" type="danger" disabled>
+                                                        <el-icon><Delete /></el-icon> 删除
+                                                    </el-button>
+                                                </span>
+                                            </el-tooltip>
+                                        </template>
+                                        <el-button v-else size="small" type="danger" @click.stop="deleteColor(item)">
+                                            <el-icon><Delete /></el-icon> 删除
+                                        </el-button>
                                     </div>
-                                    <div style="display:flex; gap:12px; padding:6px 4px 4px;">
-                                                            <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, color.image_path))">
-                                                                <template v-if="!color.image_path">未上传图片</template>
-                                                                <img v-else :src="$helpers.buildUploadURL(baseURL, color.image_path)" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
-                                                            </div>
-                                        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
-                                            <div class="meta-text" v-if="color.updated_at">更新：{{ $helpers.formatDate(color.updated_at) }}</div>
-                                            <div class="meta-text">分类：<template v-if="color.category_id">{{ mapCategoryLabel(color.category_id) }}</template><template v-else>（未填）</template></div>
-                                            <div class="meta-text">供应商：<template v-if="color.supplier_name">{{ color.supplier_name }}</template><template v-else>（未填）</template></div>
-                                            <div class="meta-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="color.purchase_link_url || ''">采购：<template v-if="color.purchase_link_url">{{ color.purchase_link_url }}</template><template v-else>（未填）</template></div>
-                                            <div class="meta-text">适用色：
-                                                <template v-if="rawUsageCodes(color).length">
-                                                    <span class="usage-chips">
-                                                        <span v-for="c in rawUsageCodes(color)" :key="c" class="mf-chip usage-chip" @click="handleColorChipClick(c)" style="cursor:pointer;">{{ c }}</span>
-                                                    </span>
-                                                </template>
-                                                <template v-else>（未使用）</template>
-                                            </div>
+                                </div>
+                                <div style="display:flex; gap:12px; padding:6px 4px 4px;">
+                                    <div
+                                        class="scheme-thumbnail"
+                                        :class="{ 'no-image': !item.image_path }"
+                                        @click="item.image_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, item.image_path))"
+                                    >
+                                        <template v-if="!item.image_path">未上传图片</template>
+                                        <img v-else :src="$helpers.buildUploadURL(baseURL, item.image_path)" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                                    </div>
+                                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
+                                        <div class="meta-text" v-if="item.updated_at">更新：{{ $helpers.formatDate(item.updated_at) }}</div>
+                                        <div class="meta-text">分类：<template v-if="item.category_id">{{ mapCategoryLabel(item.category_id) }}</template><template v-else>（未填）</template></div>
+                                        <div class="meta-text">供应商：<template v-if="item.supplier_name">{{ item.supplier_name }}</template><template v-else>（未填）</template></div>
+                                        <div class="meta-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" :title="item.purchase_link_url || ''">采购：<template v-if="item.purchase_link_url">{{ item.purchase_link_url }}</template><template v-else>（未填）</template></div>
+                                        <div class="meta-text">适用色：
+                                            <template v-if="rawUsageCodes(item).length">
+                                                <span class="usage-chips">
+                                                    <span v-for="code in rawUsageCodes(item)" :key="code" class="mf-chip usage-chip" @click.stop="handleColorChipClick(code)" style="cursor:pointer;">{{ code }}</span>
+                                                </span>
+                                            </template>
+                                            <template v-else>（未使用）</template>
                                         </div>
                                     </div>
                                 </div>
-                                </div><!-- End of color-cards-grid -->
-                                
-                                <!-- Pagination Controls -->
-                                <div v-if="filteredColors.length > 0" class="pagination-container">
-                                    <div class="pagination-info">
-                                        显示 {{ startItem }}-{{ endItem }} 共 {{ filteredColors.length }} 项
-                                    </div>
-                                    
-                                    <div class="pagination-controls">
-                                        <el-button 
-                                            size="small"
-                                            :disabled="currentPage === 1"
-                                            @click="goToPage(1)">
-                                            <el-icon><DArrowLeft /></el-icon>
-                                            <span>首页</span>
-                                        </el-button>
-                                        
-                                        <el-button 
-                                            size="small"
-                                            :disabled="currentPage === 1"
-                                            @click="goToPage(currentPage - 1)">
-                                            <el-icon><ArrowLeft /></el-icon>
-                                            <span>上一页</span>
-                                        </el-button>
-                                        
-                                        <span class="page-numbers">
-                                            <button 
-                                                v-for="page in visiblePages"
-                                                :key="page"
-                                                :class="{ active: page === currentPage, ellipsis: page === '...' }"
-                                                :disabled="page === '...'"
-                                                @click="goToPage(page)">
-                                                {{ page }}
-                                            </button>
-                                        </span>
-                                        
-                                        <el-button 
-                                            size="small"
-                                            :disabled="currentPage === totalPages"
-                                            @click="goToPage(currentPage + 1)">
-                                            <span>下一页</span>
-                                            <el-icon><ArrowRight /></el-icon>
-                                        </el-button>
-                                        
-                                        <el-button 
-                                            size="small"
-                                            :disabled="currentPage === totalPages"
-                                            @click="goToPage(totalPages)">
-                                            <span>末页</span>
-                                            <el-icon><DArrowRight /></el-icon>
-                                        </el-button>
-                                    </div>
-                                    
-                                    <div class="items-per-page">
-                                        <span>每页显示：</span>
-                                        <el-select v-model="itemsPerPage" @change="onItemsPerPageChange" size="small">
-                                            <el-option v-if="isDevelopmentMode" :value="2" label="2 项" />
-                                            <el-option :value="12" label="12 项" />
-                                            <el-option :value="24" label="24 项" />
-                                            <el-option :value="48" label="48 项" />
-                                            <el-option :value="0" label="全部" />
-                                        </el-select>
-                                    </div>
-                                </div>
-                        </div>
+                            </template>
+                        </paginated-card-grid>
 
             <!-- Category Manager Dialog -->
             <category-manager
@@ -354,13 +318,6 @@ const MontMarteComponent = {
     },
     computed: {
     baseURL() { return window.location.origin; },
-
-    isDevelopmentMode() {
-        return this.globalData &&
-               this.globalData.appConfig &&
-               this.globalData.appConfig.value &&
-               this.globalData.appConfig.value.mode === 'test';
-    },
         montMarteColors() {
             const list = (this.globalData.montMarteColors.value || []).slice();
             if (this.sortMode === 'name') {
@@ -387,70 +344,16 @@ const MontMarteComponent = {
             }
             return list;
         },
-        
-        // Pagination computed properties
-        totalPages() {
-            if (this.itemsPerPage === 0) return 1;  // Show all
-            return Math.ceil(this.filteredColors.length / this.itemsPerPage);
+        paginationNamespace() {
+            return 'mont-marte';
         },
-        
+        paginationKeyPrefix() {
+            return 'sw-mont-marte';
+        },
         paginatedColors() {
-            if (this.itemsPerPage === 0) {
-                return this.filteredColors;  // Show all
-            }
-            
-            const start = (this.currentPage - 1) * this.itemsPerPage;
-            const end = start + this.itemsPerPage;
-            return this.filteredColors.slice(start, end);
+            return this.paginatedItems;
         },
-        
-        startItem() {
-            if (this.filteredColors.length === 0) return 0;
-            if (this.itemsPerPage === 0) return 1;
-            return (this.currentPage - 1) * this.itemsPerPage + 1;
-        },
-        
-        endItem() {
-            if (this.itemsPerPage === 0) return this.filteredColors.length;
-            return Math.min(
-                this.currentPage * this.itemsPerPage,
-                this.filteredColors.length
-            );
-        },
-        
-        visiblePages() {
-            const pages = [];
-            const maxVisible = 7;
-            
-            if (this.totalPages <= maxVisible) {
-                for (let i = 1; i <= this.totalPages; i++) {
-                    pages.push(i);
-                }
-            } else {
-                if (this.currentPage <= 4) {
-                    for (let i = 1; i <= 5; i++) pages.push(i);
-                    pages.push('...');
-                    pages.push(this.totalPages);
-                } else if (this.currentPage >= this.totalPages - 3) {
-                    pages.push(1);
-                    pages.push('...');
-                    for (let i = this.totalPages - 4; i <= this.totalPages; i++) {
-                        pages.push(i);
-                    }
-                } else {
-                    pages.push(1);
-                    pages.push('...');
-                    for (let i = this.currentPage - 1; i <= this.currentPage + 1; i++) {
-                        pages.push(i);
-                    }
-                    pages.push('...');
-                    pages.push(this.totalPages);
-                }
-            }
-            
-            return pages;
-        },
-        
+
         supplierOptions() { return this.globalData.suppliers.value || []; },
         purchaseLinkOptions() { return this.globalData.purchaseLinks.value || []; },
         nameDuplicate() {
@@ -467,82 +370,30 @@ const MontMarteComponent = {
             this.$message.success('分类已更新');
         },
         
-        // Pagination methods
-        goToPage(page) {
-            if (page === '...') return;
-            if (page < 1 || page > this.totalPages) return;
-            
-            this.currentPage = page;
-            
-            // Scroll to top of content area
-            this.$nextTick(() => {
-                const container = this.$el.querySelector('.color-cards-grid');
-                if (container) {
-                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-mont-marte-page', page);
-            } catch(e) {}
+        montMarteCardClass(item) {
+            if (!item) return null;
+            return { selected: this.selectedColorId === item.id };
         },
-        
-        onItemsPerPageChange() {
-            // Reset to first page when changing items per page
-            this.currentPage = 1;
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-mont-marte-items-per-page', this.itemsPerPage);
-            } catch(e) {}
+        montMarteCardProps(item) {
+            if (!item) return {};
+            return {
+                'data-raw-id': item.id
+            };
         },
-        
-        restorePaginationState() {
-            try {
-                const savedPage = localStorage.getItem('sw-mont-marte-page');
-                const savedItems = localStorage.getItem('sw-mont-marte-items-per-page');
-                
-                if (savedItems) {
-                    this.itemsPerPage = parseInt(savedItems);
-                }
-                
-                if (savedPage) {
-                    const page = parseInt(savedPage);
-                    if (page <= this.totalPages) {
-                        this.currentPage = page;
-                    }
-                }
-            } catch(e) {}
-        },
-        
-        // Update pagination based on app config
-        updatePaginationFromConfig() {
-            if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
-                const config = this.globalData.appConfig.value;
-                
-                // Get saved items per page preference
-                let savedItems = null;
-                try {
-                    const saved = localStorage.getItem('sw-mont-marte-items-per-page');
-                    if (saved) savedItems = parseInt(saved);
-                } catch(e) {}
-                
-                // Use ConfigHelper to determine items per page
-                this.itemsPerPage = window.ConfigHelper.getItemsPerPage(
-                    config, 
-                    'mont-marte', 
-                    savedItems
-                );
+        montMarteCardKey(item, index) {
+            if (item && typeof item === 'object' && 'id' in item) {
+                return item.id;
             }
+            return index;
         },
-        
+
         // Card selection methods
-        toggleColorSelection(colorId) {
-            // Prevent propagation to avoid conflicts with other handlers
-            event.stopPropagation();
-            
-            // Toggle selection
+        toggleColorSelection(payload, event) {
+            const colorId = payload && typeof payload === 'object' ? payload.id : payload;
+            if (event && event.stopPropagation) {
+                event.stopPropagation();
+            }
+
             if (this.selectedColorId === colorId) {
                 this.selectedColorId = null;
             } else {
@@ -929,28 +780,6 @@ const MontMarteComponent = {
     },
     
     watch: {
-        // Reset to page 1 when filter changes
-        activeCategory() {
-            this.currentPage = 1;
-        },
-        
-        // Adjust current page if it exceeds total pages
-        totalPages(newVal) {
-            if (this.currentPage > newVal && newVal > 0) {
-                this.currentPage = newVal;
-            }
-        },
-        
-        // Watch for app config changes
-        'globalData.appConfig.value': {
-            handler(newConfig) {
-                if (newConfig) {
-                    this.updatePaginationFromConfig();
-                }
-            },
-            deep: true
-        },
-        
         // Clear validation error when there's a duplicate
         nameDuplicate(val) {
             if (val && this.$refs.formRef) {
@@ -960,15 +789,9 @@ const MontMarteComponent = {
     },
     
     mounted() {
-        // Update items per page based on app config
-        this.updatePaginationFromConfig();
-        
         // Load Mont-Marte categories from API
         this.loadMontMarteCategories();
-        
-        // Restore pagination state on mount
-        this.restorePaginationState();
-        
+
         // Add global event listeners for selection
         document.addEventListener('click', this.handleGlobalClick);
         document.addEventListener('keydown', this.handleEscKey);
