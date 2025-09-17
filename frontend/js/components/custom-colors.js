@@ -34,6 +34,7 @@ const CustomColorsComponent = {
                 :current-page="currentPage"
                 :total-pages="totalPages"
                 :items-per-page="itemsPerPage"
+                :items-per-page-options="itemsPerPageOptions"
                 :is-development-mode="isDevelopmentMode"
                 :highlight-code="highlightCode"
                 :selected-color-id="selectedColorId"
@@ -179,11 +180,6 @@ const CustomColorsComponent = {
 
         handleToggleSelection(colorId, event) {
             this.toggleColorSelection(colorId, event);
-        },
-
-        handleItemsPerPageChange(value) {
-            this.itemsPerPage = value;
-            this.onItemsPerPageChange();
         },
 
         async deleteColor(color) {
