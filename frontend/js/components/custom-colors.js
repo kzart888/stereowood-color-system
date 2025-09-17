@@ -6,7 +6,15 @@ const CustomColorsComponent = {
     props: {
         sortMode: { type: String, default: 'time' } // time | name
     },
-    
+
+    mixins: [
+        window.CustomColorFilteringMixin,
+        window.CustomColorPaginationMixin,
+        window.CustomColorSelectionMixin,
+        window.CustomColorMediaMixin,
+        window.CustomColorDuplicateMixin
+    ],
+
     template: `
         <div class="custom-colors-page">
             <div class="category-switch-group" role="tablist" aria-label="颜色分类筛选">
@@ -37,7 +45,7 @@ const CustomColorsComponent = {
                 
                 <!-- Grid Container for Cards -->
                 <div class="color-cards-grid">
-                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :data-color-id="color.id" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id)">
+                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :data-color-id="color.id" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id, $event)">
                     <div class="artwork-header" style="display:flex; padding:8px; align-items:center; justify-content:space-between;">
                         <div style="display:flex; align-items:center;">
                             <div class="artwork-title" style="width:88px; flex-shrink:0;">
@@ -440,18 +448,8 @@ const CustomColorsComponent = {
             showCategoryManager: false,
             editingColor: null,
             saving: false,
-            _colorItemRefs: new Map(),
-            
-            // Pagination
-            currentPage: 1,
-            itemsPerPage: 12,  // Default, will be updated from app config
-            highlightCode: null,
             refreshKey: 0,
-            extracting: false,
-            
-            // Card selection
-            selectedColorId: null,
-            
+
             // Form data with color fields
             form: {
                 category_id: '',
@@ -484,14 +482,7 @@ const CustomColorsComponent = {
             
             _originalColorFormSnapshot: null,
             _escHandler: null,
-            
-            // Duplicate detection
-            showDuplicateDialog: false,
-            duplicateGroups: [],
-            duplicateSelections: {},
-            deletionPending: false,
-            mergingPending: false,
-            
+
             // Conflict resolution
             showConflictDialog: false,
             conflictData: null,
@@ -506,281 +497,21 @@ const CustomColorsComponent = {
             return window.formulaUtils || { segments: (f) => f ? f.split(/\s+/) : [] };
         },
 
-        isDevelopmentMode() {
-            return this.globalData &&
-                   this.globalData.appConfig &&
-                   this.globalData.appConfig.value &&
-                   this.globalData.appConfig.value.mode === 'test';
-        },
-        
         baseURL() {
             return this.globalData.baseURL;
         },
-        
-        categories() {
-            return this.globalData.categories.value || [];
-        },
-        
-        customColors() {
-            return this.globalData.customColors.value || [];
-        },
-        
-        montMarteColors() {
-            return this.globalData.montMarteColors.value || [];
-        },
-        
-        filteredColors() {
-            let list;
-            if (this.activeCategory === 'all') {
-                list = this.customColors.slice();
-            } else if (this.activeCategory === 'other') {
-                list = this.customColors.filter(color => {
-                    const prefix = color.color_code.substring(0, 2).toUpperCase();
-                    const matchedCategory = this.categories.find(cat => cat.code === prefix);
-                    return !matchedCategory;
-                });
-            } else {
-                list = this.customColors.filter(c => c.category_id === parseInt(this.activeCategory));
-            }
-            
-            // Search filter
-            const q = (this.$root && this.$root.globalSearchQuery || '').trim().toLowerCase();
-            if (q && this.$root.activeTab === 'custom-colors') {
-                list = list.filter(c => ((c.name||'').toLowerCase().includes(q)) || ((c.color_code||'').toLowerCase().includes(q)));
-            }
-            
-            // Sort
-            if (this.sortMode === 'name') {
-                list.sort((a,b) => (a.color_code||'').localeCompare(b.color_code||''));
-            } else {
-                list.sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
-            }
-            
-            return list;
-        },
-        
-        // Pagination computed properties
-        totalPages() {
-            if (this.itemsPerPage === 0) return 1;  // Show all
-            return Math.ceil(this.filteredColors.length / this.itemsPerPage);
-        },
-        
-        paginatedColors() {
-            if (this.itemsPerPage === 0) {
-                return this.filteredColors;  // Show all
-            }
-            
-            const start = (this.currentPage - 1) * this.itemsPerPage;
-            const end = start + this.itemsPerPage;
-            return this.filteredColors.slice(start, end);
-        },
-        
-        startItem() {
-            if (this.filteredColors.length === 0) return 0;
-            if (this.itemsPerPage === 0) return 1;
-            return (this.currentPage - 1) * this.itemsPerPage + 1;
-        },
-        
-        endItem() {
-            if (this.itemsPerPage === 0) return this.filteredColors.length;
-            return Math.min(
-                this.currentPage * this.itemsPerPage,
-                this.filteredColors.length
-            );
-        },
-        
-        visiblePages() {
-            const pages = [];
-            const maxVisible = 7;
-            
-            if (this.totalPages <= maxVisible) {
-                for (let i = 1; i <= this.totalPages; i++) {
-                    pages.push(i);
-                }
-            } else {
-                if (this.currentPage <= 4) {
-                    for (let i = 1; i <= 5; i++) pages.push(i);
-                    pages.push('...');
-                    pages.push(this.totalPages);
-                } else if (this.currentPage >= this.totalPages - 3) {
-                    pages.push(1);
-                    pages.push('...');
-                    for (let i = this.totalPages - 4; i <= this.totalPages; i++) {
-                        pages.push(i);
-                    }
-                } else {
-                    pages.push(1);
-                    pages.push('...');
-                    for (let i = this.currentPage - 1; i <= this.currentPage + 1; i++) {
-                        pages.push(i);
-                    }
-                    pages.push('...');
-                    pages.push(this.totalPages);
-                }
-            }
-            
-            return pages;
-        },
-        
-        orderedCategoriesWithOther() {
-            const raw = [...(this.categories||[])];
-            // Sort by display_order to match backend ordering
-            raw.sort((a,b)=> (a.display_order || 999) - (b.display_order || 999));
-            return raw;
-        },
-        
-        categoriesWithOther() {
-            return this.orderedCategoriesWithOther.map(c=>c);
-        },
-        
-        // Computed properties for duplicate checking
-        canDeleteAny() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            for(const g of this.duplicateGroups){
-                const keepId = this.duplicateSelections[g.signature];
-                if(!keepId) continue;
-                if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
-            }
-            return false;
-        },
-        
-        canForceMerge() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
-        },
-        
+
         esCategoryId() {
-            const es = this.categories.find(c=>c.code==='ES');
+            const es = this.categories.find(c => c.code === 'ES');
             return es ? es.id : null;
         },
-        
-        
+
         colorCodeDuplicate() {
             const val = (this.form.color_code || '').trim();
             if (!val) return false;
             return this.customColors.some(c => c.color_code === val && c.id !== (this.editingColor?.id || null));
-        },
-        
-        // Image availability check
-        hasImageAvailable() {
-            return !!(this.form.imageFile || (this.editingColor && this.editingColor.image_path) || this.form.imagePreview);
-        },
-        
-        // Color value checks
-        hasRGBValue() {
-            return this.form.rgb_r != null && this.form.rgb_g != null && this.form.rgb_b != null;
-        },
-        
-        hasCMYKValue() {
-            return this.form.cmyk_c != null || this.form.cmyk_m != null || this.form.cmyk_y != null || this.form.cmyk_k != null;
-        },
-        
-        hasHEXValue() {
-            return !!this.form.hex_color;
-        },
-        
-        hasPantoneCoatedValue() {
-            return !!this.form.pantone_coated;
-        },
-        
-        hasPantoneUncoatedValue() {
-            return !!this.form.pantone_uncoated;
-        },
-        
-        // Color swatch styles
-        rgbSwatchStyle() {
-            if (this.hasRGBValue) {
-                return {
-                    backgroundColor: `rgb(${this.form.rgb_r}, ${this.form.rgb_g}, ${this.form.rgb_b})`,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        cmykSwatchStyle() {
-            if (this.hasCMYKValue && window.ColorConverter) {
-                const rgb = window.ColorConverter.cmykToRgb(
-                    this.form.cmyk_c || 0,
-                    this.form.cmyk_m || 0,
-                    this.form.cmyk_y || 0,
-                    this.form.cmyk_k || 0
-                );
-                return {
-                    backgroundColor: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        hexSwatchStyle() {
-            if (this.hasHEXValue) {
-                return {
-                    backgroundColor: this.form.hex_color,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        pantoneCoatedSwatchStyle() {
-            if (this.hasPantoneCoatedValue && window.PantoneHelper) {
-                const color = window.PantoneHelper.getColorByName(this.form.pantone_coated);
-                if (color) {
-                    return {
-                        backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                        border: '1px solid rgba(0, 0, 0, 0.15)'
-                    };
-                }
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        pantoneUncoatedSwatchStyle() {
-            if (this.hasPantoneUncoatedValue && window.PantoneHelper) {
-                const color = window.PantoneHelper.getColorByName(this.form.pantone_uncoated);
-                if (color) {
-                    return {
-                        backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                        border: '1px solid rgba(0, 0, 0, 0.15)'
-                    };
-                }
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        canDeleteAny() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            for(const g of this.duplicateGroups){
-                const keepId = this.duplicateSelections[g.signature];
-                if(!keepId) continue;
-                if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
-            }
-            return false;
-        },
-        
-        canForceMerge() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
         }
     },
-    
     methods: {
         // Category management
         async handleCategoriesUpdated() {
@@ -790,305 +521,9 @@ const CustomColorsComponent = {
             this.$message.success('分类已更新');
         },
         
-        // Pagination methods
-        goToPage(page) {
-            if (page === '...') return;
-            if (page < 1 || page > this.totalPages) return;
-            
-            this.currentPage = page;
-            
-            // Scroll to top of content area
-            this.$nextTick(() => {
-                const container = this.$el.querySelector('.color-cards-grid');
-                if (container) {
-                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-colors-page', page);
-            } catch(e) {}
-        },
-        
-        onItemsPerPageChange() {
-            // Reset to first page when changing items per page
-            this.currentPage = 1;
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-colors-items-per-page', this.itemsPerPage);
-            } catch(e) {}
-        },
-        
-        restorePaginationState() {
-            try {
-                const savedPage = localStorage.getItem('sw-colors-page');
-                const savedItems = localStorage.getItem('sw-colors-items-per-page');
-                
-                if (savedItems) {
-                    this.itemsPerPage = parseInt(savedItems);
-                }
-                
-                if (savedPage) {
-                    const page = parseInt(savedPage);
-                    if (page <= this.totalPages) {
-                        this.currentPage = page;
-                    }
-                }
-            } catch(e) {}
-        },
-        
-        // Update pagination based on app config
-        updatePaginationFromConfig() {
-            if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
-                const config = this.globalData.appConfig.value;
-                
-                // Get saved items per page preference
-                let savedItems = null;
-                try {
-                    const saved = localStorage.getItem('sw-colors-items-per-page');
-                    if (saved) savedItems = parseInt(saved);
-                } catch(e) {}
-                
-                // Use ConfigHelper to determine items per page
-                this.itemsPerPage = window.ConfigHelper.getItemsPerPage(
-                    config, 
-                    'custom-colors', 
-                    savedItems
-                );
-            }
-        },
-        
-        // Card selection methods
-        toggleColorSelection(colorId) {
-            // Prevent propagation to avoid conflicts with other handlers
-            event.stopPropagation();
-            
-            // Toggle selection
-            if (this.selectedColorId === colorId) {
-                this.selectedColorId = null;
-            } else {
-                this.selectedColorId = colorId;
-            }
-        },
-        
-        clearSelection() {
-            this.selectedColorId = null;
-        },
-        
-        handleGlobalClick(event) {
-            // Clear selection if clicking outside the cards
-            if (!event.target.closest('.artwork-bar')) {
-                this.clearSelection();
-            }
-        },
-        
-        handleEscKey(event) {
-            // Only clear selection if ESC is pressed and no input is focused
-            if (event.key === 'Escape') {
-                // Check if any input, textarea, or select is focused
-                const activeElement = document.activeElement;
-                const isInputFocused = activeElement && (
-                    activeElement.tagName === 'INPUT' ||
-                    activeElement.tagName === 'TEXTAREA' ||
-                    activeElement.tagName === 'SELECT' ||
-                    activeElement.classList.contains('el-input__inner')
-                );
-                
-                // Clear selection only if no input is focused
-                if (!isInputFocused && this.selectedColorId !== null) {
-                    this.clearSelection();
-                    event.preventDefault();
-                }
-            }
-        },
-        
         // Helper to get message service
         getMsg() {
             return ElementPlus.ElMessage;
-        },
-        
-        setColorItemRef(color) {
-            return (el) => {
-                if (el) this._colorItemRefs.set(color.color_code, el); 
-                else this._colorItemRefs.delete(color.color_code);
-            };
-        },
-        
-        usageGroups(color) {
-            if (!color) return [];
-            const code = color.color_code;
-            if (!code) return [];
-            const artworks = (this.globalData.artworks?.value) || [];
-            const groups = [];
-            artworks.forEach(a => {
-                (a.schemes || []).forEach(s => {
-                    const layers = [];
-                    (s.layers || []).forEach(l => {
-                        if (l.colorCode === code) {
-                            const num = Number(l.layer);
-                            if (Number.isFinite(num)) layers.push(num);
-                        }
-                    });
-                    if (layers.length) {
-                        layers.sort((x,y)=>x-y);
-                        const schemeName = s.name || s.scheme_name || '-';
-                        const header = `${this.$helpers.formatArtworkTitle(a)}-[${schemeName}]`;
-                        const suffix = layers.map(n=>`(${n})`).join('');
-                        groups.push({
-                            display: header + suffix,
-                            artworkId: a.id,
-                            schemeId: s.id,
-                            layers: layers.slice(),
-                            colorCode: code,
-                            schemeName
-                        });
-                    }
-                });
-            });
-            return groups;
-        },
-        
-        categoryName(color) {
-            const cat = this.categories.find(c => c.id === color.category_id);
-            if (cat) return cat.name;
-            const prefix = (color.color_code || '').substring(0,2).toUpperCase();
-            const byPrefix = this.categories.find(c => c.code === prefix);
-            return byPrefix ? byPrefix.name : '其他';
-        },
-        
-        handleImageChange(file) {
-            this.form.imageFile = file.raw;
-            if (this.form.imagePreview) {
-                URL.revokeObjectURL(this.form.imagePreview);
-            }
-            this.form.imagePreview = URL.createObjectURL(file.raw);
-        },
-        
-        clearImage() {
-            this.form.imageFile = null;
-            if (this.form.imagePreview) {
-                URL.revokeObjectURL(this.form.imagePreview);
-                this.form.imagePreview = null;
-            }
-        },
-        
-        async fetchImageAsFile(imageUrl) {
-            try {
-                const response = await fetch(imageUrl);
-                const blob = await response.blob();
-                return new File([blob], 'image.jpg', { type: blob.type });
-            } catch (error) {
-                // Error fetching image - silently handle
-                return null;
-            }
-        },
-        
-        async extractColorFromImage() {
-            const msg = this.getMsg();
-            let imageToProcess = null;
-            
-            if (this.form.imageFile) {
-                imageToProcess = this.form.imageFile;
-            } else if (this.editingColor && this.editingColor.image_path) {
-                const imageUrl = this.$helpers.buildUploadURL(this.baseURL, this.editingColor.image_path);
-                imageToProcess = await this.fetchImageAsFile(imageUrl);
-            } else if (this.form.imagePreview) {
-                imageToProcess = await this.fetchImageAsFile(this.form.imagePreview);
-            }
-            
-            if (!imageToProcess) {
-                msg.warning('没有可用的图片');
-                return;
-            }
-            
-            try {
-                const color = await ColorConverter.extractColorFromImage(imageToProcess);
-                
-                // ColorConverter returns {r, g, b} directly
-                this.form.rgb_r = color.r;
-                this.form.rgb_g = color.g;
-                this.form.rgb_b = color.b;
-                
-                const cmyk = ColorConverter.rgbToCmyk(color.r, color.g, color.b);
-                this.form.cmyk_c = cmyk.c;
-                this.form.cmyk_m = cmyk.m;
-                this.form.cmyk_y = cmyk.y;
-                this.form.cmyk_k = cmyk.k;
-                
-                this.form.hex_color = ColorConverter.rgbToHex(color.r, color.g, color.b);
-                
-                msg.success('已提取颜色值');
-            } catch (error) {
-                // Error extracting color - silently handle
-                msg.error('提取颜色失败');
-            }
-        },
-        
-        clearColorValues() {
-            const msg = this.getMsg();
-            this.form.rgb_r = null;
-            this.form.rgb_g = null;
-            this.form.rgb_b = null;
-            this.form.cmyk_c = null;
-            this.form.cmyk_m = null;
-            this.form.cmyk_y = null;
-            this.form.cmyk_k = null;
-            this.form.hex_color = null;
-            this.form.pantone_coated = null;
-            this.form.pantone_uncoated = null;
-            msg.success('色值已清除');
-        },
-        
-        async findPantoneMatch() {
-            const msg = this.getMsg();
-            if (this.form.rgb_r === null || this.form.rgb_g === null || this.form.rgb_b === null) {
-                msg.warning('请先输入或提取 RGB 颜色值');
-                return;
-            }
-            
-            try {
-                const rgb = {
-                    r: parseInt(this.form.rgb_r),
-                    g: parseInt(this.form.rgb_g),
-                    b: parseInt(this.form.rgb_b)
-                };
-                
-                if (!ColorConverter.isValidRGB(rgb.r, rgb.g, rgb.b)) {
-                    msg.error('RGB 值无效，请检查输入');
-                    return;
-                }
-                
-                let coatedMatch, uncoatedMatch;
-                
-                if (window.PantoneHelper) {
-                    coatedMatch = window.PantoneHelper.findClosest(rgb, 'coated');
-                    uncoatedMatch = window.PantoneHelper.findClosest(rgb, 'uncoated');
-                } else {
-                    const pantoneResult = ColorConverter.findClosestPantone(rgb);
-                    coatedMatch = pantoneResult.coated;
-                    uncoatedMatch = pantoneResult.uncoated;
-                }
-                
-                if (coatedMatch) {
-                    // Format: Remove "PANTONE" prefix and keep only number + C
-                    const cleanName = coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C');
-                    this.form.pantone_coated = cleanName;
-                }
-                if (uncoatedMatch) {
-                    // Format: Remove "PANTONE" prefix and keep only number + U
-                    const cleanName = uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U');
-                    this.form.pantone_uncoated = cleanName;
-                }
-                
-                const coatedDisplay = coatedMatch ? coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C') : '无';
-                const uncoatedDisplay = uncoatedMatch ? uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U') : '无';
-                msg.success(`已匹配潘通色号: ${coatedDisplay} / ${uncoatedDisplay}`);
-            } catch (error) {
-                // Error finding Pantone match - silently handle
-                msg.error('匹配潘通色号失败');
-            }
         },
         
         openAddDialog() {
@@ -1423,105 +858,10 @@ const CustomColorsComponent = {
             msg.info('历史功能待实现');
         },
         
-        focusCustomColor(code) {
-            if (this.activeCategory !== 'all') this.activeCategory = 'all';
-            
-            // Find the color in filtered colors (which determines pagination)
-            const targetIndex = this.filteredColors.findIndex(c => c.color_code === code);
-            
-            if (targetIndex === -1) return;
-            
-            // Calculate which page the color is on based on filtered list
-            const targetPage = this.itemsPerPage === 0 ? 1 : Math.floor(targetIndex / this.itemsPerPage) + 1;
-            
-            // Navigate to the correct page if needed
-            if (targetPage !== this.currentPage) {
-                this.currentPage = targetPage;
-            }
-            
-            this.$nextTick(() => {
-                const el = this._colorItemRefs.get(code);
-                if (el && el.scrollIntoView) {
-                    // Instant scroll to element (no animation for efficiency)
-                    const rect = el.getBoundingClientRect();
-                    const current = window.pageYOffset || document.documentElement.scrollTop;
-                    const targetScroll = current + rect.top - 100; // 100px offset from top
-                    window.scrollTo({
-                        top: Math.max(0, targetScroll),
-                        behavior: 'instant' // No animation for factory efficiency
-                    });
-                    this.highlightCode = code;
-                    setTimeout(()=>{ this.highlightCode = null; }, 2000);
-                }
-            });
-        },
-        
         handleVersionConflict(conflictData, formData) {
             this.conflictData = conflictData;
             this.pendingFormData = formData;
             this.showConflictDialog = true;
-        },
-        
-        // Helper method to get CMYK color as RGB string
-        getCMYKColor(c, m, y, k) {
-            if (window.ColorConverter) {
-                const rgb = window.ColorConverter.cmykToRgb(c, m, y, k);
-                return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-            }
-            return '#f5f5f5';
-        },
-        
-        // Helper method to get Pantone swatch style
-        getPantoneSwatchStyle(pantoneCode) {
-            if (!pantoneCode || !window.PantoneHelper) {
-                return { background: '#f5f5f5', border: '1px dashed #ccc' };
-            }
-            
-            const color = window.PantoneHelper.getColorByName(pantoneCode);
-            if (color && color.rgb) {
-                return { 
-                    background: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
-            }
-            return { background: '#f5f5f5', border: '1px dashed #ccc' };
-        },
-        
-        // Duplicate check method
-        runDuplicateCheck(focusSignature=null, preferredKeepId=null) {
-            const msg = this.getMsg();
-            if(!window.duplicateDetector) { 
-                msg.info('查重模块未加载'); 
-                return; 
-            }
-            const list = this.globalData.customColors?.value || [];
-            const map = window.duplicateDetector.groupByRatioSignature(list);
-            const sigs = Object.keys(map);
-            if(!sigs.length) { 
-                msg.success('未发现重复配方'); 
-                this.showDuplicateDialog = false; 
-                return; 
-            }
-            
-            // Construct group data
-            this.duplicateGroups = sigs.map(sig => {
-                const recs = map[sig].slice().sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
-                const parsed = window.duplicateDetector.parseRatio(sig);
-                return { signature: sig, records: recs, parsed };
-            });
-            
-            this.duplicateSelections = {};
-            // Default selection
-            this.duplicateGroups.forEach(g => {
-                if (focusSignature && g.signature === focusSignature && preferredKeepId) {
-                    this.duplicateSelections[g.signature] = preferredKeepId;
-                } else if(g.records.length) {
-                    this.duplicateSelections[g.signature] = g.records[0].id;
-                }
-            });
-            
-            this.showDuplicateDialog = true;
-            msg.warning(`发现 ${sigs.length} 组重复配方`);
         },
         
         // Show color palette method - now uses the new advanced dialog
@@ -1778,27 +1118,6 @@ const CustomColorsComponent = {
     
     // Watch for category changes to reset pagination
     watch: {
-        activeCategory() {
-            this.currentPage = 1;
-        },
-        
-        totalPages(newVal) {
-            // Adjust current page if it exceeds total pages
-            if (this.currentPage > newVal && newVal > 0) {
-                this.currentPage = newVal;
-            }
-        },
-        
-        // Watch for app config changes
-        'globalData.appConfig.value': {
-            handler(newConfig) {
-                if (newConfig) {
-                    this.updatePaginationFromConfig();
-                }
-            },
-            deep: true
-        },
-        
         // Clear validation error when there's a duplicate
         colorCodeDuplicate(val) {
             if (val && this.$refs.formRef) {
@@ -1806,24 +1125,7 @@ const CustomColorsComponent = {
             }
         }
     },
-    
-    // Restore pagination state on mount
-    mounted() {
-        // Update items per page based on app config
-        this.updatePaginationFromConfig();
-        
-        this.restorePaginationState();
-        
-        // Add global event listeners for selection
-        document.addEventListener('click', this.handleGlobalClick);
-        document.addEventListener('keydown', this.handleEscKey);
-    },
-    
-    beforeUnmount() {
-        // Clean up event listeners
-        document.removeEventListener('click', this.handleGlobalClick);
-        document.removeEventListener('keydown', this.handleEscKey);
-    }
+
 };
 
 // Expose to global scope

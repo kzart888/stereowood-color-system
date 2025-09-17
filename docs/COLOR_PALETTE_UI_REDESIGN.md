@@ -243,7 +243,7 @@ color-palette-dialog/
 │   ├── ColorWheel.vue           # Wheel canvas
 │   └── ColorCard.vue            # Color display card
 ├── utils/
-│   ├── colorConversion.js       # RGB/HSL/LAB conversions
+│   ├── color-tools.js           # RGB/HSL/LAB conversions
 │   ├── colorDistance.js         # Delta E calculations
 │   └── colorMapping.js          # Coordinate mappings
 └── styles/

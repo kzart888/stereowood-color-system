@@ -16,7 +16,7 @@
     <script src="https://unpkg.com/@element-plus/icons-vue@2.1.0/dist/index.iife.min.js"></script>
     
     <!-- Our utilities and components -->
-    <script src="frontend/js/utils/colorConversion.js"></script>
+    <script src="frontend/js/utils/color-tools.js"></script>
     <script src="frontend/js/utils/colorDistance.js"></script>
     <script src="frontend/js/components/color-palette-dialog.js"></script>
     
@@ -97,13 +97,7 @@
     
     <script>
         const { createApp } = Vue;
-        
-        // Make color conversion functions global
-        window.rgbToHsl = rgbToHsl;
-        window.hslToRgb = hslToRgb;
-        window.rgbToLab = rgbToLab;
-        window.rgbToHex = rgbToHex;
-        window.hexToRgb = hexToRgb;
+        const { rgbToHsl, hslToRgb, rgbToLab, rgbToHex, hexToRgb } = window.ColorTools;
         
         const app = createApp({
             data() {

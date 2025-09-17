@@ -8,9 +8,9 @@
 const path = require('path');
 const fs = require('fs/promises');
 
-const queries = require('../db/queries/montMarteColors');
-const { cascadeRenameInFormulas } = require('./formula');
-const { db } = require('../db');
+const defaultQueries = require('../db/queries/montMarteColors');
+const { cascadeRenameInFormulas: defaultCascadeRenameInFormulas } = require('./formula');
+const { db: defaultDb } = require('../db');
 
 function serviceError(message, status) {
   const error = new Error(message);
@@ -28,12 +28,22 @@ function normaliseCategory(value) {
 }
 
 class MontMarteService {
-  constructor() {
-    this.uploadRoot = path.join(__dirname, '..', 'uploads');
+  constructor(dependencies = {}) {
+    const {
+      queries = defaultQueries,
+      cascadeRenameInFormulas = defaultCascadeRenameInFormulas,
+      db = defaultDb,
+      uploadRoot = path.join(__dirname, '..', 'uploads'),
+    } = dependencies;
+
+    this.queries = queries;
+    this.cascadeRenameInFormulas = cascadeRenameInFormulas;
+    this.db = db;
+    this.uploadRoot = uploadRoot;
   }
 
   async listColors() {
-    return queries.getAll();
+    return this.queries.getAll();
   }
 
   async createColor(payload) {
@@ -56,12 +66,12 @@ class MontMarteService {
       category_id: payload.categoryId ?? null,
     };
 
-    const newId = await queries.insertColor(insertPayload);
-    return queries.getById(newId);
+    const newId = await this.queries.insertColor(insertPayload);
+    return this.queries.getById(newId);
   }
 
   async updateColor(id, payload) {
-    const existing = await queries.getBasicById(id);
+    const existing = await this.queries.getBasicById(id);
     if (!existing) {
       throw serviceError('颜色不存在', 404);
     }
@@ -87,13 +97,13 @@ class MontMarteService {
       category_id: payload.categoryId ?? null,
     };
 
-    await queries.updateColor(id, updatePayload);
+    await this.queries.updateColor(id, updatePayload);
 
     let updatedReferences = 0;
     let warn;
     if (existing.name && existing.name !== name) {
       try {
-        updatedReferences = await cascadeRenameInFormulas(db, existing.name, name);
+        updatedReferences = await this.cascadeRenameInFormulas(this.db, existing.name, name);
       } catch (error) {
         warn = '读取配方失败，未做级联';
       }
@@ -107,7 +117,7 @@ class MontMarteService {
       await this.discardUpload(existing.image_path);
     }
 
-    const fresh = await queries.getById(id);
+    const fresh = await this.queries.getById(id);
     return { ...fresh, updatedReferences, warn };
   }
 
@@ -126,12 +136,12 @@ class MontMarteService {
   }
 
   async deleteColor(id) {
-    const existing = await queries.getBasicById(id);
+    const existing = await this.queries.getBasicById(id);
     if (!existing) {
       throw serviceError('颜色不存在', 404);
     }
 
-    const changes = await queries.deleteColor(id);
+    const changes = await this.queries.deleteColor(id);
     if (!changes) {
       throw serviceError('颜色不存在', 404);
     }
@@ -153,4 +163,7 @@ class MontMarteService {
   }
 }
 
-module.exports = new MontMarteService();
+const montMarteService = new MontMarteService();
+
+module.exports = montMarteService;
+module.exports.MontMarteService = MontMarteService;
