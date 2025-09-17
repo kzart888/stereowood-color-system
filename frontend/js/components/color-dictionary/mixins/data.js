@@ -34,6 +34,20 @@
             },
 
             enrichColors() {
+                const utils = window.ColorProcessingUtils;
+                if (utils && typeof utils.enrichColors === 'function') {
+                    const fallback = (categoryId) => {
+                        if (utils && typeof utils.getDefaultColorForCategory === 'function') {
+                            return utils.getDefaultColorForCategory(categoryId);
+                        }
+                        return this.getDefaultColorForCategory(categoryId);
+                    };
+                    this.enrichedColors = utils.enrichColors(this.colors, {
+                        fallbackByCategory: fallback
+                    });
+                    return;
+                }
+
                 this.enrichedColors = this.colors.map((color) => {
                     const enriched = { ...color };
 
