@@ -375,11 +375,6 @@ if (typeof ColorDictionaryComponent !== 'undefined') {
     app.component('color-dictionary-component', ColorDictionaryComponent);
 }
 
-// 添加通用操作按钮组件注册 - 暂时禁用
-// if (typeof ActionButtonComponent !== 'undefined') {
-//     app.component('action-button', ActionButtonComponent);
-// }
-
 
 // ===== 挂载应用 =====
 // 使用Element Plus UI库并挂载到#app元素
