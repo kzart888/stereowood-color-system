@@ -1,7 +1,7 @@
 /* =========================================================
    Module: backend/routes/custom-colors.js
    Responsibility: CRUD routes for Custom Colors and their history
-   Imports/Relations: Uses ColorService for business logic; multer for image upload
+   Imports/Relations: Uses ColorService for business logic; shared upload helper for images
    Origin: Extracted from backend/server.js (2025-08), refactored with Service layer
    Contract: Mount under /api
    Notes: Returns errors as { error: message }
@@ -11,19 +11,11 @@
 const express = require('express');
 const router = express.Router();
 const ColorService = require('../services/ColorService');
-const multer = require('multer');
 const path = require('path');
+const { createUploadHandler } = require('../utils/upload');
 
-// Multer config (same as server.js)
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) { 
-    cb(null, path.join(__dirname, '..', 'uploads')); 
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage });
+// Shared upload handler ensures consistent storage path and naming
+const upload = createUploadHandler();
 
 // GET /api/custom-colors
 router.get('/custom-colors', async (req, res) => {
