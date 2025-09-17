@@ -233,7 +233,7 @@ Base URL: `http://localhost:9099/api`
 ### Key Files to Focus On
 - **Monolithic Components**: `custom-colors.js` (1822 lines), `artworks.js` (1583 lines), `color-dictionary.js` (1891 lines)
 - **Performance Issue**: `pantone-colors-full.js` (1.13 MB loaded on every page)
-- **Duplicate Utils**: `color-converter.js` vs `colorConversion.js`
+- **Shared Utils**: consolidate around `color-tools.js`
 
 ### Testing with Playwright MCP
 ```javascript

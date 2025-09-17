@@ -41,7 +41,7 @@ This document provides a comprehensive, test-first refactoring strategy for the 
 
 **Code Quality Issues**:
 - 84+ console.log statements scattered throughout
-- Duplicate utilities: `color-converter.js` vs `colorConversion.js`
+- Consolidate new `color-tools.js` usage across components
 - Multiple overlapping helpers: `helpers.js`, `message.js`
 - Obsolete files: `version-guard.js` (0 bytes)
 - Direct DOM manipulation mixed with Vue reactive patterns
