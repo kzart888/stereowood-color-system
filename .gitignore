@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+frontend-vue3/node_modules/
+legacy/**/node_modules/
 npm-debug.log*
 yarn-error.log*
 package-lock.json
@@ -72,6 +74,10 @@ coverage/
 
 # 构建输出
 dist/
+frontend-vue3/dist/
+frontend-vue3/.vite/
+legacy/**/dist/
+legacy/**/build/
 build/
 
 # Claude Code 配置文件

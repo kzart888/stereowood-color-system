@@ -5,7 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js",
+    "dev": "npm run dev:backend",
+    "dev:backend": "nodemon backend/server.js",
+    "dev:frontend": "npm --prefix frontend-vue3 run dev",
+    "build:frontend": "npm --prefix frontend-vue3 run build",
+    "test": "npm run test:unit",
+    "test:unit": "npm --prefix frontend-vue3 run test:unit",
+    "lint": "npm --prefix frontend-vue3 run lint",
     "backup": "node scripts/backup.js",
     "restore": "node scripts/restore.js"
   },

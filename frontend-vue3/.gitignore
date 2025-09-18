@@ -1,0 +1,11 @@
+# Build output
+/dist
+/.vite
+
+# Dependencies
+/node_modules
+
+# Auto generated typings
+/src/auto-imports.d.ts
+/src/components.d.ts
+/.eslintrc-auto-import.json

@@ -37,10 +37,15 @@ backend/*.db-shm
 
 # Node modules (will be installed fresh)
 node_modules/
+frontend-vue3/node_modules/
+legacy/**/node_modules/
 package-lock.json
 
 # Build artifacts
 dist/
+frontend-vue3/dist/
+frontend-vue3/.vite/
+legacy/
 build/
 *.tar
 *.tar.gz

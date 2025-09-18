@@ -46,9 +46,19 @@ app.use((req, res, next) => {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 前端静态文件服务
-const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
-if (fs.existsSync(FRONTEND_DIR)) {
-  app.use('/', express.static(FRONTEND_DIR, { extensions: ['html'] }));
+const VITE_DIST_DIR = path.join(__dirname, '..', 'frontend-vue3', 'dist');
+if (fs.existsSync(VITE_DIST_DIR)) {
+  app.use('/', express.static(VITE_DIST_DIR, { extensions: ['html'] }));
+}
+
+const LEGACY_FRONTEND_DIR = path.join(__dirname, '..', 'legacy', 'frontend-vue2');
+if (fs.existsSync(LEGACY_FRONTEND_DIR)) {
+  app.use('/legacy', express.static(LEGACY_FRONTEND_DIR, { extensions: ['html'] }));
+
+  // 在尚未构建新前端时, 默认仍然提供旧版前端
+  if (!fs.existsSync(VITE_DIST_DIR)) {
+    app.use('/', express.static(LEGACY_FRONTEND_DIR, { extensions: ['html'] }));
+  }
 }
 
 // 确保上传目录存在

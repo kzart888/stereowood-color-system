@@ -12,20 +12,24 @@ Simple color management system for factory production (3-5 users).
 ## Quick Start
 
 ```bash
-# Windows
-start.bat
+npm install
+npm --prefix frontend-vue3 install
 
-# Mac/Linux
-npm install  # First time only
-npm start
+# Start backend API + legacy UI
+npm run dev:backend
+
+# In a second terminal, launch the Vue 3 workspace
+npm run dev:frontend
 ```
 
-Open browser: http://localhost:9099
+- Legacy Vue 2 interface: http://localhost:9099/legacy
+- Vue 3 development workspace: http://localhost:3000
 
 ## Documentation
 
 - **[OPERATIONS.md](docs/OPERATIONS.md)** - Daily operations, backup, troubleshooting
 - **[CLAUDE.md](CLAUDE.md)** - Development guide for Claude Code maintenance
+- **[LEGACY_FRONTEND.md](docs/LEGACY_FRONTEND.md)** - How to serve the archived Vue 2 bundle
 
 ## System Requirements
 
@@ -35,7 +39,7 @@ Open browser: http://localhost:9099
 
 ## Version
 
-Current: v0.8.2 (2025-01-03)
+Current: v0.9.8 (2025-02-14)
 
 ## License
 
