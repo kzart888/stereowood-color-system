@@ -120,11 +120,13 @@
     <script src="js/modules/calc-store.js"></script>
     <!-- 配方查重模块 (顺序 + 倍数不敏感) -->
     <script src="js/modules/duplicate-detector.js"></script>
-    
+    <!-- 自配色业务逻辑 store -->
+    <script src="js/modules/custom-colors-store.js"></script>
+
     <!-- API封装库 -->
     <!-- 提供: api.categories, api.customColors, api.artworks, api.montMarteColors -->
     <script src="js/api/api.js"></script>
-    
+
     <!-- Vue组件定义 - 必须在app.js之前加载 -->
     <!-- 头部组件 -->
     <script src="js/components/app-header-bar.js"></script>
@@ -134,6 +136,10 @@
     <script src="js/components/common/ConflictResolver.js"></script>
     <!-- 通用操作按钮组件 - 暂时禁用 -->
     <!-- <script src="js/components/common/ActionButton.js"></script> -->
+    <!-- 自配色子组件 -->
+    <script src="js/components/custom-colors/color-card-grid.js"></script>
+    <script src="js/components/custom-colors/color-details-dialog.js"></script>
+    <script src="js/components/custom-colors/duplicate-resolution-dialog.js"></script>
     <!-- 定义全局变量: CustomColorsComponent -->
     <script src="js/components/custom-colors.js"></script>
     
