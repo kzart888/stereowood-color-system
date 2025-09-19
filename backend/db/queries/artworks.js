@@ -265,10 +265,12 @@ function deleteScheme(schemeId) {
                         db.run('ROLLBACK');
                         return reject(err2);
                     }
-                    
+
+                    const deletedChanges = this.changes;
+
                     db.run('COMMIT', (commitErr) => {
                         if (commitErr) reject(commitErr);
-                        else resolve(this.changes);
+                        else resolve(deletedChanges);
                     });
                 });
             });
