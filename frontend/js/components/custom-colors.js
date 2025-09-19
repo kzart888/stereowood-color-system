@@ -1,1067 +1,405 @@
-// 自配颜色管理组件 - Enhanced Version with RGB/CMYK/HEX/Pantone
-// 文件路径: frontend/js/components/custom-colors.js
-// 定义全局变量 CustomColorsComponent，被 app.js 引用并注册
+const {
+    ref,
+    reactive,
+    computed,
+    inject,
+    onMounted,
+    onBeforeUnmount,
+    watch,
+    getCurrentInstance,
+    provide,
+    nextTick
+} = Vue;
+
+function createDefaultForm() {
+    return {
+        category_id: '',
+        color_code: '',
+        formula: '',
+        imageFile: null,
+        imagePreview: null,
+        rgb_r: null,
+        rgb_g: null,
+        rgb_b: null,
+        cmyk_c: null,
+        cmyk_m: null,
+        cmyk_y: null,
+        cmyk_k: null,
+        hex_color: null,
+        pantone_coated: null,
+        pantone_uncoated: null
+    };
+}
+
+function revokePreview(preview) {
+    if (preview && preview.startsWith && preview.startsWith('blob:')) {
+        try { URL.revokeObjectURL(preview); } catch (e) {}
+    }
+}
+
+function useMessage() {
+    return ElementPlus.ElMessage;
+}
 
 const CustomColorsComponent = {
+    name: 'CustomColorsComponent',
     props: {
-        sortMode: { type: String, default: 'time' } // time | name
+        sortMode: { type: String, default: 'time' }
     },
-    
-    template: `
-        <div class="custom-colors-page">
-            <div class="category-switch-group" role="tablist" aria-label="颜色分类筛选">
-                <button type="button" class="category-switch" :class="{active: activeCategory==='all'}" @click="activeCategory='all'" role="tab" :aria-selected="activeCategory==='all'">全部</button>
-                <button 
-                    v-for="cat in orderedCategoriesWithOther" 
-                    :key="cat.id || 'other'"
-                    type="button"
-                    class="category-switch"
-                    :class="{active: activeCategory===String(cat.id || 'other')}"
-                    @click="activeCategory=String(cat.id || 'other')"
-                    role="tab"
-                    :aria-selected="activeCategory===String(cat.id || 'other')"
-                >{{ cat.name }}</button>
-                <button 
-                    type="button"
-                    class="category-settings-btn"
-                    @click="showCategoryManager = true"
-                    title="管理分类"
-                >
-                    <el-icon><Setting /></el-icon>
-                </button>
-            </div>
-            
-            <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
-            <div v-else>
-                <div v-if="filteredColors.length === 0" class="empty-message">暂无自配色，点击右上角"新自配色"添加</div>
-                
-                <!-- Grid Container for Cards -->
-                <div class="color-cards-grid">
-                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :data-color-id="color.id" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id)">
-                    <div class="artwork-header" style="display:flex; padding:8px; align-items:center; justify-content:space-between;">
-                        <div style="display:flex; align-items:center;">
-                            <div class="artwork-title" style="width:88px; flex-shrink:0;">
-                                {{ color.color_code }}
-                            </div>
-                            <div class="header-meta-group" style="margin-left:12px;">
-                                <span class="header-meta">分类: {{ categoryName(color) }}</span>
-                                <span class="header-meta" v-if="color.updated_at">更新: {{ $helpers.formatDate(color.updated_at) }}</span>
-                            </div>
-                        </div>
-                        <div class="color-actions">
-                            <el-button size="small" @click="$calc && $calc.open(color.color_code, color.formula||'', $event.currentTarget)"><el-icon><ScaleToOriginal /></el-icon> 计算</el-button>
-                            <el-button size="small" type="primary" @click="editColor(color)"><el-icon><Edit /></el-icon> 修改</el-button>
-                            <el-button size="small" @click="viewHistory(color)" disabled><el-icon><Clock /></el-icon> 历史</el-button>
-                            <template v-if="isColorReferenced(color)">
-                                <el-tooltip content="该自配色已被引用，无法删除" placement="top">
-                                    <span>
-                                        <el-button size="small" type="danger" disabled><el-icon><Delete /></el-icon> 删除</el-button>
-                                    </span>
-                                </el-tooltip>
-                            </template>
-                            <el-button v-else size="small" type="danger" @click="deleteColor(color)"><el-icon><Delete /></el-icon> 删除</el-button>
-                        </div>
-                    </div>
-                    
-                    <div style="display:flex; gap:12px; padding:8px; align-items:stretch;">
-                        <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, color.image_path))">
-                            <template v-if="!color.image_path">未上传图片</template>
-                            <img v-else :src="$helpers.buildUploadURL(baseURL, color.image_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
-                        </div>
-                        
-                        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; position:relative;">
-                            
-                            <div class="meta-text" v-if="!color.formula">配方: (未指定配方)</div>
-                            <div class="meta-text" v-else>配方：
-                                <span class="usage-chips">
-                                    <span v-for="(seg,i) in formulaUtils.segments(color.formula)" :key="'ccf'+color.id+'-'+i" class="mf-chip">{{ seg }}</span>
-                                </span>
-                            </div>
-                            
-                            <!-- Color Information Row 1: RGB, CMYK, HEX -->
-                            <div class="meta-text color-info-row">
-                                <span class="color-value-group">
-                                    <span v-if="color.rgb_r != null || color.rgb_g != null || color.rgb_b != null" class="color-swatch-inline" :style="{background: 'rgb(' + (color.rgb_r||0) + ', ' + (color.rgb_g||0) + ', ' + (color.rgb_b||0) + ')'}"></span>
-                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
-                                    <span class="color-label-inline">RGB:</span>
-                                    <span v-if="color.rgb_r != null || color.rgb_g != null || color.rgb_b != null">
-                                        {{ color.rgb_r || 0 }}, {{ color.rgb_g || 0 }}, {{ color.rgb_b || 0 }}
-                                    </span>
-                                    <span v-else class="color-value-empty">未填写</span>
-                                </span>
-                                <span class="color-value-group">
-                                    <span v-if="color.cmyk_c != null || color.cmyk_m != null || color.cmyk_y != null || color.cmyk_k != null" class="color-swatch-inline" :style="{background: getCMYKColor(color.cmyk_c || 0, color.cmyk_m || 0, color.cmyk_y || 0, color.cmyk_k || 0)}"></span>
-                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
-                                    <span class="color-label-inline">CMYK:</span>
-                                    <span v-if="color.cmyk_c != null || color.cmyk_m != null || color.cmyk_y != null || color.cmyk_k != null">
-                                        {{ color.cmyk_c || 0 }}, {{ color.cmyk_m || 0 }}, {{ color.cmyk_y || 0 }}, {{ color.cmyk_k || 0 }}
-                                    </span>
-                                    <span v-else class="color-value-empty">未填写</span>
-                                </span>
-                                <span class="color-value-group">
-                                    <span v-if="color.hex_color" class="color-swatch-inline" :style="{background: color.hex_color}"></span>
-                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
-                                    <span class="color-label-inline">HEX:</span>
-                                    <span v-if="color.hex_color">
-                                        {{ color.hex_color }}
-                                    </span>
-                                    <span v-else class="color-value-empty">未填写</span>
-                                </span>
-                            </div>
-                            
-                            <!-- Color Information Row 2: Pantone (U aligned with CMYK) -->
-                            <div class="meta-text color-info-row pantone-row">
-                                <span class="color-value-group pantone-c-group">
-                                    <span v-if="color.pantone_coated" class="color-swatch-inline" :style="getPantoneSwatchStyle(color.pantone_coated)"></span>
-                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
-                                    <span class="color-label-inline">Pantone C:</span>
-                                    <span v-if="color.pantone_coated">{{ color.pantone_coated }}</span>
-                                    <span v-else class="color-value-empty">未填写</span>
-                                </span>
-                                <span class="color-value-group pantone-u-group">
-                                    <span v-if="color.pantone_uncoated" class="color-swatch-inline" :style="getPantoneSwatchStyle(color.pantone_uncoated)"></span>
-                                    <span v-else class="color-swatch-inline" style="background: #f5f5f5; border: 1px dashed #ccc;"></span>
-                                    <span class="color-label-inline">Pantone U:</span>
-                                    <span v-if="color.pantone_uncoated">{{ color.pantone_uncoated }}</span>
-                                    <span v-else class="color-value-empty">未填写</span>
-                                </span>
-                                <span class="pantone-spacer"></span> <!-- Spacer for third column -->
-                            </div>
-                            
-                            <div class="meta-text">适用层：
-                                <template v-if="usageGroups(color).length">
-                                    <span class="usage-chips">
-                                        <span v-for="g in usageGroups(color)" :key="'ug'+color.id+g.display" class="mf-chip usage-chip" style="cursor:pointer;" @click="$root && $root.focusArtworkScheme && $root.focusArtworkScheme(g)">{{ g.display }}</span>
-                                    </span>
-                                </template>
-                                <span v-else>(未使用)</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                </div><!-- End of color-cards-grid -->
-                
-                <!-- Pagination Controls -->
-                <div v-if="filteredColors.length > 0" class="pagination-container">
-                    <div class="pagination-info">
-                        显示 {{ startItem }}-{{ endItem }} 共 {{ filteredColors.length }} 项
-                    </div>
-                    
-                    <div class="pagination-controls">
-                        <el-button 
-                            size="small"
-                            :disabled="currentPage === 1"
-                            @click="goToPage(1)">
-                            <el-icon><DArrowLeft /></el-icon>
-                            <span>首页</span>
-                        </el-button>
-                        
-                        <el-button 
-                            size="small"
-                            :disabled="currentPage === 1"
-                            @click="goToPage(currentPage - 1)">
-                            <el-icon><ArrowLeft /></el-icon>
-                            <span>上一页</span>
-                        </el-button>
-                        
-                        <span class="page-numbers">
-                            <button 
-                                v-for="page in visiblePages"
-                                :key="page"
-                                :class="{ active: page === currentPage, ellipsis: page === '...' }"
-                                :disabled="page === '...'"
-                                @click="goToPage(page)">
-                                {{ page }}
-                            </button>
-                        </span>
-                        
-                        <el-button 
-                            size="small"
-                            :disabled="currentPage === totalPages"
-                            @click="goToPage(currentPage + 1)">
-                            <span>下一页</span>
-                            <el-icon><ArrowRight /></el-icon>
-                        </el-button>
-                        
-                        <el-button 
-                            size="small"
-                            :disabled="currentPage === totalPages"
-                            @click="goToPage(totalPages)">
-                            <span>末页</span>
-                            <el-icon><DArrowRight /></el-icon>
-                        </el-button>
-                    </div>
-                    
-                    <div class="items-per-page">
-                        <span>每页显示：</span>
-                        <el-select v-model="itemsPerPage" @change="onItemsPerPageChange" size="small">
-                            <el-option v-if="isDevelopmentMode" :value="2" label="2 项" />
-                            <el-option :value="12" label="12 项" />
-                            <el-option :value="24" label="24 项" />
-                            <el-option :value="48" label="48 项" />
-                            <el-option :value="0" label="全部" />
-                        </el-select>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Category Manager Dialog -->
-            <category-manager
-                :visible="showCategoryManager"
-                @update:visible="showCategoryManager = $event"
-                :categories="categories"
-                category-type="colors"
-                @updated="handleCategoriesUpdated"
-            />
-            
-            <!-- Add/Edit Dialog -->
-            <el-dialog 
-                v-model="showAddDialog" 
-                class="scheme-dialog"
-                :title="editingColor ? '修改自配色' : '添加自配色'"
-                width="600px"
-                :close-on-click-modal="false"
-                :close-on-press-escape="false"
-                @open="onOpenColorDialog"
-                @close="resetForm"
-            >
-                <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" @keydown.enter.stop.prevent="saveColor">
-                    <el-form-item label="颜色分类" prop="category_id">
-                        <el-select v-model="form.category_id" placeholder="选择分类" @change="onCategoryChange">
-                            <el-option v-for="cat in categoriesWithOther" :key="cat.id || 'other'" :label="cat.name" :value="cat.id || 'other'" />
-                        </el-select>
-                    </el-form-item>
-                    
-                    <el-form-item label="颜色编号" prop="color_code">
-                        <div class="dup-inline-row">
-                            <el-input v-model="form.color_code" placeholder="如：BU001" @input="onColorCodeInput" />
-                            <span v-if="colorCodeDuplicate" class="dup-msg">该编号已存在</span>
-                        </div>
-                    </el-form-item>
-                    
-                    <el-form-item label="配方">
-                        <formula-editor 
-                            v-if="showAddDialog"
-                            v-model="form.formula"
-                            :mont-marte-colors="montMarteColors"
-                        />
-                    </el-form-item>
-                    
-                    <el-form-item label="颜色样本">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="scheme-thumbnail" 
-                                 :class="{ 'no-image': !form.imagePreview }" 
-                                 style="width: 80px; height: 80px; flex-shrink: 0;"
-                                 @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)">
-                                <template v-if="!form.imagePreview">未上传图片</template>
-                                <img v-else :src="form.imagePreview" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
-                            </div>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <el-upload
-                                    :auto-upload="false"
-                                    :show-file-list="false"
-                                    :on-change="handleImageChange"
-                                    accept="image/*"
-                                >
-                                    <el-button size="small" type="primary">
-                                        <el-icon><Upload /></el-icon>
-                                        {{ form.imagePreview ? '更换图片' : '上传图片' }}
-                                    </el-button>
-                                </el-upload>
-                                
-                                <el-button 
-                                    v-if="form.imagePreview"
-                                    size="small"
-                                    @click="clearImage"
-                                >
-                                    <el-icon><Delete /></el-icon>
-                                    清除图片
-                                </el-button>
-                            </div>
-                        </div>
-                    </el-form-item>
-                    
-                    <!-- Color Information Section -->
-                    <el-form-item label="颜色信息" class="color-info-header">
-                        <div class="color-action-buttons">
-                            <el-button 
-                                size="small" 
-                                type="primary" 
-                                @click="extractColorFromImage"
-                                :disabled="!hasImageAvailable">
-                                <el-icon><Camera /></el-icon>
-                                计算基础色值
-                            </el-button>
-                            <el-button 
-                                size="small" 
-                                @click="findPantoneMatch"
-                                :disabled="!(form.rgb_r != null && form.rgb_g != null && form.rgb_b != null)">
-                                <el-icon><Search /></el-icon>
-                                匹配潘通色号
-                            </el-button>
-                            <el-button 
-                                size="small" 
-                                type="warning"
-                                @click="clearColorValues">
-                                <el-icon><Delete /></el-icon>
-                                清除色值
-                            </el-button>
-                        </div>
-                    </el-form-item>
-                    
-                    <!-- RGB Input -->
-                    <el-form-item label="RGB:">
-                        <div class="color-input-row">
-                            <div class="color-swatch-wrapper">
-                                <div class="color-swatch" :style="rgbSwatchStyle"></div>
-                                <span v-if="!hasRGBValue" class="swatch-empty-text">未</span>
-                            </div>
-                            <el-input v-model.number="form.rgb_r" placeholder="R" class="color-input-small" :min="0" :max="255" />
-                            <el-input v-model.number="form.rgb_g" placeholder="G" class="color-input-small" :min="0" :max="255" />
-                            <el-input v-model.number="form.rgb_b" placeholder="B" class="color-input-small" :min="0" :max="255" />
-                        </div>
-                    </el-form-item>
-                    
-                    <!-- CMYK Input -->
-                    <el-form-item label="CMYK:">
-                        <div class="color-input-row">
-                            <div class="color-swatch-wrapper">
-                                <div class="color-swatch" :style="cmykSwatchStyle"></div>
-                                <span v-if="!hasCMYKValue" class="swatch-empty-text">未</span>
-                            </div>
-                            <el-input v-model.number="form.cmyk_c" placeholder="C" class="color-input-small" :min="0" :max="100" />
-                            <el-input v-model.number="form.cmyk_m" placeholder="M" class="color-input-small" :min="0" :max="100" />
-                            <el-input v-model.number="form.cmyk_y" placeholder="Y" class="color-input-small" :min="0" :max="100" />
-                            <el-input v-model.number="form.cmyk_k" placeholder="K" class="color-input-small" :min="0" :max="100" />
-                        </div>
-                    </el-form-item>
-                    
-                    <!-- HEX Input -->
-                    <el-form-item label="HEX:">
-                        <div class="color-input-row">
-                            <div class="color-swatch-wrapper">
-                                <div class="color-swatch" :style="hexSwatchStyle"></div>
-                                <span v-if="!hasHEXValue" class="swatch-empty-text">未</span>
-                            </div>
-                            <el-input v-model="form.hex_color" placeholder="#000000" class="color-input-hex" />
-                        </div>
-                    </el-form-item>
-                    
-                    <!-- Pantone Coated -->
-                    <el-form-item label="Pantone C:">
-                        <div class="color-input-row">
-                            <div class="color-swatch-wrapper">
-                                <div class="color-swatch" :style="pantoneCoatedSwatchStyle"></div>
-                                <span v-if="!hasPantoneCoatedValue" class="swatch-empty-text">未</span>
-                            </div>
-                            <el-input v-model="form.pantone_coated" placeholder="如: 185 C" class="color-input-pantone" />
-                        </div>
-                    </el-form-item>
-                    
-                    <!-- Pantone Uncoated -->
-                    <el-form-item label="Pantone U:">
-                        <div class="color-input-row">
-                            <div class="color-swatch-wrapper">
-                                <div class="color-swatch" :style="pantoneUncoatedSwatchStyle"></div>
-                                <span v-if="!hasPantoneUncoatedValue" class="swatch-empty-text">未</span>
-                            </div>
-                            <el-input v-model="form.pantone_uncoated" placeholder="如: 185 U" class="color-input-pantone" />
-                        </div>
-                    </el-form-item>
-                </el-form>
-                
-                <template #footer>
-                    <el-button @click="attemptCloseAddDialog">取消</el-button>
-                    <el-button type="primary" @click="saveColor" :disabled="colorCodeDuplicate || saving">
-                        <el-icon v-if="saving" class="is-loading"><Loading /></el-icon>
-                        {{ saving ? '保存中...' : '保存' }}
-                    </el-button>
-                </template>
-            </el-dialog>
-            
-            <!-- Duplicate Check Dialog -->
-            <el-dialog
-                v-model="showDuplicateDialog"
-                class="dup-groups-dialog"
-                title="重复配方处理(比例等价)"
-                width="760px"
-                :close-on-click-modal="false"
-                :close-on-press-escape="false"
-            >
-                <div v-if="!duplicateGroups.length" class="meta-text">暂无重复组</div>
-                <div v-else class="dup-groups-wrapper">
-                    <div class="dup-group-block" v-for="grp in duplicateGroups" :key="grp.signature">
-                        <div class="dup-group-head">
-                            <span class="dup-group-badge">{{ grp.records.length }} 条</span>
-                            <span class="dup-group-formula">
-                                <el-tag v-for="it in grp.parsed.items" :key="it.name+'-'+it.unit" size="small" disable-transitions>
-                                    {{ it.name }} {{ it.ratio }}
-                                </el-tag>
-                            </span>
-                        </div>
-                        <div class="dup-records">
-                            <div class="dup-record-row" v-for="rec in grp.records" :key="rec.id" :class="{ 'is-referenced': isColorReferenced(rec) }">
-                                <label class="keep-radio">
-                                    <input type="radio" :name="'keep-'+grp.signature" :value="rec.id" v-model="duplicateSelections[grp.signature]" />
-                                    <span>保留</span>
-                                </label>
-                                <span class="code" @click="focusCustomColor(rec.color_code)">{{ rec.color_code }}</span>
-                                <span class="meta" v-if="rec.updated_at">{{ $helpers.formatDate(rec.updated_at) }}</span>
-                                <span class="ref-flag" v-if="isColorReferenced(rec)">被引用</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <template #footer>
-                    <el-button @click="keepAllDuplicates" :disabled="deletionPending">全部保留</el-button>
-                    <el-button type="primary" :disabled="!canDeleteAny || deletionPending" @click="performDuplicateDeletion">保留所选并删除其它</el-button>
-                    <el-tooltip content="更新引用到保留记录后删除其它（包括已被引用的记录）" placement="top">
-                        <span>
-                            <el-button type="danger" :disabled="!canForceMerge || deletionPending || mergingPending" :loading="mergingPending" @click="confirmForceMerge">强制合并（更新引用）</el-button>
-                        </span>
-                    </el-tooltip>
-                </template>
-            </el-dialog>
-            
-            <!-- Color Palette Dialog removed - now using standalone Color Dictionary page -->
-        </div>
-    `,
-    
-    inject: ['globalData'],
-    
-    data() {
-        // Initial items per page - will be updated from app config in mounted
-        
-        return {
-            loading: false,
-            activeCategory: 'all',
-            showAddDialog: false,
-            showCategoryManager: false,
-            editingColor: null,
-            saving: false,
-            _colorItemRefs: new Map(),
-            
-            // Pagination
-            currentPage: 1,
-            itemsPerPage: 12,  // Default, will be updated from app config
-            highlightCode: null,
-            refreshKey: 0,
-            extracting: false,
-            
-            // Card selection
-            selectedColorId: null,
-            
-            // Form data with color fields
-            form: {
-                category_id: '',
-                color_code: '',
-                formula: '',
-                imageFile: null,
-                imagePreview: null,
-                // Color fields
-                rgb_r: null,
-                rgb_g: null,
-                rgb_b: null,
-                cmyk_c: null,
-                cmyk_m: null,
-                cmyk_y: null,
-                cmyk_k: null,
-                hex_color: null,
-                pantone_coated: null,
-                pantone_uncoated: null
-            },
-            
-            rules: {
-                category_id: [{ required: true, message: '请选择分类', trigger: 'change' }],
-                color_code: [
-                    { required: true, message: '请输入颜色编号', trigger: 'blur' }
-                ]
-            },
-            
-            // Flag to disable auto-sync after first manual change
-            autoSyncDisabled: false,
-            
-            _originalColorFormSnapshot: null,
-            _escHandler: null,
-            
-            // Duplicate detection
-            showDuplicateDialog: false,
-            duplicateGroups: [],
-            duplicateSelections: {},
-            deletionPending: false,
-            mergingPending: false,
-            
-            // Conflict resolution
-            showConflictDialog: false,
-            conflictData: null,
-            pendingFormData: null,
-            
-            // Color palette
-        };
-    },
-    
-    computed: {
-        formulaUtils() {
-            return window.formulaUtils || { segments: (f) => f ? f.split(/\s+/) : [] };
-        },
+    setup(props) {
+        const globalData = inject('globalData');
+        const instance = getCurrentInstance();
 
-        isDevelopmentMode() {
-            return this.globalData &&
-                   this.globalData.appConfig &&
-                   this.globalData.appConfig.value &&
-                   this.globalData.appConfig.value.mode === 'test';
-        },
-        
-        baseURL() {
-            return this.globalData.baseURL;
-        },
-        
-        categories() {
-            return this.globalData.categories.value || [];
-        },
-        
-        customColors() {
-            return this.globalData.customColors.value || [];
-        },
-        
-        montMarteColors() {
-            return this.globalData.montMarteColors.value || [];
-        },
-        
-        filteredColors() {
-            let list;
-            if (this.activeCategory === 'all') {
-                list = this.customColors.slice();
-            } else if (this.activeCategory === 'other') {
-                list = this.customColors.filter(color => {
-                    const prefix = color.color_code.substring(0, 2).toUpperCase();
-                    const matchedCategory = this.categories.find(cat => cat.code === prefix);
-                    return !matchedCategory;
-                });
-            } else {
-                list = this.customColors.filter(c => c.category_id === parseInt(this.activeCategory));
+        const store = window.createCustomColorsStore({
+            globalData,
+            getSortMode: () => props.sortMode,
+            getSearchQuery: () => {
+                const root = instance?.proxy?.$root;
+                return (root && root.globalSearchQuery) || '';
+            },
+            getActiveTab: () => {
+                const root = instance?.proxy?.$root;
+                return root ? root.activeTab : 'custom-colors';
             }
-            
-            // Search filter
-            const q = (this.$root && this.$root.globalSearchQuery || '').trim().toLowerCase();
-            if (q && this.$root.activeTab === 'custom-colors') {
-                list = list.filter(c => ((c.name||'').toLowerCase().includes(q)) || ((c.color_code||'').toLowerCase().includes(q)));
-            }
-            
-            // Sort
-            if (this.sortMode === 'name') {
-                list.sort((a,b) => (a.color_code||'').localeCompare(b.color_code||''));
-            } else {
-                list.sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
-            }
-            
-            return list;
-        },
-        
-        // Pagination computed properties
-        totalPages() {
-            if (this.itemsPerPage === 0) return 1;  // Show all
-            return Math.ceil(this.filteredColors.length / this.itemsPerPage);
-        },
-        
-        paginatedColors() {
-            if (this.itemsPerPage === 0) {
-                return this.filteredColors;  // Show all
-            }
-            
-            const start = (this.currentPage - 1) * this.itemsPerPage;
-            const end = start + this.itemsPerPage;
-            return this.filteredColors.slice(start, end);
-        },
-        
-        startItem() {
-            if (this.filteredColors.length === 0) return 0;
-            if (this.itemsPerPage === 0) return 1;
-            return (this.currentPage - 1) * this.itemsPerPage + 1;
-        },
-        
-        endItem() {
-            if (this.itemsPerPage === 0) return this.filteredColors.length;
-            return Math.min(
-                this.currentPage * this.itemsPerPage,
-                this.filteredColors.length
-            );
-        },
-        
-        visiblePages() {
-            const pages = [];
-            const maxVisible = 7;
-            
-            if (this.totalPages <= maxVisible) {
-                for (let i = 1; i <= this.totalPages; i++) {
-                    pages.push(i);
-                }
-            } else {
-                if (this.currentPage <= 4) {
-                    for (let i = 1; i <= 5; i++) pages.push(i);
-                    pages.push('...');
-                    pages.push(this.totalPages);
-                } else if (this.currentPage >= this.totalPages - 3) {
-                    pages.push(1);
-                    pages.push('...');
-                    for (let i = this.totalPages - 4; i <= this.totalPages; i++) {
-                        pages.push(i);
-                    }
-                } else {
-                    pages.push(1);
-                    pages.push('...');
-                    for (let i = this.currentPage - 1; i <= this.currentPage + 1; i++) {
-                        pages.push(i);
-                    }
-                    pages.push('...');
-                    pages.push(this.totalPages);
-                }
-            }
-            
-            return pages;
-        },
-        
-        orderedCategoriesWithOther() {
-            const raw = [...(this.categories||[])];
-            // Sort by display_order to match backend ordering
-            raw.sort((a,b)=> (a.display_order || 999) - (b.display_order || 999));
+        });
+
+        provide('customColorsStore', store);
+
+        const loading = ref(false);
+        const showCategoryManager = ref(false);
+        const showAddDialog = ref(false);
+        const editingColor = ref(null);
+        const saving = ref(false);
+        const form = reactive(createDefaultForm());
+        const rules = {
+            category_id: [{ required: true, message: '请选择分类', trigger: 'change' }],
+            color_code: [{ required: true, message: '请输入颜色编号', trigger: 'blur' }]
+        };
+        const autoSyncDisabled = ref(false);
+        const originalFormSnapshot = ref(null);
+        const escHandler = ref(null);
+        const formRef = ref(null);
+        const pendingFormData = ref(null);
+        const conflictData = ref(null);
+        const showConflictDialog = ref(false);
+
+        const colorValueHelpers = window.createColorValueHelpers(form);
+        const hasImageAvailable = computed(() =>
+            colorValueHelpers.hasImageAvailable.value || !!(editingColor.value && editingColor.value.image_path)
+        );
+        const dialogColorHelpers = {
+            ...colorValueHelpers,
+            hasImageAvailable
+        };
+
+        const orderedCategories = computed(() => {
+            const raw = [...(store.categories.value || [])];
+            raw.sort((a, b) => (a.display_order || 999) - (b.display_order || 999));
             return raw;
-        },
-        
-        categoriesWithOther() {
-            return this.orderedCategoriesWithOther.map(c=>c);
-        },
-        
-        // Computed properties for duplicate checking
-        canDeleteAny() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            for(const g of this.duplicateGroups){
-                const keepId = this.duplicateSelections[g.signature];
-                if(!keepId) continue;
-                if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
+        });
+
+        const orderedCategoriesWithOther = computed(() => {
+            const raw = orderedCategories.value.slice();
+            const hasOther = raw.some(cat => String(cat.id || '').toLowerCase() === 'other');
+            if (!hasOther) {
+                raw.push({ id: 'other', name: '其他', code: null });
             }
-            return false;
-        },
-        
-        canForceMerge() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
-        },
-        
-        esCategoryId() {
-            const es = this.categories.find(c=>c.code==='ES');
-            return es ? es.id : null;
-        },
-        
-        
-        colorCodeDuplicate() {
-            const val = (this.form.color_code || '').trim();
+            return raw;
+        });
+
+        const dialogCategories = computed(() => orderedCategoriesWithOther.value);
+        const baseURL = computed(() => store.baseURL.value);
+        const montMarteColors = computed(() => globalData.montMarteColors?.value || []);
+
+        const colorCodeDuplicate = computed(() => {
+            const val = (form.color_code || '').trim();
             if (!val) return false;
-            return this.customColors.some(c => c.color_code === val && c.id !== (this.editingColor?.id || null));
-        },
-        
-        // Image availability check
-        hasImageAvailable() {
-            return !!(this.form.imageFile || (this.editingColor && this.editingColor.image_path) || this.form.imagePreview);
-        },
-        
-        // Color value checks
-        hasRGBValue() {
-            return this.form.rgb_r != null && this.form.rgb_g != null && this.form.rgb_b != null;
-        },
-        
-        hasCMYKValue() {
-            return this.form.cmyk_c != null || this.form.cmyk_m != null || this.form.cmyk_y != null || this.form.cmyk_k != null;
-        },
-        
-        hasHEXValue() {
-            return !!this.form.hex_color;
-        },
-        
-        hasPantoneCoatedValue() {
-            return !!this.form.pantone_coated;
-        },
-        
-        hasPantoneUncoatedValue() {
-            return !!this.form.pantone_uncoated;
-        },
-        
-        // Color swatch styles
-        rgbSwatchStyle() {
-            if (this.hasRGBValue) {
-                return {
-                    backgroundColor: `rgb(${this.form.rgb_r}, ${this.form.rgb_g}, ${this.form.rgb_b})`,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
+            const editingId = editingColor.value ? editingColor.value.id : null;
+            return (store.customColors.value || []).some(color => color.color_code === val && color.id !== editingId);
+        });
+
+        const esCategoryId = computed(() => {
+            const es = (store.categories.value || []).find(cat => cat.code === 'ES');
+            return es ? es.id : null;
+        });
+
+        function resetForm() {
+            revokePreview(form.imagePreview);
+            Object.assign(form, createDefaultForm());
+            if (formRef.value) {
+                formRef.value.resetFields();
             }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        cmykSwatchStyle() {
-            if (this.hasCMYKValue && window.ColorConverter) {
-                const rgb = window.ColorConverter.cmykToRgb(
-                    this.form.cmyk_c || 0,
-                    this.form.cmyk_m || 0,
-                    this.form.cmyk_y || 0,
-                    this.form.cmyk_k || 0
-                );
-                return {
-                    backgroundColor: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        hexSwatchStyle() {
-            if (this.hasHEXValue) {
-                return {
-                    backgroundColor: this.form.hex_color,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        pantoneCoatedSwatchStyle() {
-            if (this.hasPantoneCoatedValue && window.PantoneHelper) {
-                const color = window.PantoneHelper.getColorByName(this.form.pantone_coated);
-                if (color) {
-                    return {
-                        backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                        border: '1px solid rgba(0, 0, 0, 0.15)'
-                    };
-                }
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        pantoneUncoatedSwatchStyle() {
-            if (this.hasPantoneUncoatedValue && window.PantoneHelper) {
-                const color = window.PantoneHelper.getColorByName(this.form.pantone_uncoated);
-                if (color) {
-                    return {
-                        backgroundColor: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                        border: '1px solid rgba(0, 0, 0, 0.15)'
-                    };
-                }
-            }
-            return {
-                backgroundColor: '#f5f5f5',
-                border: '1px dashed #ccc'
-            };
-        },
-        
-        canDeleteAny() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            for(const g of this.duplicateGroups){
-                const keepId = this.duplicateSelections[g.signature];
-                if(!keepId) continue;
-                if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
-            }
-            return false;
-        },
-        
-        canForceMerge() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
+            editingColor.value = null;
+            autoSyncDisabled.value = false;
+            originalFormSnapshot.value = null;
+            unbindEsc();
         }
-    },
-    
-    methods: {
-        // Category management
-        async handleCategoriesUpdated() {
-            // Reload categories and colors after changes
-            await this.globalData.loadCategories();
-            await this.globalData.loadCustomColors();
-            this.$message.success('分类已更新');
-        },
-        
-        // Pagination methods
-        goToPage(page) {
-            if (page === '...') return;
-            if (page < 1 || page > this.totalPages) return;
-            
-            this.currentPage = page;
-            
-            // Scroll to top of content area
-            this.$nextTick(() => {
-                const container = this.$el.querySelector('.color-cards-grid');
-                if (container) {
-                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        function handleCategoriesUpdated() {
+            globalData.loadCategories();
+            globalData.loadCustomColors();
+            useMessage().success('分类已更新');
+        }
+
+        function openAddDialog() {
+            editingColor.value = null;
+            autoSyncDisabled.value = false;
+            if (store.pagination.activeCategory !== 'all') {
+                const categoryId = store.pagination.activeCategory === 'other'
+                    ? 'other'
+                    : parseInt(store.pagination.activeCategory, 10);
+                form.category_id = categoryId;
+                if (categoryId === esCategoryId.value) {
+                    form.color_code = '';
+                } else if (categoryId !== 'other') {
+                    generateColorCode(categoryId);
+                } else {
+                    form.color_code = '';
                 }
-            });
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-colors-page', page);
-            } catch(e) {}
-        },
-        
-        onItemsPerPageChange() {
-            // Reset to first page when changing items per page
-            this.currentPage = 1;
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-colors-items-per-page', this.itemsPerPage);
-            } catch(e) {}
-        },
-        
-        restorePaginationState() {
-            try {
-                const savedPage = localStorage.getItem('sw-colors-page');
-                const savedItems = localStorage.getItem('sw-colors-items-per-page');
-                
-                if (savedItems) {
-                    this.itemsPerPage = parseInt(savedItems);
-                }
-                
-                if (savedPage) {
-                    const page = parseInt(savedPage);
-                    if (page <= this.totalPages) {
-                        this.currentPage = page;
-                    }
-                }
-            } catch(e) {}
-        },
-        
-        // Update pagination based on app config
-        updatePaginationFromConfig() {
-            if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
-                const config = this.globalData.appConfig.value;
-                
-                // Get saved items per page preference
-                let savedItems = null;
-                try {
-                    const saved = localStorage.getItem('sw-colors-items-per-page');
-                    if (saved) savedItems = parseInt(saved);
-                } catch(e) {}
-                
-                // Use ConfigHelper to determine items per page
-                this.itemsPerPage = window.ConfigHelper.getItemsPerPage(
-                    config, 
-                    'custom-colors', 
-                    savedItems
-                );
-            }
-        },
-        
-        // Card selection methods
-        toggleColorSelection(colorId) {
-            // Prevent propagation to avoid conflicts with other handlers
-            event.stopPropagation();
-            
-            // Toggle selection
-            if (this.selectedColorId === colorId) {
-                this.selectedColorId = null;
             } else {
-                this.selectedColorId = colorId;
+                form.category_id = '';
+                form.color_code = '';
             }
-        },
-        
-        clearSelection() {
-            this.selectedColorId = null;
-        },
-        
-        handleGlobalClick(event) {
-            // Clear selection if clicking outside the cards
-            if (!event.target.closest('.artwork-bar')) {
-                this.clearSelection();
-            }
-        },
-        
-        handleEscKey(event) {
-            // Only clear selection if ESC is pressed and no input is focused
-            if (event.key === 'Escape') {
-                // Check if any input, textarea, or select is focused
-                const activeElement = document.activeElement;
-                const isInputFocused = activeElement && (
-                    activeElement.tagName === 'INPUT' ||
-                    activeElement.tagName === 'TEXTAREA' ||
-                    activeElement.tagName === 'SELECT' ||
-                    activeElement.classList.contains('el-input__inner')
-                );
-                
-                // Clear selection only if no input is focused
-                if (!isInputFocused && this.selectedColorId !== null) {
-                    this.clearSelection();
+            form.formula = '';
+            form.imageFile = null;
+            revokePreview(form.imagePreview);
+            form.imagePreview = null;
+            form.rgb_r = null;
+            form.rgb_g = null;
+            form.rgb_b = null;
+            form.cmyk_c = null;
+            form.cmyk_m = null;
+            form.cmyk_y = null;
+            form.cmyk_k = null;
+            form.hex_color = null;
+            form.pantone_coated = null;
+            form.pantone_uncoated = null;
+            showAddDialog.value = true;
+        }
+
+        function editColor(color) {
+            editingColor.value = color;
+            autoSyncDisabled.value = true;
+            form.category_id = color.category_id;
+            form.color_code = color.color_code;
+            form.formula = color.formula;
+            form.imageFile = null;
+            revokePreview(form.imagePreview);
+            form.imagePreview = color.image_path ? instance.proxy.$helpers.buildUploadURL(baseURL.value, color.image_path) : null;
+            form.rgb_r = color.rgb_r;
+            form.rgb_g = color.rgb_g;
+            form.rgb_b = color.rgb_b;
+            form.cmyk_c = color.cmyk_c;
+            form.cmyk_m = color.cmyk_m;
+            form.cmyk_y = color.cmyk_y;
+            form.cmyk_k = color.cmyk_k;
+            form.hex_color = color.hex_color;
+            form.pantone_coated = color.pantone_coated;
+            form.pantone_uncoated = color.pantone_uncoated;
+            showAddDialog.value = true;
+        }
+
+        function normalizedColorForm() {
+            return {
+                category_id: form.category_id || '',
+                color_code: form.color_code || '',
+                formula: form.formula || '',
+                imagePreview: form.imagePreview ? '1' : ''
+            };
+        }
+
+        function bindEsc() {
+            unbindEsc();
+            escHandler.value = (event) => {
+                if (event.key === 'Escape') {
                     event.preventDefault();
+                    attemptCloseAddDialog();
+                }
+            };
+            document.addEventListener('keydown', escHandler.value);
+        }
+
+        function unbindEsc() {
+            if (escHandler.value) {
+                document.removeEventListener('keydown', escHandler.value);
+                escHandler.value = null;
+            }
+        }
+
+        function onDialogOpen(formInstance) {
+            formRef.value = formInstance;
+            initForm();
+            originalFormSnapshot.value = JSON.stringify(normalizedColorForm());
+            bindEsc();
+        }
+
+        function onDialogClose() {
+            resetForm();
+        }
+
+        function isFormDirty() {
+            if (!originalFormSnapshot.value) return false;
+            return JSON.stringify(normalizedColorForm()) !== originalFormSnapshot.value;
+        }
+
+        async function attemptCloseAddDialog() {
+            if (isFormDirty()) {
+                try {
+                    await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存的修改', {
+                        confirmButtonText: '丢弃修改',
+                        cancelButtonText: '继续编辑',
+                        type: 'warning'
+                    });
+                } catch (e) {
+                    return;
                 }
             }
-        },
-        
-        // Helper to get message service
-        getMsg() {
-            return ElementPlus.ElMessage;
-        },
-        
-        setColorItemRef(color) {
-            return (el) => {
-                if (el) this._colorItemRefs.set(color.color_code, el); 
-                else this._colorItemRefs.delete(color.color_code);
-            };
-        },
-        
-        usageGroups(color) {
-            if (!color) return [];
-            const code = color.color_code;
-            if (!code) return [];
-            const artworks = (this.globalData.artworks?.value) || [];
-            const groups = [];
-            artworks.forEach(a => {
-                (a.schemes || []).forEach(s => {
-                    const layers = [];
-                    (s.layers || []).forEach(l => {
-                        if (l.colorCode === code) {
-                            const num = Number(l.layer);
-                            if (Number.isFinite(num)) layers.push(num);
-                        }
-                    });
-                    if (layers.length) {
-                        layers.sort((x,y)=>x-y);
-                        const schemeName = s.name || s.scheme_name || '-';
-                        const header = `${this.$helpers.formatArtworkTitle(a)}-[${schemeName}]`;
-                        const suffix = layers.map(n=>`(${n})`).join('');
-                        groups.push({
-                            display: header + suffix,
-                            artworkId: a.id,
-                            schemeId: s.id,
-                            layers: layers.slice(),
-                            colorCode: code,
-                            schemeName
-                        });
-                    }
-                });
-            });
-            return groups;
-        },
-        
-        categoryName(color) {
-            const cat = this.categories.find(c => c.id === color.category_id);
-            if (cat) return cat.name;
-            const prefix = (color.color_code || '').substring(0,2).toUpperCase();
-            const byPrefix = this.categories.find(c => c.code === prefix);
-            return byPrefix ? byPrefix.name : '其他';
-        },
-        
-        handleImageChange(file) {
-            this.form.imageFile = file.raw;
-            if (this.form.imagePreview) {
-                URL.revokeObjectURL(this.form.imagePreview);
+            showAddDialog.value = false;
+        }
+
+        function onColorCodeInput(value) {
+            if (editingColor.value) return;
+            if (autoSyncDisabled.value) return;
+            const esId = esCategoryId.value;
+            if (esId && form.category_id === esId) return;
+            if (!value) return;
+            const msg = useMessage();
+            const firstChar = value.charAt(0);
+            const esTriggers = ['酒', '沙', '红', '黑', '蓝'];
+            if (esId && esTriggers.includes(firstChar)) {
+                if (form.category_id !== esId) {
+                    form.category_id = esId;
+                    msg.info('已自动识别为 色精');
+                    autoSyncDisabled.value = true;
+                }
+                return;
             }
-            this.form.imagePreview = URL.createObjectURL(file.raw);
-        },
-        
-        clearImage() {
-            this.form.imageFile = null;
-            if (this.form.imagePreview) {
-                URL.revokeObjectURL(this.form.imagePreview);
-                this.form.imagePreview = null;
+            if (value.length >= 2) {
+                const prefix = value.substring(0, 2).toUpperCase();
+                const matchedCategory = (store.categories.value || []).find(cat => cat.code === prefix);
+                if (matchedCategory && form.category_id !== matchedCategory.id) {
+                    form.category_id = matchedCategory.id;
+                    msg.info(`已自动切换到 ${matchedCategory.name}`);
+                    autoSyncDisabled.value = true;
+                }
             }
-        },
-        
-        async fetchImageAsFile(imageUrl) {
+        }
+
+        function initForm() {
+            const esId = esCategoryId.value;
+            if (!editingColor.value && form.category_id && form.category_id !== esId && form.category_id !== 'other') {
+                generateColorCode(form.category_id);
+            }
+        }
+
+        function onCategoryChange(value) {
+            if (autoSyncDisabled.value) return;
+            const esId = esCategoryId.value;
+            if (!editingColor.value && value && value !== esId && value !== 'other') {
+                generateColorCode(value);
+                autoSyncDisabled.value = true;
+            } else if (value === esId) {
+                form.color_code = '';
+                autoSyncDisabled.value = true;
+            }
+        }
+
+        function generateColorCode(categoryId) {
+            const esId = esCategoryId.value;
+            if (!categoryId || categoryId === esId || categoryId === 'other') return;
+            const code = instance.proxy.$helpers.generateColorCode(store.categories.value, store.customColors.value || [], categoryId);
+            if (code) {
+                form.color_code = code;
+            }
+        }
+
+        function handleImageChange(file) {
+            form.imageFile = file.raw;
+            revokePreview(form.imagePreview);
+            form.imagePreview = URL.createObjectURL(file.raw);
+        }
+
+        function clearImage() {
+            form.imageFile = null;
+            revokePreview(form.imagePreview);
+            form.imagePreview = null;
+        }
+
+        async function fetchImageAsFile(imageUrl) {
             try {
                 const response = await fetch(imageUrl);
                 const blob = await response.blob();
                 return new File([blob], 'image.jpg', { type: blob.type });
             } catch (error) {
-                // Error fetching image - silently handle
                 return null;
             }
-        },
-        
-        async extractColorFromImage() {
-            const msg = this.getMsg();
+        }
+
+        async function extractColorFromImage() {
+            const msg = useMessage();
             let imageToProcess = null;
-            
-            if (this.form.imageFile) {
-                imageToProcess = this.form.imageFile;
-            } else if (this.editingColor && this.editingColor.image_path) {
-                const imageUrl = this.$helpers.buildUploadURL(this.baseURL, this.editingColor.image_path);
-                imageToProcess = await this.fetchImageAsFile(imageUrl);
-            } else if (this.form.imagePreview) {
-                imageToProcess = await this.fetchImageAsFile(this.form.imagePreview);
+            if (form.imageFile) {
+                imageToProcess = form.imageFile;
+            } else if (editingColor.value && editingColor.value.image_path) {
+                const imageUrl = instance.proxy.$helpers.buildUploadURL(baseURL.value, editingColor.value.image_path);
+                imageToProcess = await fetchImageAsFile(imageUrl);
+            } else if (form.imagePreview) {
+                imageToProcess = await fetchImageAsFile(form.imagePreview);
             }
-            
             if (!imageToProcess) {
                 msg.warning('没有可用的图片');
                 return;
             }
-            
             try {
                 const color = await ColorConverter.extractColorFromImage(imageToProcess);
-                
-                // ColorConverter returns {r, g, b} directly
-                this.form.rgb_r = color.r;
-                this.form.rgb_g = color.g;
-                this.form.rgb_b = color.b;
-                
+                form.rgb_r = color.r;
+                form.rgb_g = color.g;
+                form.rgb_b = color.b;
                 const cmyk = ColorConverter.rgbToCmyk(color.r, color.g, color.b);
-                this.form.cmyk_c = cmyk.c;
-                this.form.cmyk_m = cmyk.m;
-                this.form.cmyk_y = cmyk.y;
-                this.form.cmyk_k = cmyk.k;
-                
-                this.form.hex_color = ColorConverter.rgbToHex(color.r, color.g, color.b);
-                
+                form.cmyk_c = cmyk.c;
+                form.cmyk_m = cmyk.m;
+                form.cmyk_y = cmyk.y;
+                form.cmyk_k = cmyk.k;
+                form.hex_color = ColorConverter.rgbToHex(color.r, color.g, color.b);
                 msg.success('已提取颜色值');
             } catch (error) {
-                // Error extracting color - silently handle
                 msg.error('提取颜色失败');
             }
-        },
-        
-        clearColorValues() {
-            const msg = this.getMsg();
-            this.form.rgb_r = null;
-            this.form.rgb_g = null;
-            this.form.rgb_b = null;
-            this.form.cmyk_c = null;
-            this.form.cmyk_m = null;
-            this.form.cmyk_y = null;
-            this.form.cmyk_k = null;
-            this.form.hex_color = null;
-            this.form.pantone_coated = null;
-            this.form.pantone_uncoated = null;
+        }
+
+        function clearColorValues() {
+            const msg = useMessage();
+            form.rgb_r = null;
+            form.rgb_g = null;
+            form.rgb_b = null;
+            form.cmyk_c = null;
+            form.cmyk_m = null;
+            form.cmyk_y = null;
+            form.cmyk_k = null;
+            form.hex_color = null;
+            form.pantone_coated = null;
+            form.pantone_uncoated = null;
             msg.success('色值已清除');
-        },
-        
-        async findPantoneMatch() {
-            const msg = this.getMsg();
-            if (this.form.rgb_r === null || this.form.rgb_g === null || this.form.rgb_b === null) {
+        }
+
+        async function findPantoneMatch() {
+            const msg = useMessage();
+            if (form.rgb_r === null || form.rgb_g === null || form.rgb_b === null) {
                 msg.warning('请先输入或提取 RGB 颜色值');
                 return;
             }
-            
             try {
                 const rgb = {
-                    r: parseInt(this.form.rgb_r),
-                    g: parseInt(this.form.rgb_g),
-                    b: parseInt(this.form.rgb_b)
+                    r: parseInt(form.rgb_r, 10),
+                    g: parseInt(form.rgb_g, 10),
+                    b: parseInt(form.rgb_b, 10)
                 };
-                
                 if (!ColorConverter.isValidRGB(rgb.r, rgb.g, rgb.b)) {
                     msg.error('RGB 值无效，请检查输入');
                     return;
                 }
-                
-                let coatedMatch, uncoatedMatch;
-                
+                let coatedMatch;
+                let uncoatedMatch;
                 if (window.PantoneHelper) {
                     coatedMatch = window.PantoneHelper.findClosest(rgb, 'coated');
                     uncoatedMatch = window.PantoneHelper.findClosest(rgb, 'uncoated');
@@ -1070,314 +408,79 @@ const CustomColorsComponent = {
                     coatedMatch = pantoneResult.coated;
                     uncoatedMatch = pantoneResult.uncoated;
                 }
-                
                 if (coatedMatch) {
-                    // Format: Remove "PANTONE" prefix and keep only number + C
                     const cleanName = coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C');
-                    this.form.pantone_coated = cleanName;
+                    form.pantone_coated = cleanName;
                 }
                 if (uncoatedMatch) {
-                    // Format: Remove "PANTONE" prefix and keep only number + U
                     const cleanName = uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U');
-                    this.form.pantone_uncoated = cleanName;
+                    form.pantone_uncoated = cleanName;
                 }
-                
                 const coatedDisplay = coatedMatch ? coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C') : '无';
                 const uncoatedDisplay = uncoatedMatch ? uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U') : '无';
                 msg.success(`已匹配潘通色号: ${coatedDisplay} / ${uncoatedDisplay}`);
             } catch (error) {
-                // Error finding Pantone match - silently handle
                 msg.error('匹配潘通色号失败');
             }
-        },
-        
-        openAddDialog() {
-            this.editingColor = null;
-            
-            // Reset auto-sync flag for new dialog
-            this.autoSyncDisabled = false;
-            
-            if (this.activeCategory !== 'all') {
-                const categoryId = parseInt(this.activeCategory);
-                this.form.category_id = categoryId;
-                // For ES category, don't auto-generate code
-                if (categoryId === this.esCategoryId) {
-                    this.form.color_code = '';
-                } else {
-                    this.generateColorCode(categoryId);
-                }
-            } else {
-                this.form.category_id = '';
-                this.form.color_code = '';
-            }
-            
-            this.form.formula = '';
-            this.form.imageFile = null;
-            this.form.imagePreview = null;
-            
-            // Clear color fields
-            this.form.rgb_r = null;
-            this.form.rgb_g = null;
-            this.form.rgb_b = null;
-            this.form.cmyk_c = null;
-            this.form.cmyk_m = null;
-            this.form.cmyk_y = null;
-            this.form.cmyk_k = null;
-            this.form.hex_color = null;
-            this.form.pantone_coated = null;
-            this.form.pantone_uncoated = null;
-            
-            this.showAddDialog = true;
-        },
-        
-        editColor(color) {
-            this.editingColor = color;
-            
-            // Disable auto-sync for editing (user has control)
-            this.autoSyncDisabled = true;
-            
-            const prefix = color.color_code.substring(0, 2).toUpperCase();
-            const matchedCategory = this.categories.find(cat => cat.code === prefix);
-            
-            this.form = {
-                category_id: color.category_id, // Use the actual category_id from database
-                color_code: color.color_code,
-                formula: color.formula,
-                imageFile: null,
-                imagePreview: color.image_path ? this.$helpers.buildUploadURL(this.baseURL, color.image_path) : null,
-                // Load color values
-                rgb_r: color.rgb_r,
-                rgb_g: color.rgb_g,
-                rgb_b: color.rgb_b,
-                cmyk_c: color.cmyk_c,
-                cmyk_m: color.cmyk_m,
-                cmyk_y: color.cmyk_y,
-                cmyk_k: color.cmyk_k,
-                hex_color: color.hex_color,
-                pantone_coated: color.pantone_coated,
-                pantone_uncoated: color.pantone_uncoated
-            };
-            
-            this.showAddDialog = true;
-        },
-        
-        async saveColor() {
-            const msg = this.getMsg();
-            const valid = await this.$refs.formRef.validate().catch(() => false);
+        }
+
+        async function saveColor() {
+            if (!formRef.value) return;
+            const valid = await formRef.value.validate().catch(() => false);
             if (!valid) return;
-            if (this.colorCodeDuplicate) return;
-            
+            if (colorCodeDuplicate.value) return;
+            const msg = useMessage();
             try {
-                this.saving = true;
+                saving.value = true;
                 const formData = new FormData();
-                
-                // Use the actual category_id from form
-                let actualCategoryId = this.form.category_id;
-                
+                const actualCategoryId = form.category_id === 'other' ? '' : form.category_id;
                 formData.append('category_id', actualCategoryId);
-                formData.append('color_code', this.form.color_code);
-                formData.append('formula', this.form.formula);
-                
-                if (this.form.imageFile) {
-                    formData.append('image', this.form.imageFile);
-                }
-                
-                // Add color fields to FormData
-                if (this.form.rgb_r != null) formData.append('rgb_r', this.form.rgb_r);
-                if (this.form.rgb_g != null) formData.append('rgb_g', this.form.rgb_g);
-                if (this.form.rgb_b != null) formData.append('rgb_b', this.form.rgb_b);
-                if (this.form.cmyk_c != null) formData.append('cmyk_c', this.form.cmyk_c);
-                if (this.form.cmyk_m != null) formData.append('cmyk_m', this.form.cmyk_m);
-                if (this.form.cmyk_y != null) formData.append('cmyk_y', this.form.cmyk_y);
-                if (this.form.cmyk_k != null) formData.append('cmyk_k', this.form.cmyk_k);
-                if (this.form.hex_color) formData.append('hex_color', this.form.hex_color);
-                if (this.form.pantone_coated) formData.append('pantone_coated', this.form.pantone_coated);
-                if (this.form.pantone_uncoated) formData.append('pantone_uncoated', this.form.pantone_uncoated);
-                
-                if (this.editingColor) {
-                    if (!this.form.imageFile && this.editingColor.image_path) {
-                        formData.append('existingImagePath', this.editingColor.image_path);
+                formData.append('color_code', form.color_code);
+                formData.append('formula', form.formula || '');
+                if (form.imageFile) formData.append('image', form.imageFile);
+                if (form.rgb_r != null) formData.append('rgb_r', form.rgb_r);
+                if (form.rgb_g != null) formData.append('rgb_g', form.rgb_g);
+                if (form.rgb_b != null) formData.append('rgb_b', form.rgb_b);
+                if (form.cmyk_c != null) formData.append('cmyk_c', form.cmyk_c);
+                if (form.cmyk_m != null) formData.append('cmyk_m', form.cmyk_m);
+                if (form.cmyk_y != null) formData.append('cmyk_y', form.cmyk_y);
+                if (form.cmyk_k != null) formData.append('cmyk_k', form.cmyk_k);
+                if (form.hex_color) formData.append('hex_color', form.hex_color);
+                if (form.pantone_coated) formData.append('pantone_coated', form.pantone_coated);
+                if (form.pantone_uncoated) formData.append('pantone_uncoated', form.pantone_uncoated);
+                if (editingColor.value) {
+                    if (!form.imageFile && editingColor.value.image_path) {
+                        formData.append('existingImagePath', editingColor.value.image_path);
                     }
-                    if (this.editingColor.version) {
-                        formData.append('version', this.editingColor.version);
+                    if (editingColor.value.version) {
+                        formData.append('version', editingColor.value.version);
                     }
-                    await api.customColors.update(this.editingColor.id, formData);
+                    await api.customColors.update(editingColor.value.id, formData);
                     msg.success('修改成功');
                 } else {
                     await api.customColors.create(formData);
                     msg.success('添加成功');
                 }
-                
-                this.showAddDialog = false;
-                this.resetForm();
-                await this.globalData.loadCustomColors();
-                await this.globalData.loadArtworks();
-                this.refreshKey++;
-                
+                showAddDialog.value = false;
+                resetForm();
+                await globalData.loadCustomColors();
+                await globalData.loadArtworks();
+                store.refreshKey.value = (store.refreshKey.value || 0) + 1;
             } catch (error) {
                 if (error.response?.status === 409 && error.response?.data?.code === 'VERSION_CONFLICT') {
-                    this.handleVersionConflict(error.response.data, formData);
+                    conflictData.value = error.response.data;
+                    pendingFormData.value = formData;
+                    showConflictDialog.value = true;
                 } else {
                     msg.error(error.response?.data?.error || '保存失败');
                 }
             } finally {
-                this.saving = false;
+                saving.value = false;
             }
-        },
-        
-        resetForm() {
-            this.editingColor = null;
-            this.form = {
-                category_id: '',
-                color_code: '',
-                formula: '',
-                imageFile: null,
-                imagePreview: null,
-                rgb_r: null,
-                rgb_g: null,
-                rgb_b: null,
-                cmyk_c: null,
-                cmyk_m: null,
-                cmyk_y: null,
-                cmyk_k: null,
-                hex_color: null,
-                pantone_coated: null,
-                pantone_uncoated: null
-            };
-            if (this.$refs.formRef) {
-                this.$refs.formRef.resetFields();
-            }
-            this._originalColorFormSnapshot = null;
-            this._unbindEsc();
-        },
-        
-        // Other methods remain the same...
-        onOpenColorDialog() {
-            this.initForm();
-            this._originalColorFormSnapshot = JSON.stringify(this._normalizedColorForm());
-            this._bindEscForDialog();
-        },
-        
-        _normalizedColorForm() {
-            return {
-                category_id: this.form.category_id || '',
-                color_code: this.form.color_code || '',
-                formula: this.form.formula || '',
-                imagePreview: this.form.imagePreview ? '1' : ''
-            };
-        },
-        
-        _isColorFormDirty() {
-            if (!this._originalColorFormSnapshot) return false;
-            return JSON.stringify(this._normalizedColorForm()) !== this._originalColorFormSnapshot;
-        },
-        
-        async attemptCloseAddDialog() {
-            if (this._isColorFormDirty()) {
-                try {
-                    await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存的修改', {
-                        confirmButtonText: '丢弃修改',
-                        cancelButtonText: '继续编辑',
-                        type: 'warning'
-                    });
-                } catch(e) { return; }
-            }
-            this.showAddDialog = false;
-        },
-        
-        _bindEscForDialog() {
-            this._unbindEsc();
-            this._escHandler = (e) => {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    this.attemptCloseAddDialog();
-                }
-            };
-            document.addEventListener('keydown', this._escHandler);
-        },
-        
-        _unbindEsc() {
-            if (this._escHandler) {
-                document.removeEventListener('keydown', this._escHandler);
-                this._escHandler = null;
-            }
-        },
-        
-        onColorCodeInput(value) {
-            const msg = this.getMsg();
-            if (this.editingColor) return;
-            
-            // Skip auto-sync if disabled (user has made manual changes)
-            if (this.autoSyncDisabled) return;
-            
-            const esId = this.esCategoryId;
-            if (esId && this.form.category_id === esId) return;
-            if (!value) return;
-            
-            const firstChar = value.charAt(0);
-            const esTriggers = ['酒','沙','红','黑','蓝']; // Triggers for ES (色精)
-            if (esId && esTriggers.includes(firstChar)) {
-                if (this.form.category_id !== esId) {
-                    this.form.category_id = esId;
-                    msg.info('已自动识别为 色精');
-                    // Disable further auto-sync after first automation
-                    this.autoSyncDisabled = true;
-                }
-                return;
-            }
-            
-            if (value.length >= 2) {
-                const prefix = value.substring(0, 2).toUpperCase();
-                const matchedCategory = this.categories.find(cat => cat.code === prefix);
-                
-                if (matchedCategory) {
-                    if (this.form.category_id !== matchedCategory.id) {
-                        this.form.category_id = matchedCategory.id;
-                        msg.info(`已自动切换到 ${matchedCategory.name}`);
-                        // Disable further auto-sync after first automation
-                        this.autoSyncDisabled = true;
-                    }
-                }
-                // No auto-switch for unrecognized prefixes
-            }
-        },
-        
-        initForm() {
-            const esId = this.esCategoryId;
-            if (!this.editingColor && this.form.category_id && this.form.category_id !== esId) {
-                this.generateColorCode(this.form.category_id);
-            }
-        },
-        
-        onCategoryChange(categoryId) {
-            // Skip auto-sync if disabled (user has made manual changes)
-            if (this.autoSyncDisabled) return;
-            
-            const esId = this.esCategoryId;
-            
-            if (!this.editingColor && categoryId && categoryId !== esId) {
-                this.generateColorCode(categoryId);
-                // Disable further auto-sync after first automation
-                this.autoSyncDisabled = true;
-            } else if (categoryId === esId) {
-                this.form.color_code = '';
-                // Also disable auto-sync when user selects 色精
-                this.autoSyncDisabled = true;
-            }
-        },
-        
-        generateColorCode(categoryId) {
-            const esId = this.esCategoryId;
-            if (!categoryId || categoryId === esId) return;
-            const code = helpers.generateColorCode(this.categories, this.customColors, categoryId);
-            if (code) {
-                this.form.color_code = code;
-            }
-        },
-        
-        async deleteColor(color) {
-            const msg = this.getMsg();
-            const ok = await this.$helpers.doubleDangerConfirm({
+        }
+
+        async function deleteColor(color) {
+            const ok = await instance.proxy.$helpers.doubleDangerConfirm({
                 firstMessage: `确定删除 ${color.color_code} 吗？`,
                 firstConfirmText: '确定',
                 firstCancelText: '取消',
@@ -1386,14 +489,13 @@ const CustomColorsComponent = {
                 secondCancelText: '取消',
                 confirmType: 'danger'
             });
-            
             if (!ok) return;
-            
+            const msg = useMessage();
             try {
                 await api.customColors.delete(color.id);
                 msg.success('删除成功');
-                await this.globalData.loadCustomColors();
-                await this.globalData.loadArtworks();
+                await globalData.loadCustomColors();
+                await globalData.loadArtworks();
             } catch (error) {
                 const raw = error?.response?.data?.error || '';
                 if (raw.includes('配色方案使用')) {
@@ -1402,429 +504,154 @@ const CustomColorsComponent = {
                     msg.error(raw || '删除失败');
                 }
             }
-        },
-        
-        isColorReferenced(color) {
-            if (!color) return false;
-            const code = color.color_code;
-            const artworks = this.globalData.artworks?.value || [];
-            for (const artwork of artworks) {
-                for (const s of (artwork.schemes||[])) {
-                    for (const l of (s.layers||[])) {
-                        if (l.colorCode === code) return true;
-                    }
-                }
-            }
-            return false;
-        },
-        
-        viewHistory(color) {
-            const msg = this.getMsg();
-            msg.info('历史功能待实现');
-        },
-        
-        focusCustomColor(code) {
-            if (this.activeCategory !== 'all') this.activeCategory = 'all';
-            
-            // Find the color in filtered colors (which determines pagination)
-            const targetIndex = this.filteredColors.findIndex(c => c.color_code === code);
-            
-            if (targetIndex === -1) return;
-            
-            // Calculate which page the color is on based on filtered list
-            const targetPage = this.itemsPerPage === 0 ? 1 : Math.floor(targetIndex / this.itemsPerPage) + 1;
-            
-            // Navigate to the correct page if needed
-            if (targetPage !== this.currentPage) {
-                this.currentPage = targetPage;
-            }
-            
-            this.$nextTick(() => {
-                const el = this._colorItemRefs.get(code);
-                if (el && el.scrollIntoView) {
-                    // Instant scroll to element (no animation for efficiency)
-                    const rect = el.getBoundingClientRect();
-                    const current = window.pageYOffset || document.documentElement.scrollTop;
-                    const targetScroll = current + rect.top - 100; // 100px offset from top
-                    window.scrollTo({
-                        top: Math.max(0, targetScroll),
-                        behavior: 'instant' // No animation for factory efficiency
-                    });
-                    this.highlightCode = code;
-                    setTimeout(()=>{ this.highlightCode = null; }, 2000);
-                }
+        }
+
+        function viewHistory() {
+            useMessage().info('历史功能待实现');
+        }
+
+        function runDuplicateCheck() {
+            store.runDuplicateCheck();
+        }
+
+        function showColorPalette() {
+            useMessage().info('请使用“自配色字典”页面查看色卡');
+        }
+
+        onMounted(() => {
+            store.updatePaginationFromConfig();
+            store.restorePaginationState();
+            document.addEventListener('click', store.handleGlobalClick);
+            document.addEventListener('keydown', store.handleEscKey);
+        });
+
+        onBeforeUnmount(() => {
+            document.removeEventListener('click', store.handleGlobalClick);
+            document.removeEventListener('keydown', store.handleEscKey);
+        });
+
+        watch(() => store.pagination.itemsPerPage, () => {
+            // reset snapshot when per-page changes (prevents stale diff)
+            nextTick(() => {
+                originalFormSnapshot.value = JSON.stringify(normalizedColorForm());
             });
-        },
-        
-        handleVersionConflict(conflictData, formData) {
-            this.conflictData = conflictData;
-            this.pendingFormData = formData;
-            this.showConflictDialog = true;
-        },
-        
-        // Helper method to get CMYK color as RGB string
-        getCMYKColor(c, m, y, k) {
-            if (window.ColorConverter) {
-                const rgb = window.ColorConverter.cmykToRgb(c, m, y, k);
-                return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-            }
-            return '#f5f5f5';
-        },
-        
-        // Helper method to get Pantone swatch style
-        getPantoneSwatchStyle(pantoneCode) {
-            if (!pantoneCode || !window.PantoneHelper) {
-                return { background: '#f5f5f5', border: '1px dashed #ccc' };
-            }
-            
-            const color = window.PantoneHelper.getColorByName(pantoneCode);
-            if (color && color.rgb) {
-                return { 
-                    background: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
-            }
-            return { background: '#f5f5f5', border: '1px dashed #ccc' };
-        },
-        
-        // Duplicate check method
-        runDuplicateCheck(focusSignature=null, preferredKeepId=null) {
-            const msg = this.getMsg();
-            if(!window.duplicateDetector) { 
-                msg.info('查重模块未加载'); 
-                return; 
-            }
-            const list = this.globalData.customColors?.value || [];
-            const map = window.duplicateDetector.groupByRatioSignature(list);
-            const sigs = Object.keys(map);
-            if(!sigs.length) { 
-                msg.success('未发现重复配方'); 
-                this.showDuplicateDialog = false; 
-                return; 
-            }
-            
-            // Construct group data
-            this.duplicateGroups = sigs.map(sig => {
-                const recs = map[sig].slice().sort((a,b) => new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
-                const parsed = window.duplicateDetector.parseRatio(sig);
-                return { signature: sig, records: recs, parsed };
-            });
-            
-            this.duplicateSelections = {};
-            // Default selection
-            this.duplicateGroups.forEach(g => {
-                if (focusSignature && g.signature === focusSignature && preferredKeepId) {
-                    this.duplicateSelections[g.signature] = preferredKeepId;
-                } else if(g.records.length) {
-                    this.duplicateSelections[g.signature] = g.records[0].id;
-                }
-            });
-            
-            this.showDuplicateDialog = true;
-            msg.warning(`发现 ${sigs.length} 组重复配方`);
-        },
-        
-        // Show color palette method - now uses the new advanced dialog
-        // Color palette functionality moved to standalone Color Dictionary page
-        // Users should navigate to 自配色字典 from the main navigation
-        
-        // Keep all duplicates
-        keepAllDuplicates(){
-            this.showDuplicateDialog=false;
-            ElementPlus.ElMessage.info('已保留全部重复记录');
-        },
-        
-        // Perform duplicate deletion - original from v0.5.6
-        async performDuplicateDeletion(){
-            if(this.deletionPending) return;
-            const toDelete=[];
-            this.duplicateGroups.forEach(g=>{
-                const keepId = this.duplicateSelections[g.signature];
-                if(!keepId) return;
-                g.records.forEach(r=>{ if(r.id!==keepId && !this.isColorReferenced(r)) toDelete.push(r); });
-            });
-            if(!toDelete.length){ ElementPlus.ElMessage.info('没有可删除的记录'); return; }
-            try { await ElementPlus.ElMessageBox.confirm(`将删除 ${toDelete.length} 条记录，确认继续？`, '删除确认', { type:'warning', confirmButtonText:'确认删除', cancelButtonText:'取消' }); } catch(e){ return; }
-            this.deletionPending=true;
-            let ok=0, fail=0;
-            for(const rec of toDelete){
-                try { await api.customColors.delete(rec.id); ok++; }
-                catch(e){ fail++; break; }
-            }
-            this.deletionPending=false;
-            await this.globalData.loadCustomColors();
-            await this.globalData.loadArtworks();
-            ElementPlus.ElMessage.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
-            // 重新检测
-            this.runDuplicateCheck();
-        },
-        
-        // Confirm force merge - original from v0.5.6
-        async confirmForceMerge(){
-            if(this.mergingPending || this.deletionPending) return;
-            const candidates = this.duplicateGroups.filter(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
-            if(!candidates.length){ ElementPlus.ElMessage.info('请选择要保留的记录'); return; }
-            const g = candidates[0];
-            const keepId = this.duplicateSelections[g.signature];
-            if(!keepId){ ElementPlus.ElMessage.info('请先选择要保留的记录'); return; }
-            const removeIds = g.records.filter(r=> r.id!==keepId).map(r=> r.id);
-            if(!removeIds.length){ ElementPlus.ElMessage.info('该组没有其它记录'); return; }
-            let referenced=0; g.records.forEach(r=>{ if(r.id!==keepId && this.isColorReferenced(r)) referenced++; });
-            const msg = `将合并该组：保留 1 条，删除 ${removeIds.length} 条；其中 ${referenced} 条被引用，其引用将更新到保留记录。确认继续？`;
-            try { await ElementPlus.ElMessageBox.confirm(msg, '强制合并确认', { type:'warning', confirmButtonText:'执行合并', cancelButtonText:'取消' }); } catch(e){ return; }
-            this.executeForceMerge({ keepId, removeIds, signature: g.signature });
-        },
-        
-        // Execute force merge - original from v0.5.6
-        async executeForceMerge(payload){
-            if(this.mergingPending) return;
-            this.mergingPending = true;
-            try {
-                const resp = await api.customColors.forceMerge(payload);
-                const updated = resp?.updatedLayers ?? resp?.data?.updatedLayers ?? 0;
-                const deleted = resp?.deleted ?? resp?.data?.deleted ?? payload.removeIds.length;
-                ElementPlus.ElMessage.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
-                await this.globalData.loadCustomColors();
-                await this.globalData.loadArtworks();
-                this.runDuplicateCheck();
-                if(!this.duplicateGroups.length){ this.showDuplicateDialog=false; }
-            } catch(err){
-                const raw = err?.response?.data?.error || '';
-                if(raw){ ElementPlus.ElMessage.error('合并失败: '+raw); }
-                else if(err?.request){ ElementPlus.ElMessage.error('网络错误，合并失败'); }
-                else { ElementPlus.ElMessage.error('合并失败'); }
-            } finally {
-                this.mergingPending = false;
-            }
-        },
-        
-        // Print color palette
-        printColorPalette() {
-            const msg = this.getMsg();
-            msg.info('正在准备打印，请稍候...');
-            
-            this.$nextTick(() => {
-                setTimeout(() => {
-                    this.createPrintWindow();
-                }, 300);
-            });
-        },
-        
-        // Create print window
-        createPrintWindow() {
-            const printContent = this.generatePrintHTML();
-            
-            const printWindow = window.open('', '_blank', 'width=800,height=600');
-            printWindow.document.write(printContent);
-            printWindow.document.close();
-            
-            printWindow.onload = () => {
-                setTimeout(() => {
-                    printWindow.print();
-                    printWindow.close();
-                }, 500);
-            };
-        },
-        
-        // Generate print HTML
-        generatePrintHTML() {
-            const colorCount = (this.globalData.customColors?.value || []).length;
-            const groupCount = this.paletteGroups.length;
-            const baseURL = this.baseURL || window.location.origin;
-            
-            let html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>自配色列表</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
-            background: white;
-        }
-        .print-header {
-            text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .print-title {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .print-stats {
-            font-size: 14px;
-            color: #666;
-        }
-        .print-main {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .print-group {
-            display: grid;
-            grid-template-columns: 30px 1fr;
-            gap: 12px;
-            margin: 0;
-        }
-        .print-group.group-spacing {
-            margin-top: 8px;
-        }
-        .print-group-label {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            font-size: 13px;
-            font-weight: 600;
-            color: #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8f9fa;
-            padding: 8px 4px;
-            border-radius: 4px;
-            min-height: 100px;
-        }
-        .print-colors {
-            display: grid;
-            grid-template-columns: repeat(10, 80px);
-            gap: 8px;
-            padding: 0;
-        }
-        .print-color-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-        .print-color-block {
-            width: 80px;
-            height: 80px;
-            border-radius: 6px;
-            border: 1px solid #e0e0e0;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f5f5f5;
-        }
-        .print-color-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .print-no-image {
-            color: #999;
-            font-size: 10px;
-            text-align: center;
-            padding: 4px;
-        }
-        .print-color-name {
-            font-size: 11px;
-            font-weight: 500;
-            text-align: center;
-            max-width: 80px;
-            word-wrap: break-word;
-        }
-        @media print {
-            body {
-                margin: 0;
-                padding: 10px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="print-header">
-        <div class="print-title">自配色列表</div>
-        <div class="print-stats">共${colorCount}个颜色，${groupCount}个分类</div>
-    </div>
-    <div class="print-main">`;
-    
-            this.paletteGroups.forEach((group, groupIndex) => {
-                html += `
-        <div class="print-group${groupIndex > 0 ? ' group-spacing' : ''}">
-            <div class="print-group-label">${group.categoryName}</div>
-            <div class="print-colors">`;
-                
-                group.colors.forEach(color => {
-                    const imageUrl = color.image_path ? `${baseURL}/uploads/${color.image_path}` : null;
-                    const imageHtml = imageUrl 
-                        ? `<img src="${imageUrl}" class="print-color-image" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'print-no-image\\'>图片加载失败</div>'" />`
-                        : `<div class="print-no-image">未上传<br/>图片</div>`;
-                    
-                    html += `
-                <div class="print-color-item">
-                    <div class="print-color-block">${imageHtml}</div>
-                    <div class="print-color-name">${color.color_code}</div>
-                </div>`;
-                });
-                
-                html += `
+        });
+
+        return {
+            store,
+            loading,
+            showCategoryManager,
+            showAddDialog,
+            editingColor,
+            saving,
+            form,
+            rules,
+            colorCodeDuplicate,
+            dialogCategories,
+            montMarteColors,
+            dialogColorHelpers,
+            orderedCategoriesWithOther,
+            esCategoryId,
+            baseURL,
+            handleCategoriesUpdated,
+            openAddDialog,
+            editColor,
+            saveColor,
+            deleteColor,
+            viewHistory,
+            attemptCloseAddDialog,
+            onColorCodeInput,
+            onCategoryChange,
+            handleImageChange,
+            clearImage,
+            extractColorFromImage,
+            clearColorValues,
+            findPantoneMatch,
+            runDuplicateCheck,
+            showColorPalette,
+            onDialogOpen,
+            onDialogClose,
+            conflictData,
+            pendingFormData,
+            showConflictDialog
+        };
+    },
+    template: `
+        <div class="custom-colors-page">
+            <div class="category-switch-group" role="tablist" aria-label="颜色分类筛选">
+                <button
+                    type="button"
+                    class="category-switch"
+                    :class="{active: store.pagination.activeCategory==='all'}"
+                    @click="store.pagination.activeCategory='all'"
+                    role="tab"
+                    :aria-selected="store.pagination.activeCategory==='all'">
+                    全部
+                </button>
+                <button
+                    v-for="cat in orderedCategoriesWithOther"
+                    :key="cat.id || 'other'"
+                    type="button"
+                    class="category-switch"
+                    :class="{active: store.pagination.activeCategory===String(cat.id || 'other')}"
+                    @click="store.pagination.activeCategory=String(cat.id || 'other')"
+                    role="tab"
+                    :aria-selected="store.pagination.activeCategory===String(cat.id || 'other')"
+                >{{ cat.name }}</button>
+                <button
+                    type="button"
+                    class="category-settings-btn"
+                    @click="showCategoryManager = true"
+                    title="管理分类"
+                >
+                    <el-icon><Setting /></el-icon>
+                </button>
             </div>
-        </div>`;
-            });
-            
-            html += `
-    </div>
-</body>
-</html>`;
-            return html;
-        }
-    },
-    
-    // Watch for category changes to reset pagination
-    watch: {
-        activeCategory() {
-            this.currentPage = 1;
-        },
-        
-        totalPages(newVal) {
-            // Adjust current page if it exceeds total pages
-            if (this.currentPage > newVal && newVal > 0) {
-                this.currentPage = newVal;
-            }
-        },
-        
-        // Watch for app config changes
-        'globalData.appConfig.value': {
-            handler(newConfig) {
-                if (newConfig) {
-                    this.updatePaginationFromConfig();
-                }
-            },
-            deep: true
-        },
-        
-        // Clear validation error when there's a duplicate
-        colorCodeDuplicate(val) {
-            if (val && this.$refs.formRef) {
-                this.$refs.formRef.clearValidate('color_code');
-            }
-        }
-    },
-    
-    // Restore pagination state on mount
-    mounted() {
-        // Update items per page based on app config
-        this.updatePaginationFromConfig();
-        
-        this.restorePaginationState();
-        
-        // Add global event listeners for selection
-        document.addEventListener('click', this.handleGlobalClick);
-        document.addEventListener('keydown', this.handleEscKey);
-    },
-    
-    beforeUnmount() {
-        // Clean up event listeners
-        document.removeEventListener('click', this.handleGlobalClick);
-        document.removeEventListener('keydown', this.handleEscKey);
-    }
+
+            <div v-if="loading" class="loading"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
+            <div v-else>
+                <color-card-grid
+                    @edit-color="editColor"
+                    @delete-color="deleteColor"
+                    @view-history="viewHistory"
+                />
+            </div>
+
+            <category-manager
+                :visible="showCategoryManager"
+                @update:visible="val => showCategoryManager = val"
+                :categories="store.categories.value"
+                category-type="colors"
+                @updated="handleCategoriesUpdated"
+            />
+
+            <color-details-dialog
+                :visible="showAddDialog"
+                @update:visible="val => showAddDialog = val"
+                :form="form"
+                :rules="rules"
+                :editing-color="editingColor"
+                :saving="saving"
+                :color-code-duplicate="colorCodeDuplicate"
+                :categories="dialogCategories"
+                :mont-marte-colors="montMarteColors"
+                :color-value-helpers="dialogColorHelpers"
+                @save="saveColor"
+                @attempt-close="attemptCloseAddDialog"
+                @dialog-open="onDialogOpen"
+                @dialog-close="onDialogClose"
+                @color-code-input="onColorCodeInput"
+                @category-change="onCategoryChange"
+                @image-change="handleImageChange"
+                @clear-image="clearImage"
+                @extract-color="extractColorFromImage"
+                @find-pantone="findPantoneMatch"
+                @clear-color-values="clearColorValues"
+            />
+
+            <duplicate-resolution-dialog />
+        </div>
+    `
 };
 
-// Expose to global scope
 window.CustomColorsComponent = CustomColorsComponent;
