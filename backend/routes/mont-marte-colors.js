@@ -12,20 +12,9 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../db/index');
 const { cascadeRenameInFormulas } = require('../services/formula');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-
-// Multer config (same as server.js)
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) { 
-    cb(null, path.join(__dirname, '..', 'uploads')); 
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage });
+const upload = require('../middleware/upload');
 
 // GET /api/mont-marte-colors
 router.get('/mont-marte-colors', (req, res) => {

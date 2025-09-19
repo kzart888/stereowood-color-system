@@ -11,19 +11,8 @@
 const express = require('express');
 const router = express.Router();
 const ColorService = require('../services/ColorService');
-const multer = require('multer');
 const path = require('path');
-
-// Multer config (same as server.js)
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) { 
-    cb(null, path.join(__dirname, '..', 'uploads')); 
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage });
+const upload = require('../middleware/upload');
 
 // GET /api/custom-colors
 router.get('/custom-colors', async (req, res) => {
