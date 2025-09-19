@@ -1,334 +1,386 @@
-// 主应用入口文件
-// 负责：1.创建Vue应用实例 2.注册组件 3.管理全局数据 4.初始化数据加载
-const { createApp } = Vue;
+import { useAppData } from './modules/app-data.js';
+import { useGlobalSearch } from './modules/global-search.js';
 
-const app = createApp({
-    data() {
-        let initTab = 'custom-colors';
+const {
+    createApp,
+    ref,
+    reactive,
+    computed,
+    watch,
+    onMounted,
+    onBeforeUnmount,
+    nextTick,
+    provide
+} = Vue;
+
+const ALLOWED_TABS = ['custom-colors', 'color-dictionary', 'artworks', 'mont-marte'];
+
+function getInitialTab() {
+    let initTab = 'custom-colors';
+    try {
+        const savedTab = localStorage.getItem('sw-active-tab');
+        if (savedTab && ALLOWED_TABS.includes(savedTab)) initTab = savedTab;
+    } catch (e) {
+        // ignore persistence failures
+    }
+    return initTab;
+}
+
+function setupActiveTabPersistence(activeTab) {
+    watch(activeTab, val => {
         try {
-            const savedTab = localStorage.getItem('sw-active-tab');
-            if (savedTab && ['custom-colors','color-dictionary','artworks','mont-marte'].includes(savedTab)) initTab = savedTab;
-        } catch(e) {}
-        return {
-            baseURL: window.location.origin,
-            loading: false,
-            activeTab: initTab,
-            artworksViewMode: 'byLayer',
-            customColorsSortMode: 'time',
-            artworksSortMode: 'time',
-            montMarteSortMode: 'time',
-            // System configuration from backend
-            appConfig: {
-                mode: 'production',
-                testModeItemsPerPage: 3,
-                features: {}
-            },
-            // 全局搜索
-            globalSearchQuery: '',
-            globalSearchResults: [],
-            showSearchDropdown: false,
-            _searchIndex: { customColors: [], artworks: [], schemes: [], rawMaterials: [] },
-            _indexReady: { customColors:false, artworks:false, rawMaterials:false },
-            _searchDebounceTimer: null,
-            // 数据
-            categories: [],
-            customColors: [],
-            artworks: [],
-            montMarteColors: [],
-            suppliers: [],
-            purchaseLinks: [],
-            // Global help state
-            showGlobalHelp: false,
-            helpContent: {
-                'custom-colors': `
-                    <h4>自配色管理</h4>
-                    <ul>
-                        <li>添加新的自配色配方</li>
-                        <li>编辑现有颜色信息</li>
-                        <li>查看颜色历史记录</li>
-                        <li>检测重复配方</li>
-                    </ul>
-                    <h4>快捷键</h4>
-                    <ul>
-                        <li><kbd>Ctrl</kbd>+<kbd>F</kbd> - 打开全局搜索</li>
-                        <li><kbd>ESC</kbd> - 清空搜索结果</li>
-                    </ul>
-                `,
-                'color-dictionary': `
-                    <h4>自配色字典</h4>
-                    <ul>
-                        <li>按类别浏览所有自配色</li>
-                        <li>快速查看颜色详情</li>
-                        <li>打印颜色列表</li>
-                    </ul>
-                    <h4>快捷键</h4>
-                    <ul>
-                        <li><kbd>1</kbd> - 切换到列表视图</li>
-                        <li><kbd>2</kbd> - 切换到色轮视图</li>
-                        <li><kbd>3</kbd> - 切换到统计视图</li>
-                        <li><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> - 键盘导航</li>
-                        <li><kbd>Enter</kbd> - 选中当前颜色</li>
-                        <li><kbd>Ctrl</kbd>+<kbd>P</kbd> - 打印</li>
-                    </ul>
-                `,
-                'artworks': `
-                    <h4>作品配色管理</h4>
-                    <ul>
-                        <li>创建和管理作品</li>
-                        <li>为作品添加配色方案</li>
-                        <li>管理层号到颜色的映射</li>
-                        <li>使用过滤器筛选作品</li>
-                    </ul>
-                    <h4>过滤器</h4>
-                    <ul>
-                        <li>尺寸筛选：巨尺寸/大尺寸/中尺寸/小尺寸</li>
-                        <li>形状筛选：正方形/长方形/圆形/不规则形</li>
-                    </ul>
-                `,
-                'mont-marte': `
-                    <h4>颜色原料管理</h4>
-                    <ul>
-                        <li>管理基础颜料信息</li>
-                        <li>添加供应商信息</li>
-                        <li>维护采购链接</li>
-                        <li>作为自配色的参考</li>
-                    </ul>
-                `
-            }
-        };
-    },
-    provide() {
-        return {
-            globalData: {
-                baseURL: this.baseURL,
-                appConfig: Vue.computed(()=>this.appConfig),
-                categories: Vue.computed(()=>this.categories),
-                customColors: Vue.computed(()=>this.customColors),
-                artworks: Vue.computed(()=>this.artworks),
-                montMarteColors: Vue.computed(()=>this.montMarteColors),
-                suppliers: Vue.computed(()=>this.suppliers),
-                purchaseLinks: Vue.computed(()=>this.purchaseLinks),
-                loadCategories: ()=>this.loadCategories(),
-                loadCustomColors: (bypassCache)=>this.loadCustomColors(bypassCache),
-                loadArtworks: ()=>this.loadArtworks(),
-                loadMontMarteColors: ()=>this.loadMontMarteColors(),
-                loadSuppliers: ()=>this.loadSuppliers(),
-                loadPurchaseLinks: ()=>this.loadPurchaseLinks()
-            }
-        };
-    },
-    mounted() {
-        this.initApp();
-        try { if (!localStorage.getItem('sw-active-tab')) localStorage.setItem('sw-active-tab', this.activeTab); } catch(e) {}
-        const restoreScroll = () => {
-            try {
-                const raw = localStorage.getItem('sw-scroll-map');
-                if (!raw) return;
-                const map = JSON.parse(raw);
-                const pos = map && typeof map[this.activeTab]==='number' ? map[this.activeTab] : 0;
-                if (pos>0) window.scrollTo(0,pos);
-            } catch(e) {}
-        };
-        setTimeout(restoreScroll, 80);
-        let _stTimer=null;
-        window.addEventListener('scroll', ()=>{
-            if (_stTimer) return;
-            _stTimer = setTimeout(()=>{
-                _stTimer=null;
-                try {
-                    const raw = localStorage.getItem('sw-scroll-map');
-                    const map = raw ? JSON.parse(raw) : {};
-                    map[this.activeTab] = window.scrollY||0;
-                    localStorage.setItem('sw-scroll-map', JSON.stringify(map));
-                } catch(e) {}
-            },200);
-        }, { passive:true });
-        this.$watch('activeTab', ()=>{
+            localStorage.setItem('sw-active-tab', val);
+        } catch (e) {
+            // ignore persistence failures
+        }
+    });
+}
+
+function setupScrollPersistence(activeTab, suppressNextRestore) {
+    const restoreScroll = () => {
+        try {
+            const raw = localStorage.getItem('sw-scroll-map');
+            if (!raw) return;
+            const map = JSON.parse(raw);
+            const pos = map && typeof map[activeTab.value] === 'number' ? map[activeTab.value] : 0;
+            if (pos > 0) window.scrollTo(0, pos);
+        } catch (e) {
+            // ignore scroll restoration failures
+        }
+    };
+
+    let scrollTimer = null;
+    const handleScroll = () => {
+        if (scrollTimer) return;
+        scrollTimer = setTimeout(() => {
+            scrollTimer = null;
             try {
                 const raw = localStorage.getItem('sw-scroll-map');
                 const map = raw ? JSON.parse(raw) : {};
-                map[this._lastTabForScroll || this.activeTab] = window.scrollY||0;
+                map[activeTab.value] = window.scrollY || 0;
                 localStorage.setItem('sw-scroll-map', JSON.stringify(map));
-            } catch(e) {}
-            this._lastTabForScroll = this.activeTab;
-            if (!this._suppressNextRestore) {
-                this.$nextTick(()=> setTimeout(restoreScroll,40));
-            } else {
-                this._suppressNextRestore = false;
+            } catch (e) {
+                // ignore persistence failures
             }
+        }, 200);
+    };
+
+    onMounted(() => {
+        setTimeout(restoreScroll, 80);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+    });
+
+    onBeforeUnmount(() => {
+        window.removeEventListener('scroll', handleScroll);
+    });
+
+    let lastTabForScroll = activeTab.value;
+    watch(activeTab, (newTab, oldTab) => {
+        try {
+            const raw = localStorage.getItem('sw-scroll-map');
+            const map = raw ? JSON.parse(raw) : {};
+            const key = lastTabForScroll || oldTab || newTab;
+            map[key] = window.scrollY || 0;
+            localStorage.setItem('sw-scroll-map', JSON.stringify(map));
+        } catch (e) {
+            // ignore persistence failures
+        }
+        lastTabForScroll = newTab;
+        if (!suppressNextRestore.value) {
+            nextTick(() => setTimeout(restoreScroll, 40));
+        } else {
+            suppressNextRestore.value = false;
+        }
+    });
+
+    return { restoreScroll };
+}
+
+const helpContent = reactive({
+    'custom-colors': `
+        <h4>自配色管理</h4>
+        <ul>
+            <li>添加新的自配色配方</li>
+            <li>编辑现有颜色信息</li>
+            <li>查看颜色历史记录</li>
+            <li>检测重复配方</li>
+        </ul>
+        <h4>快捷键</h4>
+        <ul>
+            <li><kbd>Ctrl</kbd>+<kbd>F</kbd> - 打开全局搜索</li>
+            <li><kbd>ESC</kbd> - 清空搜索结果</li>
+        </ul>
+    `,
+    'color-dictionary': `
+        <h4>自配色字典</h4>
+        <ul>
+            <li>按类别浏览所有自配色</li>
+            <li>快速查看颜色详情</li>
+            <li>打印颜色列表</li>
+        </ul>
+        <h4>快捷键</h4>
+        <ul>
+            <li><kbd>1</kbd> - 切换到列表视图</li>
+            <li><kbd>2</kbd> - 切换到色轮视图</li>
+            <li><kbd>3</kbd> - 切换到统计视图</li>
+            <li><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> - 键盘导航</li>
+            <li><kbd>Enter</kbd> - 选中当前颜色</li>
+            <li><kbd>Ctrl</kbd>+<kbd>P</kbd> - 打印</li>
+        </ul>
+    `,
+    'artworks': `
+        <h4>作品配色管理</h4>
+        <ul>
+            <li>创建和管理作品</li>
+            <li>为作品添加配色方案</li>
+            <li>管理层号到颜色的映射</li>
+            <li>使用过滤器筛选作品</li>
+        </ul>
+        <h4>过滤器</h4>
+        <ul>
+            <li>尺寸筛选：巨尺寸/大尺寸/中尺寸/小尺寸</li>
+            <li>形状筛选：正方形/长方形/圆形/不规则形</li>
+        </ul>
+    `,
+    'mont-marte': `
+        <h4>颜色原料管理</h4>
+        <ul>
+            <li>管理基础颜料信息</li>
+            <li>添加供应商信息</li>
+            <li>维护采购链接</li>
+            <li>作为自配色的参考</li>
+        </ul>
+    `
+});
+
+const app = createApp({
+    setup() {
+        const search = useGlobalSearch();
+        const data = useAppData({ registerDataset: search.registerDataset });
+
+        const baseURL = data.baseURL;
+        const loading = data.loading;
+        const activeTab = ref(getInitialTab());
+        const artworksViewMode = ref('byLayer');
+        const customColorsSortMode = ref('time');
+        const artworksSortMode = ref('time');
+        const montMarteSortMode = ref('time');
+        const showGlobalHelp = ref(false);
+
+        const customColorsRef = ref(null);
+        const artworksRef = ref(null);
+        const montMarteRef = ref(null);
+        const colorDictionaryRef = ref(null);
+
+        const suppressNextRestore = ref(false);
+
+        setupActiveTabPersistence(activeTab);
+        setupScrollPersistence(activeTab, suppressNextRestore);
+
+        provide('globalData', {
+            baseURL: baseURL.value,
+            appConfig: computed(() => data.appConfig),
+            categories: computed(() => data.categories.value),
+            customColors: computed(() => data.customColors.value),
+            artworks: computed(() => data.artworks.value),
+            montMarteColors: computed(() => data.montMarteColors.value),
+            suppliers: computed(() => data.suppliers.value),
+            purchaseLinks: computed(() => data.purchaseLinks.value),
+            loadCategories: () => data.loadCategories(),
+            loadCustomColors: bypassCache => data.loadCustomColors(bypassCache),
+            loadArtworks: () => data.loadArtworks(),
+            loadMontMarteColors: () => data.loadMontMarteColors(),
+            loadSuppliers: () => data.loadSuppliers(),
+            loadPurchaseLinks: () => data.loadPurchaseLinks()
         });
-    },
-    watch: {
-        activeTab(val){ try { localStorage.setItem('sw-active-tab', val); } catch(e) {} }
-    },
-    methods: {
-        async initApp() {
-            this.loading = true;
-            try {
-                // Load app configuration first (to determine test mode)
-                await this.loadAppConfig();
-                
-                await Promise.all([
-                    this.loadCategories(),
-                    this.loadCustomColors(),
-                    this.loadArtworks(),
-                    this.loadMontMarteColors(),
-                    this.loadSuppliers(),
-                    this.loadPurchaseLinks()
-                ]);
-                // 初次加载后构建自配色配方同步索引
-                this._buildColorFormulaIndex();
-            } catch(e) { } finally { this.loading = false; }
-        },
-        async loadAppConfig() {
-            try {
-                const response = await fetch(`${this.baseURL}/api/config`);
-                if (!response.ok) throw new Error('Failed to fetch config');
-                this.appConfig = await response.json();
-            } catch (error) {
-                console.warn('Failed to load app config, using defaults:', error);
+
+        const showHelp = () => {
+            showGlobalHelp.value = true;
+        };
+
+        const setArtworksViewMode = mode => {
+            if (mode !== artworksViewMode.value && (mode === 'byLayer' || mode === 'byColor')) {
+                artworksViewMode.value = mode;
+                const comp = artworksRef.value;
+                if (comp) comp.viewMode = mode;
             }
-        },
-        async loadCategories() {
-            try { 
-                const res = await api.categories.getAll(); 
-                this.categories = res.data;
-                // Broadcast category update for other components
-                window.dispatchEvent(new CustomEvent('categories-updated', { 
-                    detail: this.categories 
-                }));
-            } catch(e){ }
-        },
-        async loadCustomColors(bypassCache = false) {
+        };
+
+        const setSortMode = (section, mode) => {
+            if (!(mode === 'time' || mode === 'name')) return;
+            if (section === 'customColors') customColorsSortMode.value = mode;
+            else if (section === 'artworks') artworksSortMode.value = mode;
+            else if (section === 'montMarte') montMarteSortMode.value = mode;
+        };
+
+        const setActiveTabPersist = tab => {
+            if (!ALLOWED_TABS.includes(tab)) return;
+            activeTab.value = tab;
             try {
-                const res = await api.customColors.getAll({ bypassCache });
-                this.customColors = res.data;
-                this.registerDataset('customColors', this.customColors.map(c=>({ id:c.id, code:c.color_code||c.code||'', name:c.name||'' })));
-                // 若已存在旧索引，执行 diff 同步；否则首次建立
-                if (this._colorFormulaIndex) {
-                    this.syncFormulasIfChanged();
-                } else {
-                    this._buildColorFormulaIndex();
+                localStorage.setItem('sw-active-tab', tab);
+            } catch (e) {
+                // ignore persistence failures
+            }
+            window.scrollTo(0, 0);
+        };
+
+        const focusCustomColor = code => {
+            if (!code) return;
+            setActiveTabPersist('custom-colors');
+            suppressNextRestore.value = true;
+            const TRY_MAX = 20;
+            let tries = 0;
+            const attempt = () => {
+                const comp = customColorsRef.value;
+                if (comp && comp.focusCustomColor) {
+                    comp.focusCustomColor(String(code));
+                } else if (tries++ < TRY_MAX) {
+                    setTimeout(attempt, 120);
                 }
-                // Broadcast color update for other components
-                window.dispatchEvent(new CustomEvent('colors-updated', { 
-                    detail: this.customColors 
-                }));
-            } catch(e){ }
-        },
-        async loadArtworks() {
-            try { const res = await api.artworks.getAll(); this.artworks = res.data; const artworksIdx=[]; const schemesIdx=[]; this.artworks.forEach(a=>{ const name=a.name||a.title||''; const code=a.code||a.no||''; artworksIdx.push({id:a.id,name,code}); if(Array.isArray(a.schemes)) a.schemes.forEach(s=> schemesIdx.push({id:s.id, artworkId:a.id, artworkName:name, artworkCode:code, name:s.name||''})); }); this.registerDataset('artworks', artworksIdx); this.registerDataset('schemes', schemesIdx); } catch(e){ }
-        },
-        async loadMontMarteColors() { try { const res = await api.montMarteColors.getAll(); this.montMarteColors = res.data; this.registerDataset('rawMaterials', this.montMarteColors.map(m=>({id:m.id, name:m.name}))); } catch(e){ } },
-        async loadSuppliers() { try { const r = await axios.get(`${this.baseURL}/api/suppliers`); this.suppliers = r.data||[]; } catch(e){} },
-        async loadPurchaseLinks() { try { const r = await axios.get(`${this.baseURL}/api/purchase-links`); this.purchaseLinks = r.data||[]; } catch(e){} },
-        setArtworksViewMode(mode){ if(mode!==this.artworksViewMode && (mode==='byLayer'||mode==='byColor')) { this.artworksViewMode=mode; const comp=this.$refs.artworksRef; if(comp) comp.viewMode=mode; } },
-        setSortMode(section, mode){ if(!(mode==='time'||mode==='name')) return; if(section==='customColors') this.customColorsSortMode=mode; else if(section==='artworks') this.artworksSortMode=mode; else if(section==='montMarte') this.montMarteSortMode=mode; },
-        focusCustomColor(code){ 
-            if(!code) return; 
-            this.setActiveTabPersist('custom-colors'); 
-            this._suppressNextRestore=true; 
-            // Add retry mechanism similar to focusArtworkScheme to ensure component is mounted
-            const TRY_MAX=20; 
-            let tries=0; 
-            const attempt=()=>{ 
-                const comp=this.$refs.customColorsRef; 
-                if(comp&&comp.focusCustomColor){ 
-                    comp.focusCustomColor(String(code)); 
-                } else if(tries++<TRY_MAX) {
-                    setTimeout(attempt,120); 
-                }
-            }; 
-            // Add small initial delay to ensure tab switch completes
+            };
             setTimeout(() => {
-                this.$nextTick(attempt);
+                nextTick(attempt);
             }, 50);
-        },
-        focusArtworkScheme(p){ if(!p||!p.artworkId||!p.schemeId) return; this.setActiveTabPersist('artworks'); this._suppressNextRestore=true; const TRY_MAX=20; let tries=0; const attempt=()=>{ const comp=this.$refs.artworksRef; if(comp&&comp.focusSchemeUsage){ if(comp.hasScheme && !comp.hasScheme(p.schemeId)){ if(tries++<TRY_MAX) return setTimeout(attempt,120); return;} comp.focusSchemeUsage({ artworkId:p.artworkId, schemeId:p.schemeId, layers:Array.isArray(p.layers)?p.layers.slice():[], colorCode:p.colorCode }); } else if(tries++<TRY_MAX) setTimeout(attempt,120); }; this.$nextTick(attempt); },
-        setActiveTabPersist(tab){ if(!['custom-colors','artworks','mont-marte','color-dictionary'].includes(tab)) return; this.activeTab=tab; try{ localStorage.setItem('sw-active-tab', tab);}catch(e){} window.scrollTo(0,0); },
-        showHelp(){ this.showGlobalHelp=true; },
-        registerDataset(type, items){ if(!type||!Array.isArray(items)) return; if(type==='customColors'){ this._searchIndex.customColors=items.slice(); this._indexReady.customColors=true;} else if(type==='artworks'){ this._searchIndex.artworks=items.slice(); this._indexReady.artworks=true;} else if(type==='schemes'){ this._searchIndex.schemes=items.slice(); } else if(type==='rawMaterials'){ this._searchIndex.rawMaterials=items.slice(); this._indexReady.rawMaterials=true;} },
-        _buildColorFormulaIndex(){
-            // 建立当前自配色 formula 哈希索引以供后续 diff
-            this._colorFormulaIndex = {};
-            (this.customColors||[]).forEach(c=>{ this._colorFormulaIndex[c.color_code] = (c.formula||''); });
-        },
-        syncFormulasIfChanged(){
-            if(!window.$formulaCalc || !this._colorFormulaIndex) return;
-            (this.customColors||[]).forEach(c=>{
-                const oldF = this._colorFormulaIndex[c.color_code];
-                const newF = c.formula||'';
-                if (oldF !== newF) {
-                    $formulaCalc.syncFormulaChange(c.color_code, newF);
+        };
+
+        const focusArtworkScheme = payload => {
+            if (!payload || !payload.artworkId || !payload.schemeId) return;
+            setActiveTabPersist('artworks');
+            suppressNextRestore.value = true;
+            const TRY_MAX = 20;
+            let tries = 0;
+            const attempt = () => {
+                const comp = artworksRef.value;
+                if (comp && comp.focusSchemeUsage) {
+                    if (comp.hasScheme && !comp.hasScheme(payload.schemeId)) {
+                        if (tries++ < TRY_MAX) return setTimeout(attempt, 120);
+                        return;
+                    }
+                    comp.focusSchemeUsage({
+                        artworkId: payload.artworkId,
+                        schemeId: payload.schemeId,
+                        layers: Array.isArray(payload.layers) ? payload.layers.slice() : [],
+                        colorCode: payload.colorCode
+                    });
+                } else if (tries++ < TRY_MAX) {
+                    setTimeout(attempt, 120);
                 }
-            });
-            this._buildColorFormulaIndex();
-    },
-    handleGlobalSearchInput(val){ this.globalSearchQuery=val; if(this._searchDebounceTimer) clearTimeout(this._searchDebounceTimer); this._searchDebounceTimer=setTimeout(()=> this.buildSearchResults(),200); if(val && !this.showSearchDropdown) this.showSearchDropdown=true; if(!val) this.globalSearchResults=[]; },
-        openSearchDropdown(){ this.showSearchDropdown=true; },
-        closeSearchDropdown(){ this.showSearchDropdown=false; },
-        buildSearchResults(){ const qRaw=(this.globalSearchQuery||'').trim(); if(!qRaw){ this.globalSearchResults=[]; this.showSearchDropdown=false; return;} const qLower=qRaw.toLowerCase(); const tokens=qLower.split(/\s+/).filter(t=>t); const multi=tokens.length>1; const results=[]; const push=i=>results.push(i); // 自配色
-            this._searchIndex.customColors.forEach(c=>{ const code=(c.code||'').toLowerCase(); const name=(c.name||'').toLowerCase(); const hay=[code,name]; const match= multi ? tokens.every(t=>hay.some(h=>h&&h.includes(t))) : hay.some(h=>h&&h.includes(qLower)); if(match) push({ type:'customColor', id:c.id, code:c.code, display:c.code||c.name, group:'自配色', pathLabel:`自配色管理 -> ${(c.code||'')}${c.name?(' '+c.name):''}` }); });
-            const artworkMatches=[]; const schemeMatches=[]; this._searchIndex.artworks.forEach(a=>{ const name=(a.name||'').toLowerCase(); const code=(a.code||'').toLowerCase(); const combo= code&&name? code+'-'+name : (code||name); const hay=[name,code,combo]; const match= multi ? tokens.every(t=>hay.some(h=>h&&h.includes(t))) : hay.some(h=>h&&h.includes(qLower)); if(match) artworkMatches.push({ type:'artwork', id:a.id, display:(a.code? a.code+'-' : '')+(a.name||''), group:'作品', pathLabel:`作品配色管理 -> ${(a.code? a.code+'-' : '')+(a.name||'')}` }); });
-            this._searchIndex.schemes.forEach(s=>{ const sName=(s.name||'').toLowerCase(); const aName=(s.artworkName||'').toLowerCase(); const aCode=(s.artworkCode||'').toLowerCase(); const combo1= aCode&&aName? aCode+'-'+aName : (aCode||aName); const hay=[sName,aName,aCode,combo1]; const match= multi ? tokens.every(t=>hay.some(h=>h&&h.includes(t))) : hay.some(h=>h&&h.includes(qLower)); if(match) schemeMatches.push({ type:'scheme', id:s.id, parentId:s.artworkId, artworkName:s.artworkName, artworkCode:s.artworkCode, display:s.name, group:'配色方案', pathLabel:`作品配色管理 -> ${(s.artworkCode? s.artworkCode+'-' : '')+s.artworkName}-[${s.name}]` }); });
-            if(multi && schemeMatches.length){ results.push(...schemeMatches);} else { results.push(...artworkMatches, ...schemeMatches);} this._searchIndex.rawMaterials.forEach(r=>{ const name=(r.name||'').toLowerCase(); const match= multi ? tokens.every(t=>name && name.includes(t)) : (name && name.includes(qLower)); if(match) push({ type:'rawMaterial', id:r.id, display:r.name, group:'原料', pathLabel:`颜色原料管理 -> ${r.name}` }); }); const groupOrder={'自配色':1,'作品':2,'配色方案':3,'原料':4}; results.sort((a,b)=>{ const ga=groupOrder[a.group]||99; const gb=groupOrder[b.group]||99; if(ga!==gb) return ga-gb; return (a.display||'').localeCompare(b.display||'','zh-CN'); }); const limited=results.slice(0,60); this.globalSearchResults=limited; this.showSearchDropdown=!!limited.length; },
-    handleGlobalSearchSelect(item){ if(!item) return; this.showSearchDropdown=false; if(item.type==='customColor'){ this.focusCustomColor(item.code||item.display); } else if(item.type==='rawMaterial'){ this.setActiveTabPersist('mont-marte'); this._suppressNextRestore=true; this.$nextTick(()=>{ const comp=this.$refs.montMarteRef; if(comp&&comp.focusRawMaterial) comp.focusRawMaterial(item.id); }); } else if(item.type==='artwork'){ this.setActiveTabPersist('artworks'); this._suppressNextRestore=true; this.$nextTick(()=>{ const comp=this.$refs.artworksRef; if(comp&&comp.focusArtwork) comp.focusArtwork(item.id); }); } else if(item.type==='scheme'){ // 方案点击：若当前查询未同时包含作品名与方案名，则自动回填“作品名 方案名”
-                const artworkNamePart = (item.artworkName||'').trim();
-                const schemeNamePart = (item.display||'').trim();
+            };
+            nextTick(attempt);
+        };
+
+        const handleGlobalSearchSelect = item => {
+            if (!item) return;
+            search.showSearchDropdown.value = false;
+            if (item.type === 'customColor') {
+                focusCustomColor(item.code || item.display);
+            } else if (item.type === 'rawMaterial') {
+                setActiveTabPersist('mont-marte');
+                suppressNextRestore.value = true;
+                nextTick(() => {
+                    const comp = montMarteRef.value;
+                    if (comp && comp.focusRawMaterial) comp.focusRawMaterial(item.id);
+                });
+            } else if (item.type === 'artwork') {
+                setActiveTabPersist('artworks');
+                suppressNextRestore.value = true;
+                nextTick(() => {
+                    const comp = artworksRef.value;
+                    if (comp && comp.focusArtwork) comp.focusArtwork(item.id);
+                });
+            } else if (item.type === 'scheme') {
+                const artworkNamePart = (item.artworkName || '').trim();
+                const schemeNamePart = (item.display || '').trim();
                 if (artworkNamePart && schemeNamePart) {
-                    const current = (this.globalSearchQuery||'').trim().toLowerCase();
+                    const current = (search.globalSearchQuery.value || '').trim().toLowerCase();
                     const needArtwork = !current.includes(artworkNamePart.toLowerCase());
                     const needScheme = !current.includes(schemeNamePart.toLowerCase());
                     if (needArtwork || needScheme) {
-                        this.globalSearchQuery = `${artworkNamePart} ${schemeNamePart}`.trim();
-                        // 立即重建结果以缩减为单作品单方案
-            this.buildSearchResults();
-            // 用户需求：回填后自动收起下拉
-            this.showSearchDropdown = false;
+                        search.globalSearchQuery.value = `${artworkNamePart} ${schemeNamePart}`.trim();
+                        search.buildSearchResults();
+                        search.showSearchDropdown.value = false;
                     }
                 }
-                this.setActiveTabPersist('artworks'); this._suppressNextRestore=true; this.focusArtworkScheme({ artworkId:item.parentId, schemeId:item.id, layers:[], colorCode:'' }); } }
+                setActiveTabPersist('artworks');
+                suppressNextRestore.value = true;
+                focusArtworkScheme({
+                    artworkId: item.parentId,
+                    schemeId: item.id,
+                    layers: [],
+                    colorCode: ''
+                });
+            }
+        };
+
+        onMounted(() => {
+            data.initApp();
+            try {
+                if (!localStorage.getItem('sw-active-tab')) {
+                    localStorage.setItem('sw-active-tab', activeTab.value);
+                }
+            } catch (e) {
+                // ignore persistence failures
+            }
+        });
+
+        return {
+            baseURL,
+            loading,
+            activeTab,
+            artworksViewMode,
+            customColorsSortMode,
+            artworksSortMode,
+            montMarteSortMode,
+            showGlobalHelp,
+            helpContent,
+            globalSearchQuery: search.globalSearchQuery,
+            globalSearchResults: search.globalSearchResults,
+            showSearchDropdown: search.showSearchDropdown,
+            handleGlobalSearchInput: search.handleGlobalSearchInput,
+            openSearchDropdown: search.openSearchDropdown,
+            closeSearchDropdown: search.closeSearchDropdown,
+            handleGlobalSearchSelect,
+            setArtworksViewMode,
+            setSortMode,
+            setActiveTabPersist,
+            focusCustomColor,
+            focusArtworkScheme,
+            showHelp,
+            customColorsRef,
+            artworksRef,
+            montMarteRef,
+            colorDictionaryRef
+        };
     }
 });
 
-// ===== 注册组件 =====
-
-// 注册 Element Plus 图标组件（新增）
 if (window.ElementPlusIconsVue) {
     for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
         app.component(key, component);
     }
 }
 
-// 注册自定义组件
 app.component('custom-colors-component', CustomColorsComponent);
-app.component('artworks-component', ArtworksComponent);  
+app.component('artworks-component', ArtworksComponent);
 app.component('mont-marte-component', MontMarteComponent);
 if (typeof ColorDictionaryComponent !== 'undefined') app.component('color-dictionary-component', ColorDictionaryComponent);
 if (typeof AppHeaderBar !== 'undefined') app.component('app-header-bar', AppHeaderBar);
-// 计算器浮层（渲染由全局服务控制）
 if (typeof FormulaCalculatorOverlay !== 'undefined') {
     app.component('formula-calculator-overlay', FormulaCalculatorOverlay);
 }
 
-// === Provide services to components (both provide and global properties for full compatibility) ===
-
-// API service
 app.provide('$api', window.api || {});
 
-// Helpers service
 if (window.helpers) {
     app.provide('$helpers', window.helpers);
     app.config.globalProperties.$helpers = window.helpers;
 }
 
-// Thumbnail preview service
 if (window.thumbPreview) {
     app.provide('$thumbPreview', window.thumbPreview);
     app.config.globalProperties.$thumbPreview = window.thumbPreview;
 }
 
-// Calculator service
 if (window.$formulaCalc) {
     const calcService = {
         open: (code, formula, triggerEl) => window.$formulaCalc.open(code, formula, triggerEl, app),
@@ -338,25 +390,20 @@ if (window.$formulaCalc) {
     app.config.globalProperties.$calc = calcService;
 }
 
-// Root properties access
 app.provide('$root', app.config.globalProperties);
 
-// 添加配方编辑器组件注册
 if (typeof FormulaEditorComponent !== 'undefined') {
     app.component('formula-editor', FormulaEditorComponent);
 }
 
-// 添加冲突解决组件注册
 if (typeof ConflictResolver !== 'undefined') {
     app.component('conflict-resolver', ConflictResolver);
 }
 
-// 添加分类管理组件注册
 if (typeof CategoryManagerComponent !== 'undefined') {
     app.component('category-manager', CategoryManagerComponent);
 }
 
-// 添加颜色选择对话框组件注册
 if (typeof ColorPaletteDialog !== 'undefined') {
     app.component('color-palette-dialog', ColorPaletteDialog);
 }
@@ -370,17 +417,8 @@ if (typeof EnhancedListView !== 'undefined') {
     app.component('enhanced-list-view', EnhancedListView);
 }
 
-// 添加自配色字典组件注册
 if (typeof ColorDictionaryComponent !== 'undefined') {
     app.component('color-dictionary-component', ColorDictionaryComponent);
 }
 
-// 添加通用操作按钮组件注册 - 暂时禁用
-// if (typeof ActionButtonComponent !== 'undefined') {
-//     app.component('action-button', ActionButtonComponent);
-// }
-
-
-// ===== 挂载应用 =====
-// 使用Element Plus UI库并挂载到#app元素
 app.use(ElementPlus).mount('#app');
