@@ -329,14 +329,7 @@ const ColorDictionaryComponent = {
                     <h4>键盘快捷键</h4>
                     <ul>
                         <li><kbd>ESC</kbd> - 取消当前选择</li>
-                        <li><kbd>1</kbd> - 切换到列表导航</li>
-                        <li><kbd>2</kbd> - 切换到HSL导航</li>
-                        <li><kbd>3</kbd> - 切换到色轮导航</li>
-                        <li><kbd>←</kbd> <kbd>→</kbd> - 在列表中左右移动选择</li>
-                        <li><kbd>↑</kbd> <kbd>↓</kbd> - 在列表中上下移动选择（跳行）</li>
-                        <li><kbd>Enter</kbd> - 在自配色管理中查看选中的颜色</li>
                         <li><kbd>Ctrl/Cmd + P</kbd> - 打印颜色列表</li>
-                        <li>点击空白处 - 取消当前选择</li>
                     </ul>
                     
                     <h4>打印功能</h4>
@@ -873,89 +866,28 @@ const ColorDictionaryComponent = {
         setupEventHandlers() {
             // Keyboard navigation handler
             this.handleKeyDown = (event) => {
-                // ESC key - deselect
+                const target = event.target;
+                if (target instanceof Element) {
+                    const editableRoot = target.closest('input, textarea, [contenteditable="true"], .el-input__inner, .el-textarea__inner');
+                    if (editableRoot) {
+                        return;
+                    }
+                }
+
                 if (event.key === 'Escape' && this.selectedColorId) {
                     event.preventDefault();
                     event.stopPropagation();
                     this.selectedColorId = null;
                     return;
                 }
-                
-                // Ctrl/Cmd + P for printing
+
                 if (event.key === 'p' && (event.ctrlKey || event.metaKey)) {
                     event.preventDefault();
                     this.printColors();
                     return;
                 }
-                
-                // View switching with number keys
-                if (event.key === '1' && !event.ctrlKey && !event.metaKey) {
-                    event.preventDefault();
-                    this.viewMode = 'list';
-                    return;
-                }
-                if (event.key === '2' && !event.ctrlKey && !event.metaKey) {
-                    event.preventDefault();
-                    this.viewMode = 'hsl';
-                    return;
-                }
-                if (event.key === '3' && !event.ctrlKey && !event.metaKey) {
-                    event.preventDefault();
-                    this.viewMode = 'wheel';
-                    return;
-                }
-                
-                // Arrow key navigation (only in list view)
-                if (this.viewMode === 'list' && this.enrichedColors.length > 0) {
-                    const handleArrowNavigation = () => {
-                        const currentIndex = this.enrichedColors.findIndex(c => c.id === this.selectedColorId);
-                        let newIndex = -1;
-                        
-                        switch(event.key) {
-                            case 'ArrowRight':
-                                event.preventDefault();
-                                newIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, this.enrichedColors.length - 1);
-                                break;
-                            case 'ArrowLeft':
-                                event.preventDefault();
-                                newIndex = currentIndex === -1 ? 0 : Math.max(currentIndex - 1, 0);
-                                break;
-                            case 'ArrowDown':
-                                event.preventDefault();
-                                // Move down by approximate row width (10 items)
-                                newIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 10, this.enrichedColors.length - 1);
-                                break;
-                            case 'ArrowUp':
-                                event.preventDefault();
-                                // Move up by approximate row width (10 items)
-                                newIndex = currentIndex === -1 ? 0 : Math.max(currentIndex - 10, 0);
-                                break;
-                            case 'Enter':
-                                if (this.selectedColorId) {
-                                    event.preventDefault();
-                                    // Navigate to color in management page
-                                    this.navigateToColor();
-                                }
-                                return;
-                        }
-                        
-                        if (newIndex >= 0 && newIndex < this.enrichedColors.length) {
-                            this.selectedColorId = this.enrichedColors[newIndex].id;
-                            // Scroll into view if needed
-                            this.$nextTick(() => {
-                                const element = this.$el.querySelector(`.color-chip-80[data-color-id="${this.selectedColorId}"]`);
-                                if (element) {
-                                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                }
-                            });
-                        }
-                    };
-                    
-                    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Enter'].includes(event.key)) {
-                        handleArrowNavigation();
-                    }
-                }
             };
+
             window.addEventListener('keydown', this.handleKeyDown);
             
             // Click outside handler
