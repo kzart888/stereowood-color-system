@@ -13,7 +13,7 @@ services:
       - "${HOST_PORT:-9099}:9099"
     volumes:
       - stereowood-data:/data
-      - stereowood-uploads:/app/uploads
+      - stereowood-uploads:/app/backend/uploads
       - stereowood-backups:/app/backups
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9099/health"]
@@ -35,3 +35,4 @@ volumes:
     name: stereowood-uploads
   stereowood-backups:
     name: stereowood-backups
+
