@@ -59,16 +59,24 @@ const app = createApp({
                     <ul>
                         <li>按类别浏览所有自配色</li>
                         <li>快速查看颜色详情</li>
-                        <li>打印颜色列表</li>
+                        <li>打印颜色列表供线下使用</li>
+                    </ul>
+                    <h4>视图导航</h4>
+                    <ul>
+                        <li>列表导航：按分类查看颜色块</li>
+                        <li>HSL 导航：通过色相与明度网格定位</li>
+                        <li>色轮导航：在色轮上查找邻近颜色</li>
+                        <li>智能匹配：输入任意色彩数值寻找最近似配方</li>
                     </ul>
                     <h4>快捷键</h4>
                     <ul>
                         <li><kbd>1</kbd> - 切换到列表视图</li>
-                        <li><kbd>2</kbd> - 切换到色轮视图</li>
-                        <li><kbd>3</kbd> - 切换到统计视图</li>
-                        <li><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> - 键盘导航</li>
+                        <li><kbd>2</kbd> - 切换到 HSL 视图</li>
+                        <li><kbd>3</kbd> - 切换到色轮视图</li>
+                        <li><kbd>4</kbd> - 切换到智能匹配视图</li>
+                        <li><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> - 键盘导航颜色</li>
                         <li><kbd>Enter</kbd> - 选中当前颜色</li>
-                        <li><kbd>Ctrl</kbd>+<kbd>P</kbd> - 打印</li>
+                        <li><kbd>Ctrl</kbd>+<kbd>P</kbd> - 打印可视列表</li>
                     </ul>
                 `,
                 'artworks': `

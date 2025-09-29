@@ -210,6 +210,14 @@ const ColorDictionaryComponent = {
                 >
                     色轮导航
                 </button>
+                <button 
+                    type="button" 
+                    class="category-switch" 
+                    :class="{active: viewMode === 'matcher'}"
+                    @click="viewMode = 'matcher'"
+                >
+                    智能匹配
+                </button>
                 
                 <!-- Sort mode for list view -->
                 <div class="sort-toggle" v-if="viewMode === 'list'">
@@ -298,6 +306,16 @@ const ColorDictionaryComponent = {
                     @select="handleColorSelect"
                     @hover="handleColorHover"
                 />
+                
+                <!-- Matcher View -->
+                <color-matcher-view
+                    v-else-if="viewMode === 'matcher'"
+                    :colors="enrichedColors"
+                    :categories="categories"
+                    :selected-color="selectedColor"
+                    @select="handleColorSelect"
+                    @hover="handleColorHover"
+                />
             </div>
             
             <!-- Help Dialog -->
@@ -332,6 +350,14 @@ const ColorDictionaryComponent = {
                         <li>鼠标悬停查看颜色信息</li>
                     </ul>
                     
+                    <h4>智能匹配</h4>
+                    <ul>
+                        <li>输入 RGB / CMYK / HEX / HSL 任意组合</li>
+                        <li>系统自动换算其余色彩数值</li>
+                        <li>基于 ΔE 排序展示最近似的自配色</li>
+                        <li>可在自动与手动匹配模式之间切换</li>
+                    </ul>
+                    
                     <h4>键盘快捷键</h4>
                     <ul>
                         <li><kbd>ESC</kbd> - 取消当前选择</li>
@@ -356,7 +382,7 @@ const ColorDictionaryComponent = {
             enrichedColors: [],
             selectedColorId: null,
             hoveredColor: null,
-            viewMode: 'list', // list | hsl | wheel
+            viewMode: 'list', // list | hsl | wheel | matcher
             listSortMode: 'name', // name | color
             showHelp: false,
             loading: false,
@@ -544,7 +570,7 @@ const ColorDictionaryComponent = {
             try {
                 // Restore view mode
                 const savedView = localStorage.getItem('color-dict-view');
-                if (savedView && ['list', 'hsl', 'wheel'].includes(savedView)) {
+                if (savedView && ['list', 'hsl', 'wheel', 'matcher'].includes(savedView)) {
                     this.viewMode = savedView;
                 }
                 
@@ -728,5 +754,6 @@ const ColorDictionaryComponent = {
 ColorDictionaryComponent.components = {
     'simplified-list-view': window.ColorDictionaryListView,
     'hsl-color-space-view': window.ColorDictionaryHslView,
-    'color-wheel-view': window.ColorDictionaryWheelView
+    'color-wheel-view': window.ColorDictionaryWheelView,
+    'color-matcher-view': window.ColorDictionaryMatcherView
 };
