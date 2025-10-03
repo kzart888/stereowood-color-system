@@ -70,7 +70,13 @@
             };
         }
         if (swatch.type === 'pure' || swatch.type === 'color') {
-            return swatch.style || {};
+            if (swatch.style && Object.keys(swatch.style).length > 0) {
+                return { ...swatch.style };
+            }
+            if (swatch.hex) {
+                return { backgroundColor: swatch.hex };
+            }
+            return {};
         }
         return {};
     }
@@ -78,6 +84,24 @@
     function extractRgb(color) {
         if (!color) {
             return null;
+        }
+
+        const hasPureRgb = color.pure_rgb_r != null && color.pure_rgb_g != null && color.pure_rgb_b != null;
+        if (hasPureRgb) {
+            return {
+                r: toNumber(color.pure_rgb_r) ?? 0,
+                g: toNumber(color.pure_rgb_g) ?? 0,
+                b: toNumber(color.pure_rgb_b) ?? 0
+            };
+        }
+
+        const pureHexCandidate = ensureHex(color.pure_hex_color);
+        if (pureHexCandidate && typeof hexToRgb === 'function') {
+            try {
+                return hexToRgb(pureHexCandidate);
+            } catch (error) {
+                console.warn('Failed to parse pure hex color', pureHexCandidate, error);
+            }
         }
 
         if (color.rgb && toNumber(color.rgb.r) != null && toNumber(color.rgb.g) != null && toNumber(color.rgb.b) != null) {
@@ -124,8 +148,16 @@
 
     function enrichColor(color) {
         const enriched = { ...color };
+        if (color.pure_hex_color) {
+            enriched.pure_hex_color = ensureHex(color.pure_hex_color);
+        }
+        if (color.pure_rgb_r != null || color.pure_rgb_g != null || color.pure_rgb_b != null) {
+            enriched.pure_rgb_r = toNumber(color.pure_rgb_r) ?? null;
+            enriched.pure_rgb_g = toNumber(color.pure_rgb_g) ?? null;
+            enriched.pure_rgb_b = toNumber(color.pure_rgb_b) ?? null;
+        }
         const rgb = extractRgb(color);
-        let hex = ensureHex(color.hex || color.hex_color);
+        let hex = ensureHex(color.pure_hex_color || color.hex || color.hex_color);
         let hsl = color.hsl || null;
         let lab = color.lab || null;
 
@@ -190,6 +222,11 @@
             return null;
         }
 
+        const pureHex = ensureHex(color.pure_hex_color);
+        if (pureHex) {
+            return pureHex;
+        }
+
         const swatch = color.swatch || resolveColorSwatch(color);
         if (swatch && (swatch.type === 'pure' || swatch.type === 'color') && swatch.hex) {
             return swatch.hex;
@@ -200,12 +237,7 @@
             return hex;
         }
 
-        const rgb = color.rgb || (hasExplicitRgb(color) ? {
-            r: color.rgb_r,
-            g: color.rgb_g,
-            b: color.rgb_b
-        } : null);
-
+        const rgb = extractRgb(color);
         if (rgb) {
             const r = toNumber(rgb.r);
             const g = toNumber(rgb.g);

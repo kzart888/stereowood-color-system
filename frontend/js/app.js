@@ -210,15 +210,15 @@ const app = createApp({
         async loadCustomColors(bypassCache = false) {
             try {
                 const res = await api.customColors.getAll({ bypassCache });
-                this.customColors = res.data;
-                this.registerDataset('customColors', this.customColors.map(c=>({ id:c.id, code:c.color_code||c.code||'', name:c.name||'' })));
-                // 若已存在旧索引，执行 diff 同步；否则首次建立
+                const list = Array.isArray(res.data) ? res.data : [];
+                const hydrated = list.map((item) => this.hydrateCustomColor(item));
+                this.customColors = hydrated;
+                this.registerDataset('customColors', hydrated.map(c=>({ id:c.id, code:c.color_code||c.code||'', name:c.name||'' })));
                 if (this._colorFormulaIndex) {
                     this.syncFormulasIfChanged();
                 } else {
                     this._buildColorFormulaIndex();
                 }
-                // Broadcast color update for other components
                 window.dispatchEvent(new CustomEvent('colors-updated', { 
                     detail: this.customColors 
                 }));
@@ -256,6 +256,60 @@ const app = createApp({
         setActiveTabPersist(tab){ if(!['custom-colors','artworks','mont-marte','color-dictionary'].includes(tab)) return; this.activeTab=tab; try{ localStorage.setItem('sw-active-tab', tab);}catch(e){} window.scrollTo(0,0); },
         showHelp(){ this.showGlobalHelp=true; },
         registerDataset(type, items){ if(!type||!Array.isArray(items)) return; if(type==='customColors'){ this._searchIndex.customColors=items.slice(); this._indexReady.customColors=true;} else if(type==='artworks'){ this._searchIndex.artworks=items.slice(); this._indexReady.artworks=true;} else if(type==='schemes'){ this._searchIndex.schemes=items.slice(); } else if(type==='rawMaterials'){ this._searchIndex.rawMaterials=items.slice(); this._indexReady.rawMaterials=true;} },
+        buildUploadURL(base, path) {
+            const sourceBase = base || this.baseURL || window.location.origin;
+            if (!path) {
+                return '';
+            }
+            if (window.helpers && typeof window.helpers.buildUploadURL === 'function') {
+                return window.helpers.buildUploadURL(sourceBase, path);
+            }
+            const cleaned = String(path).replace(/^\/+/, '');
+            const withPrefix = cleaned.startsWith('uploads/') ? cleaned : `uploads/${cleaned}`;
+            const normalizedBase = String(sourceBase || '').replace(/\/$/, '');
+            return `${normalizedBase}/${withPrefix}`;
+        },
+        hydrateCustomColor(record) {
+            if (!record || typeof record !== 'object') {
+                return record;
+            }
+            const color = { ...record };
+            if (window.CustomColorSwatch && typeof window.CustomColorSwatch.normalizeHex === 'function') {
+                if (color.pure_hex_color) {
+                    color.pure_hex_color = window.CustomColorSwatch.normalizeHex(color.pure_hex_color);
+                }
+            } else if (color.pure_hex_color) {
+                const hexStr = String(color.pure_hex_color).trim();
+                if (hexStr) {
+                    color.pure_hex_color = hexStr.startsWith('#') ? hexStr.toUpperCase() : `#${hexStr.toUpperCase()}`;
+                }
+            }
+            ['pure_rgb_r','pure_rgb_g','pure_rgb_b'].forEach((key) => {
+                if (color[key] !== undefined && color[key] !== null) {
+                    const value = Number(color[key]);
+                    color[key] = Number.isFinite(value) ? value : null;
+                }
+            });
+            if (color.pure_generated_at === undefined) {
+                color.pure_generated_at = record.pure_generated_at ?? null;
+            }
+            if (window.CustomColorSwatch && typeof window.CustomColorSwatch.hasPureColor === 'function') {
+                color.hasPureColor = window.CustomColorSwatch.hasPureColor(color);
+            } else {
+                color.hasPureColor = !!color.pure_hex_color;
+            }
+            if (window.CustomColorSwatch && typeof window.CustomColorSwatch.resolveSwatch === 'function') {
+                try {
+                    color.swatch = window.CustomColorSwatch.resolveSwatch(color, {
+                        baseURL: this.baseURL || window.location.origin,
+                        buildURL: (baseURL, uploadPath) => this.buildUploadURL(baseURL, uploadPath)
+                    });
+                } catch (error) {
+                    console.warn('Failed to resolve swatch for color', color && color.color_code, error);
+                }
+            }
+            return color;
+        },
         _buildColorFormulaIndex(){
             // 建立当前自配色 formula 哈希索引以供后续 diff
             this._colorFormulaIndex = {};

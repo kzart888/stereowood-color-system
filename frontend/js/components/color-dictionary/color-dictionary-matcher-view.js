@@ -708,11 +708,17 @@
                 if (!color) {
                     return '';
                 }
+                if (color.pure_hex_color) {
+                    return color.pure_hex_color.startsWith('#') ? color.pure_hex_color : `#${color.pure_hex_color}`;
+                }
                 if (color.hex) {
-                    return color.hex;
+                    return color.hex.startsWith('#') ? color.hex : `#${color.hex}`;
                 }
                 if (color.hex_color) {
                     return color.hex_color.startsWith('#') ? color.hex_color : `#${color.hex_color}`;
+                }
+                if (color.swatch && color.swatch.hex) {
+                    return color.swatch.hex;
                 }
                 return '';
             },

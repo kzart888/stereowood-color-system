@@ -28,7 +28,18 @@ const api = {
     // 自配颜色相关API
     customColors: {
         // 获取所有自配颜色
-        getAll: () => axios.get(`${API_BASE_URL}/custom-colors`),
+        getAll: (options = {}) => {
+            const { bypassCache, params, ...config } = options || {};
+            const requestConfig = { ...config };
+            const mergedParams = Object.assign({}, params || {});
+            if (bypassCache) {
+                mergedParams._ = Date.now();
+            }
+            if (Object.keys(mergedParams).length > 0) {
+                requestConfig.params = mergedParams;
+            }
+            return axios.get(`${API_BASE_URL}/custom-colors`, requestConfig);
+        },
         
         // 创建新颜色（带图片上传）
         create: (formData) => {
