@@ -13,6 +13,23 @@ const router = express.Router();
 const ColorService = require('../services/ColorService');
 const multer = require('multer');
 const path = require('path');
+const parseOptionalInt = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const parseOptionalFloat = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = parseFloat(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const normalizeHexInput = (value) => {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed === '' ? null : trimmed;
+};
 
 // Multer config (same as server.js)
 const storage = multer.diskStorage({
@@ -42,7 +59,8 @@ router.post('/custom-colors', upload.single('image'), async (req, res) => {
       category_id, color_code, formula, applicable_layers,
       rgb_r, rgb_g, rgb_b,
       cmyk_c, cmyk_m, cmyk_y, cmyk_k,
-      hex_color, pantone_coated, pantone_uncoated
+      hex_color, pantone_coated, pantone_uncoated,
+      pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color
     } = req.body;
     let imagePath = null;
 
@@ -58,16 +76,20 @@ router.post('/custom-colors', upload.single('image'), async (req, res) => {
       formula,
       applicable_layers,
       // New color fields - convert to proper types
-      rgb_r: rgb_r ? parseInt(rgb_r) : null,
-      rgb_g: rgb_g ? parseInt(rgb_g) : null,
-      rgb_b: rgb_b ? parseInt(rgb_b) : null,
-      cmyk_c: cmyk_c ? parseFloat(cmyk_c) : null,
-      cmyk_m: cmyk_m ? parseFloat(cmyk_m) : null,
-      cmyk_y: cmyk_y ? parseFloat(cmyk_y) : null,
-      cmyk_k: cmyk_k ? parseFloat(cmyk_k) : null,
-      hex_color: hex_color || null,
+      rgb_r: parseOptionalInt(rgb_r),
+      rgb_g: parseOptionalInt(rgb_g),
+      rgb_b: parseOptionalInt(rgb_b),
+      cmyk_c: parseOptionalFloat(cmyk_c),
+      cmyk_m: parseOptionalFloat(cmyk_m),
+      cmyk_y: parseOptionalFloat(cmyk_y),
+      cmyk_k: parseOptionalFloat(cmyk_k),
+      hex_color: normalizeHexInput(hex_color),
       pantone_coated: pantone_coated || null,
-      pantone_uncoated: pantone_uncoated || null
+      pantone_uncoated: pantone_uncoated || null,
+      pure_rgb_r: parseOptionalInt(pure_rgb_r),
+      pure_rgb_g: parseOptionalInt(pure_rgb_g),
+      pure_rgb_b: parseOptionalInt(pure_rgb_b),
+      pure_hex_color: normalizeHexInput(pure_hex_color)
     };
 
     const result = await ColorService.createColor(colorData);
@@ -113,7 +135,8 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
       category_id, color_code, formula, applicable_layers, existingImagePath, version,
       rgb_r, rgb_g, rgb_b,
       cmyk_c, cmyk_m, cmyk_y, cmyk_k,
-      hex_color, pantone_coated, pantone_uncoated
+      hex_color, pantone_coated, pantone_uncoated,
+      pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color, clear_pure_color
     } = req.body;
     const expectedVersion = version ? parseInt(version) : null;
     
@@ -139,32 +162,44 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
       shouldUpdateImage = true;
     }
 
-    const colorData = {
-      category_id,
-      color_code,
-      formula,
-      applicable_layers,
-      // New color fields - convert to proper types
-      rgb_r: rgb_r !== undefined ? (rgb_r ? parseInt(rgb_r) : null) : undefined,
-      rgb_g: rgb_g !== undefined ? (rgb_g ? parseInt(rgb_g) : null) : undefined,
-      rgb_b: rgb_b !== undefined ? (rgb_b ? parseInt(rgb_b) : null) : undefined,
-      cmyk_c: cmyk_c !== undefined ? (cmyk_c ? parseFloat(cmyk_c) : null) : undefined,
-      cmyk_m: cmyk_m !== undefined ? (cmyk_m ? parseFloat(cmyk_m) : null) : undefined,
-      cmyk_y: cmyk_y !== undefined ? (cmyk_y ? parseFloat(cmyk_y) : null) : undefined,
-      cmyk_k: cmyk_k !== undefined ? (cmyk_k ? parseFloat(cmyk_k) : null) : undefined,
-      hex_color: hex_color !== undefined ? (hex_color || null) : undefined,
-      pantone_coated: pantone_coated !== undefined ? (pantone_coated || null) : undefined,
-      pantone_uncoated: pantone_uncoated !== undefined ? (pantone_uncoated || null) : undefined
-    };
-    
-    // Remove undefined fields to avoid updating them
-    Object.keys(colorData).forEach(key => {
-      if (colorData[key] === undefined) {
-        delete colorData[key];
-      }
-    });
-    
-    // 只有在需要更新图片时才添加image_path字段
+    const colorData = {};
+
+    if (category_id !== undefined) {
+      colorData.category_id = category_id === 'other' ? null : category_id;
+    }
+    if (color_code !== undefined) {
+      colorData.color_code = color_code;
+    }
+    if (formula !== undefined) {
+      colorData.formula = formula;
+    }
+    if (applicable_layers !== undefined) {
+      colorData.applicable_layers = applicable_layers;
+    }
+
+    if (rgb_r !== undefined) colorData.rgb_r = parseOptionalInt(rgb_r);
+    if (rgb_g !== undefined) colorData.rgb_g = parseOptionalInt(rgb_g);
+    if (rgb_b !== undefined) colorData.rgb_b = parseOptionalInt(rgb_b);
+
+    if (cmyk_c !== undefined) colorData.cmyk_c = parseOptionalFloat(cmyk_c);
+    if (cmyk_m !== undefined) colorData.cmyk_m = parseOptionalFloat(cmyk_m);
+    if (cmyk_y !== undefined) colorData.cmyk_y = parseOptionalFloat(cmyk_y);
+    if (cmyk_k !== undefined) colorData.cmyk_k = parseOptionalFloat(cmyk_k);
+
+    if (hex_color !== undefined) colorData.hex_color = normalizeHexInput(hex_color);
+    if (pantone_coated !== undefined) colorData.pantone_coated = pantone_coated ? pantone_coated : null;
+    if (pantone_uncoated !== undefined) colorData.pantone_uncoated = pantone_uncoated ? pantone_uncoated : null;
+
+    if (pure_rgb_r !== undefined) colorData.pure_rgb_r = parseOptionalInt(pure_rgb_r);
+    if (pure_rgb_g !== undefined) colorData.pure_rgb_g = parseOptionalInt(pure_rgb_g);
+    if (pure_rgb_b !== undefined) colorData.pure_rgb_b = parseOptionalInt(pure_rgb_b);
+    if (pure_hex_color !== undefined) colorData.pure_hex_color = normalizeHexInput(pure_hex_color);
+
+    if (clear_pure_color !== undefined) {
+      const flag = clear_pure_color;
+      colorData.clear_pure_color = flag === '1' || flag === 'true' || flag === 'TRUE' || flag === 'True';
+    }
+
     if (shouldUpdateImage) {
       colorData.image_path = imagePath;
     }

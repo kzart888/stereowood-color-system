@@ -56,6 +56,11 @@ async function initDatabase() {
     image_path TEXT,
     formula TEXT,
     applicable_layers TEXT,
+    pure_rgb_r INTEGER,
+    pure_rgb_g INTEGER,
+    pure_rgb_b INTEGER,
+    pure_hex_color TEXT,
+    pure_generated_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES color_categories (id)
@@ -68,6 +73,10 @@ async function initDatabase() {
     image_path TEXT,
     formula TEXT,
     applicable_layers TEXT,
+    pure_rgb_r INTEGER,
+    pure_rgb_g INTEGER,
+    pure_rgb_b INTEGER,
+    pure_hex_color TEXT,
     archived_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (custom_color_id) REFERENCES custom_colors (id)
   )`);
@@ -398,6 +407,37 @@ async function runMigrations() {
     }
     */
     
+
+    // 8. Ensure pure color columns exist on custom colors tables
+    if (!(await columnExists('custom_colors', 'pure_rgb_r'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN pure_rgb_r INTEGER`);
+    }
+    if (!(await columnExists('custom_colors', 'pure_rgb_g'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN pure_rgb_g INTEGER`);
+    }
+    if (!(await columnExists('custom_colors', 'pure_rgb_b'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN pure_rgb_b INTEGER`);
+    }
+    if (!(await columnExists('custom_colors', 'pure_hex_color'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN pure_hex_color TEXT`);
+    }
+    if (!(await columnExists('custom_colors', 'pure_generated_at'))) {
+      await runSafe(`ALTER TABLE custom_colors ADD COLUMN pure_generated_at DATETIME`);
+    }
+
+    if (!(await columnExists('custom_colors_history', 'pure_rgb_r'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pure_rgb_r INTEGER`);
+    }
+    if (!(await columnExists('custom_colors_history', 'pure_rgb_g'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pure_rgb_g INTEGER`);
+    }
+    if (!(await columnExists('custom_colors_history', 'pure_rgb_b'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pure_rgb_b INTEGER`);
+    }
+    if (!(await columnExists('custom_colors_history', 'pure_hex_color'))) {
+      await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pure_hex_color TEXT`);
+    }
+
   } catch (e) {
     console.error('数据库迁移失败:', e);
   }

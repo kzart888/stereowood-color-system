@@ -73,7 +73,8 @@ function createColor(colorData) {
         category_id, color_code, image_path, formula, applicable_layers,
         rgb_r, rgb_g, rgb_b,
         cmyk_c, cmyk_m, cmyk_y, cmyk_k,
-        hex_color, pantone_coated, pantone_uncoated
+        hex_color, pantone_coated, pantone_uncoated,
+        pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color, pure_generated_at
     } = colorData;
     
     return new Promise((resolve, reject) => {
@@ -82,14 +83,16 @@ function createColor(colorData) {
                 category_id, color_code, image_path, formula, applicable_layers,
                 rgb_r, rgb_g, rgb_b,
                 cmyk_c, cmyk_m, cmyk_y, cmyk_k,
-                hex_color, pantone_coated, pantone_uncoated
+                hex_color, pantone_coated, pantone_uncoated,
+                pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color, pure_generated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             category_id, color_code, image_path, formula, applicable_layers,
             rgb_r, rgb_g, rgb_b,
             cmyk_c, cmyk_m, cmyk_y, cmyk_k,
-            hex_color, pantone_coated, pantone_uncoated
+            hex_color, pantone_coated, pantone_uncoated,
+            pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color, pure_generated_at
         ], function(err) {
             if (err) reject(err);
             else resolve(this.lastID);
@@ -171,6 +174,26 @@ function updateColor(id, colorData) {
             updates.push('pantone_uncoated = ?');
             values.push(colorData.pantone_uncoated);
         }
+        if (colorData.pure_rgb_r !== undefined) {
+            updates.push('pure_rgb_r = ?');
+            values.push(colorData.pure_rgb_r);
+        }
+        if (colorData.pure_rgb_g !== undefined) {
+            updates.push('pure_rgb_g = ?');
+            values.push(colorData.pure_rgb_g);
+        }
+        if (colorData.pure_rgb_b !== undefined) {
+            updates.push('pure_rgb_b = ?');
+            values.push(colorData.pure_rgb_b);
+        }
+        if (colorData.pure_hex_color !== undefined) {
+            updates.push('pure_hex_color = ?');
+            values.push(colorData.pure_hex_color);
+        }
+        if (colorData.pure_generated_at !== undefined) {
+            updates.push('pure_generated_at = ?');
+            values.push(colorData.pure_generated_at);
+        }
         
         // 总是更新updated_at
         updates.push('updated_at = CURRENT_TIMESTAMP');
@@ -213,9 +236,10 @@ function archiveColorHistory(colorId, colorData) {
     return new Promise((resolve, reject) => {
         db.run(`
             INSERT INTO custom_colors_history 
-            (custom_color_id, color_code, image_path, formula, applicable_layers)
-            VALUES (?, ?, ?, ?, ?)
-        `, [colorId, color_code, image_path, formula, applicable_layers], function(err) {
+            (custom_color_id, color_code, image_path, formula, applicable_layers,
+            pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [colorId, color_code, image_path, formula, applicable_layers, colorData.pure_rgb_r ?? null, colorData.pure_rgb_g ?? null, colorData.pure_rgb_b ?? null, colorData.pure_hex_color ?? null], function(err) {
             if (err) reject(err);
             else resolve(this.lastID);
         });

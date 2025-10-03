@@ -80,11 +80,54 @@ class ColorService {
         if ('hex_color' in colorData) {
             this.validateHEX(colorData.hex_color);
         }
+        if ('pure_rgb_r' in colorData || 'pure_rgb_g' in colorData || 'pure_rgb_b' in colorData) {
+            this.validateRGB(colorData.pure_rgb_r, colorData.pure_rgb_g, colorData.pure_rgb_b);
+        }
+
+        if ('pure_hex_color' in colorData) {
+            this.validateHEX(colorData.pure_hex_color);
+        }
     }
 
     /**
      * 获取所有颜色
      */
+    normalizePureColorPayload(colorData) {
+        if (!colorData) {
+            return;
+        }
+
+        if (colorData.clear_pure_color) {
+            colorData.pure_rgb_r = null;
+            colorData.pure_rgb_g = null;
+            colorData.pure_rgb_b = null;
+            colorData.pure_hex_color = null;
+            colorData.pure_generated_at = null;
+            delete colorData.clear_pure_color;
+            return;
+        }
+
+        const hasPureField = ['pure_rgb_r','pure_rgb_g','pure_rgb_b','pure_hex_color'].some(key => key in colorData);
+        const hasTimestampField = 'pure_generated_at' in colorData;
+        if (!hasPureField && !hasTimestampField) {
+            return;
+        }
+
+        if (!('pure_rgb_r' in colorData)) colorData.pure_rgb_r = null;
+        if (!('pure_rgb_g' in colorData)) colorData.pure_rgb_g = null;
+        if (!('pure_rgb_b' in colorData)) colorData.pure_rgb_b = null;
+        if (!('pure_hex_color' in colorData)) colorData.pure_hex_color = null;
+
+        const hasColor = (colorData.pure_hex_color && colorData.pure_hex_color !== '') ||
+            [colorData.pure_rgb_r, colorData.pure_rgb_g, colorData.pure_rgb_b].some(v => v !== null && v !== undefined);
+
+        if (hasColor) {
+            colorData.pure_generated_at = colorData.pure_generated_at || new Date().toISOString();
+        } else if (!hasTimestampField) {
+            colorData.pure_generated_at = null;
+        }
+    }
+
     async getAllColors() {
         try {
             return await colorQueries.getAllColors();
@@ -115,6 +158,7 @@ class ColorService {
         try {
             // 验证颜色数据
             this.validateColorData(colorData);
+            this.normalizePureColorPayload(colorData);
             
             // 检查颜色编码是否已存在
             const existing = await colorQueries.getColorByCode(colorData.color_code);
@@ -137,6 +181,7 @@ class ColorService {
         try {
             // 验证颜色数据
             this.validateColorData(colorData);
+            this.normalizePureColorPayload(colorData);
             
             // 检查颜色是否存在
             const existing = await colorQueries.getColorById(id);
