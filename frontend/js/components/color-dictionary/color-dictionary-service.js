@@ -39,6 +39,42 @@
         return trimmed.startsWith('#') ? trimmed : '#' + trimmed;
     }
 
+    function resolveColorSwatch(color, options = {}) {
+        if (!color || !window.CustomColorSwatch || typeof window.CustomColorSwatch.resolveSwatch !== 'function') {
+            return null;
+        }
+        const baseURL = options.baseURL || window.location.origin;
+        const buildURL = options.buildURL || ((base, path) => `${base.replace(/\/$/, '')}/uploads/${path}`);
+        try {
+            return window.CustomColorSwatch.resolveSwatch(color, {
+                baseURL,
+                buildURL,
+                includeColorConcentrate: !!options.includeColorConcentrate,
+                forceOriginal: !!options.forceOriginal
+            });
+        } catch (error) {
+            console.warn('Failed to resolve swatch for color', color && color.color_code, error);
+            return null;
+        }
+    }
+
+    function computeSwatchStyle(swatch) {
+        if (!swatch) {
+            return {};
+        }
+        if (swatch.type === 'image' && swatch.imageUrl) {
+            return {
+                backgroundImage: `url(${swatch.imageUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+            };
+        }
+        if (swatch.type === 'pure' || swatch.type === 'color') {
+            return swatch.style || {};
+        }
+        return {};
+    }
+
     function extractRgb(color) {
         if (!color) {
             return null;
@@ -123,6 +159,7 @@
         } else {
             delete enriched.lab;
         }
+        enriched.swatch = resolveColorSwatch(enriched);
 
         return enriched;
     }
@@ -153,6 +190,11 @@
             return null;
         }
 
+        const swatch = color.swatch || resolveColorSwatch(color);
+        if (swatch && (swatch.type === 'pure' || swatch.type === 'color') && swatch.hex) {
+            return swatch.hex;
+        }
+
         const hex = ensureHex(color.hex || color.hex_color);
         if (hex) {
             return hex;
@@ -174,6 +216,11 @@
         }
 
         return null;
+    }
+
+    function getSwatchStyle(color) {
+        const swatch = color && (color.swatch || resolveColorSwatch(color));
+        return computeSwatchStyle(swatch);
     }
 
     function formatDate(dateStr) {
@@ -278,12 +325,22 @@
                 `<div class="category-label">${name}</div>` +
                 `</div>`;
             categoryColors.forEach((color) => {
-                const bgStyle = getColorStyle(color);
+                const swatch = color.swatch || resolveColorSwatch(color);
+                let previewClass = 'color-preview';
+                let previewStyle = '';
+                let previewContent = '';
+                if (swatch && (swatch.type === 'pure' || swatch.type === 'color') && swatch.hex) {
+                    previewStyle = ` style="background: ${swatch.hex}"`;
+                } else if (swatch && swatch.type === 'image' && swatch.imageUrl) {
+                    previewClass += ' image-swatch';
+                    previewStyle = ` style="background-image: url(${swatch.imageUrl}); background-size: cover; background-position: center;"`;
+                } else {
+                    previewClass += ' blank-color';
+                    previewContent = `<span>${BLANK_PLACEHOLDER}</span>`;
+                }
                 html += `
                     <div class="print-color-chip">
-                        <div class="color-preview${bgStyle ? '' : ' blank-color'}"${bgStyle ? ` style="background: ${bgStyle}"` : ''}>
-                            ${bgStyle ? '' : `<span>${BLANK_PLACEHOLDER}</span>`}
-                        </div>
+                        <div class="${previewClass}"${previewStyle}>${previewContent}</div>
                         <div class="color-label">${color.color_code || ''}</div>
                     </div>
                 `;
@@ -432,6 +489,8 @@
         getDefaultColorForCategory,
         getCategoryName,
         getColorStyle,
+        getSwatchStyle,
+        resolveColorSwatch,
         formatDate,
         sortColors,
         groupColorsByCategory,

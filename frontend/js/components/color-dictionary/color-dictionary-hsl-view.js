@@ -94,9 +94,9 @@
                         :class="{ 'selected': isSelected(color) }"
                     >
                         <div class="color-preview"
-                             :class="{ 'blank-color': !getColorStyle(color) }"
-                             :style="getColorStyle(color) ? { background: getColorStyle(color) } : {}">
-                            <span v-if="!getColorStyle(color)" class="blank-text">无</span>
+                             :class="swatchClass(color)"
+                             :style="getSwatchStyle(color)">
+                            <span v-if="isSwatchEmpty(color)" class="blank-text">无</span>
                         </div>
                         <div class="color-code">{{ color.color_code }}</div>
                     </div>
@@ -212,13 +212,9 @@
             getDotStyle(color, index, total) {
                 const dotSize = this.calculateDotSize(total);
                 const position = this.calculateDotPosition(index, total, dotSize);
-                const bgColor = this.getColorStyle(color);
-
-                return {
+                const style = {
                     width: `${dotSize}px`,
                     height: `${dotSize}px`,
-                    background: bgColor || '#f5f5f5',
-                    border: bgColor ? '2px solid white' : '2px dashed #999',
                     position: 'absolute',
                     left: `${position.x}px`,
                     top: `${position.y}px`,
@@ -226,6 +222,22 @@
                     cursor: 'pointer',
                     zIndex: 1
                 };
+                const swatchStyle = service.getSwatchStyle ? service.getSwatchStyle(color) : null;
+                const hasSwatch = swatchStyle && Object.keys(swatchStyle).length > 0;
+                if (hasSwatch) {
+                    Object.assign(style, swatchStyle);
+                    if (swatchStyle.backgroundImage) {
+                        style.backgroundSize = swatchStyle.backgroundSize || 'cover';
+                        style.backgroundPosition = swatchStyle.backgroundPosition || 'center';
+                        style.border = '2px solid rgba(255,255,255,0.85)';
+                    } else {
+                        style.border = '2px solid white';
+                    }
+                } else {
+                    style.background = '#f5f5f5';
+                    style.border = '2px dashed #999';
+                }
+                return style;
             },
 
             calculateDotSize(total) {
@@ -280,6 +292,23 @@
 
             isSelected(color) {
                 return this.selectedColor && this.selectedColor.id === color.id;
+            },
+
+            getSwatchStyle(color) {
+                return service.getSwatchStyle ? service.getSwatchStyle(color) : {};
+            },
+
+            isSwatchEmpty(color) {
+                const swatch = color && (color.swatch || (service.resolveColorSwatch ? service.resolveColorSwatch(color) : null));
+                return !swatch || swatch.type === 'empty';
+            },
+
+            swatchClass(color) {
+                const swatch = color && (color.swatch || (service.resolveColorSwatch ? service.resolveColorSwatch(color) : null));
+                return {
+                    'blank-color': !swatch || swatch.type === 'empty',
+                    'image-swatch': swatch && swatch.type === 'image' && swatch.imageUrl
+                };
             },
 
             getColorStyle(color) {

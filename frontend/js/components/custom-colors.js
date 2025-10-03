@@ -64,9 +64,14 @@ const CustomColorsComponent = {
                     </div>
                     
                     <div style="display:flex; gap:12px; padding:8px; align-items:stretch;">
-                        <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, color.image_path))">
-                            <template v-if="!color.image_path">未上传图片</template>
-                            <img v-else :src="$helpers.buildUploadURL(baseURL, color.image_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                        <div class="scheme-thumbnail"
+                             :class="swatchThumbnailClass(color)"
+                             :style="getSwatchStyle(color)"
+                             @click="previewColorSwatch($event, color)">
+                            <template v-if="swatchIsImage(color)">
+                                <img :src="getSwatchImage(color)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                            </template>
+                            <span v-else-if="swatchIsEmpty(color)" class="blank-text">未上传图片</span>
                         </div>
                         
                         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; position:relative;">
@@ -996,6 +1001,71 @@ const CustomColorsComponent = {
             return byPrefix ? byPrefix.name : '其他';
         },
         
+
+        resolveColorSwatch(color, options = {}) {
+            if (!color || !window.CustomColorSwatch) {
+                return null;
+            }
+            const baseURL = options.baseURL || this.baseURL || window.location.origin;
+            const resolver = window.CustomColorSwatch.resolveSwatch;
+            if (typeof resolver !== 'function') {
+                return null;
+            }
+            const buildURL = this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                ? this.$helpers.buildUploadURL
+                : ((base, path) => `${base.replace(/\/$/, '')}/uploads/${path}`);
+            return resolver(color, {
+                baseURL,
+                buildURL,
+                includeColorConcentrate: !!options.includeColorConcentrate,
+                forceOriginal: !!options.forceOriginal
+            });
+        },
+
+        getSwatchStyle(color, options = {}) {
+            const swatch = this.resolveColorSwatch(color, options);
+            if (!swatch) return {};
+            if (swatch.type === 'image') {
+                return {};
+            }
+            return swatch.style || {};
+        },
+
+        swatchIsImage(color, options = {}) {
+            const swatch = this.resolveColorSwatch(color, options);
+            return !!(swatch && swatch.type === 'image' && swatch.imageUrl);
+        },
+
+        swatchIsEmpty(color, options = {}) {
+            const swatch = this.resolveColorSwatch(color, options);
+            return !swatch || swatch.type === 'empty';
+        },
+
+        swatchThumbnailClass(color, options = {}) {
+            return { 'no-image': this.swatchIsEmpty(color, options) };
+        },
+
+        getSwatchImage(color, options = {}) {
+            const swatch = this.resolveColorSwatch(color, options);
+            return swatch && swatch.type === 'image' ? swatch.imageUrl : null;
+        },
+
+        previewColorSwatch(event, color, options = {}) {
+            const swatch = this.resolveColorSwatch(color, options);
+            if (!swatch || !this.$thumbPreview) {
+                return;
+            }
+            if (swatch.type === 'image' && swatch.imageUrl) {
+                this.$thumbPreview.show(event, swatch.imageUrl);
+                return;
+            }
+            const hex = swatch && swatch.hex ? swatch.hex : (swatch && swatch.style && (swatch.style.background || swatch.style.backgroundColor));
+            if (hex && window.PureColorUtils && typeof window.PureColorUtils.createSolidSwatchDataUrl === 'function') {
+                const dataUrl = window.PureColorUtils.createSolidSwatchDataUrl(hex);
+                this.$thumbPreview.show(event, dataUrl);
+            }
+        },
+
         handleImageChange(file) {
             this.form.imageFile = file.raw;
             if (this.form.imagePreview) {
@@ -1982,6 +2052,10 @@ const CustomColorsComponent = {
             height: 100%;
             object-fit: cover;
         }
+        .print-color-solid {
+            width: 100%;
+            height: 100%;
+        }
         .print-no-image {
             color: #999;
             font-size: 10px;
@@ -2017,14 +2091,24 @@ const CustomColorsComponent = {
             <div class="print-colors">`;
                 
                 group.colors.forEach(color => {
-                    const imageUrl = color.image_path ? `${baseURL}/uploads/${color.image_path}` : null;
-                    const imageHtml = imageUrl 
-                        ? `<img src="${imageUrl}" class="print-color-image" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'print-no-image\\'>图片加载失败</div>'" />`
-                        : `<div class="print-no-image">未上传<br/>图片</div>`;
+                    const swatch = window.CustomColorSwatch && typeof window.CustomColorSwatch.resolveSwatch === 'function'
+                        ? window.CustomColorSwatch.resolveSwatch(color, {
+                            baseURL,
+                            buildURL: (base, path) => `${base.replace(/\/$/, '')}/uploads/${path}`
+                        })
+                        : null;
+                    let swatchHtml;
+                    if (swatch && swatch.type === 'image' && swatch.imageUrl) {
+                        swatchHtml = `<img src="${swatch.imageUrl}" class="print-color-image" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\'print-no-image\'>图像加载失败</div>'" />`;
+                    } else if (swatch && (swatch.type === 'pure' || swatch.type === 'color') && swatch.hex) {
+                        swatchHtml = `<div class="print-color-solid" style="background:${swatch.hex};"></div>`;
+                    } else {
+                        swatchHtml = `<div class="print-no-image">未上传<br/>图片</div>`;
+                    }
                     
                     html += `
                 <div class="print-color-item">
-                    <div class="print-color-block">${imageHtml}</div>
+                    <div class="print-color-block">${swatchHtml}</div>
                     <div class="print-color-name">${color.color_code}</div>
                 </div>`;
                 });

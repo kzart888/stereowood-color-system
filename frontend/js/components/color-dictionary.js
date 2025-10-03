@@ -31,9 +31,11 @@ const ColorDictionaryComponent = {
             <!-- Header Color Info Bar -->
             <div class="header-color-info">
                 <div class="color-preview-80">
-                    <div v-if="selectedColor && getColorStyle(selectedColor)" 
+                    <div v-if="selectedColor" 
                          class="color-swatch-preview" 
-                         :style="{background: getColorStyle(selectedColor)}">
+                         :class="swatchClass(selectedColor)" 
+                         :style="getSwatchStyle(selectedColor)">
+                        <span v-if="isSwatchEmpty(selectedColor)" class="blank-text">无</span>
                     </div>
                     <div v-else class="empty-preview">
                         <span>{{ selectedColor ? '无色值' : '请选择颜色' }}</span>
@@ -511,6 +513,53 @@ const ColorDictionaryComponent = {
                 return `rgb(${color.rgb_r}, ${color.rgb_g}, ${color.rgb_b})`;
             }
             return null;
+        },
+        
+        getSwatchStyle(color) {
+            if (!color) {
+                return {};
+            }
+            if (ColorDictionaryService && typeof ColorDictionaryService.getSwatchStyle === 'function') {
+                return ColorDictionaryService.getSwatchStyle(color);
+            }
+            let resolver = null;
+            if (ColorDictionaryService && typeof ColorDictionaryService.resolveColorSwatch === 'function') {
+                resolver = (value) => ColorDictionaryService.resolveColorSwatch(value);
+            } else if (window.CustomColorSwatch && typeof window.CustomColorSwatch.resolveSwatch === 'function') {
+                resolver = (value) => window.CustomColorSwatch.resolveSwatch(value);
+            }
+            const swatch = color.swatch || (resolver ? resolver(color) : null);
+            if (!swatch) {
+                return {};
+            }
+            const style = Object.assign({}, swatch.style || {});
+            if (swatch.type === 'image' && swatch.imageUrl) {
+                if (!style.backgroundImage) {
+                    style.backgroundImage = `url(${swatch.imageUrl})`;
+                }
+                if (!style.backgroundSize) {
+                    style.backgroundSize = 'cover';
+                }
+                if (!style.backgroundPosition) {
+                    style.backgroundPosition = 'center';
+                }
+            } else if ((swatch.type === 'pure' || swatch.type === 'color') && swatch.hex && !style.background && !style.backgroundColor) {
+                style.backgroundColor = swatch.hex;
+            }
+            return style;
+        },
+        
+        isSwatchEmpty(color) {
+            const swatch = color && (color.swatch || (ColorDictionaryService && ColorDictionaryService.resolveColorSwatch ? ColorDictionaryService.resolveColorSwatch(color) : null));
+            return !swatch || swatch.type === 'empty';
+        },
+        
+        swatchClass(color) {
+            const swatch = color && (color.swatch || (ColorDictionaryService && ColorDictionaryService.resolveColorSwatch ? ColorDictionaryService.resolveColorSwatch(color) : null));
+            return {
+                'blank-color': !swatch || swatch.type === 'empty',
+                'image-swatch': swatch && swatch.type === 'image' && swatch.imageUrl
+            };
         },
         
         formatDate(dateStr) {

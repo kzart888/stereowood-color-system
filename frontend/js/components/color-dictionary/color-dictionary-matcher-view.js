@@ -320,8 +320,8 @@
                             @mouseenter="$emit('hover', color)"
                             @mouseleave="$emit('hover', null)"
                         >
-                            <div class="match-preview" :class="{ blank: !getColorStyle(color) }" :style="getPreviewStyle(color)">
-                                <span v-if="!getColorStyle(color)">空</span>
+                            <div class="match-preview" :class="matchPreviewClass(color)" :style="getPreviewStyle(color)">
+                                <span v-if="isSwatchEmpty(color)">无</span>
                             </div>
                             <div class="match-info">
                                 <div class="match-title">
@@ -685,8 +685,18 @@
                 return null;
             },
             getPreviewStyle(color) {
-                const background = this.getColorStyle(color);
-                return background ? { background } : {};
+                return service.getSwatchStyle ? service.getSwatchStyle(color) : {};
+            },
+            isSwatchEmpty(color) {
+                const swatch = color && (color.swatch || (service.resolveColorSwatch ? service.resolveColorSwatch(color) : null));
+                return !swatch || swatch.type === 'empty';
+            },
+            matchPreviewClass(color) {
+                const swatch = color && (color.swatch || (service.resolveColorSwatch ? service.resolveColorSwatch(color) : null));
+                return {
+                    blank: !swatch || swatch.type === 'empty',
+                    'image-swatch': swatch && swatch.type === 'image' && swatch.imageUrl
+                };
             },
             getCategoryName(categoryId) {
                 if (service.getCategoryName) {

@@ -123,8 +123,8 @@ const ArtworksComponent = {
                           <div class="cell-left">
                             <span v-if="colorByCode(m.colorCode)" 
                                  class="color-preview-square" 
-                                 :class="{ 'no-image': !colorByCode(m.colorCode).image_path }"
-                                 :style="colorByCode(m.colorCode).image_path ? { backgroundImage: 'url(' + $helpers.buildUploadURL(baseURL, colorByCode(m.colorCode).image_path) + ')' } : {}">
+                                 :class="swatchClassByCode(m.colorCode)"
+                                 :style="swatchStyleByCode(m.colorCode)">
                             </span>
                           </div>
                           <div class="cell-center">
@@ -174,8 +174,8 @@ const ArtworksComponent = {
               <div class="cell-left">
                 <span v-if="colorByCode(g.code)" 
                      class="color-preview-square" 
-                     :class="{ 'no-image': !colorByCode(g.code).image_path }"
-                     :style="colorByCode(g.code).image_path ? { backgroundImage: 'url(' + $helpers.buildUploadURL(baseURL, colorByCode(g.code).image_path) + ')' } : {}">
+                     :class="swatchClassByCode(g.code)"
+                     :style="swatchStyleByCode(g.code)">
                 </span>
               </div>
               <div class="cell-center">
@@ -463,8 +463,8 @@ const ArtworksComponent = {
                         <div class="custom-select-wrapper">
                           <div v-if="m.colorCode && colorByCode(m.colorCode)" class="selected-color-display">
                             <div class="color-preview-square" 
-                                 :class="{ 'no-image': !colorByCode(m.colorCode).image_path }"
-                                 :style="colorByCode(m.colorCode).image_path ? { backgroundImage: 'url(' + $helpers.buildUploadURL(baseURL, colorByCode(m.colorCode).image_path) + ')' } : {}">
+                                 :class="swatchClassByCode(m.colorCode)"
+                                 :style="swatchStyleByCode(m.colorCode)">
                             </div>
                           </div>
                           <el-select 
@@ -482,8 +482,8 @@ const ArtworksComponent = {
                             >
                               <div class="color-option-content">
                                 <div class="color-preview-square" 
-                                     :class="{ 'no-image': !c.image_path }"
-                                     :style="c.image_path ? { backgroundImage: 'url(' + $helpers.buildUploadURL(baseURL, c.image_path) + ')' } : {}">
+                                     :class="swatchClassForColor(c)"
+                                     :style="swatchStyleForColor(c)">
                                 </div>
                                 <span class="color-code-text">{{ c.color_code }}</span>
                               </div>
@@ -840,6 +840,59 @@ const ArtworksComponent = {
     },
     colorByCode(code) {
       return code ? this.colorMap[code] : null;
+    },
+    resolveSwatchForColor(color, options = {}) {
+      if (!color || !window.CustomColorSwatch || typeof window.CustomColorSwatch.resolveSwatch !== 'function') {
+        return null;
+      }
+      const baseURL = options.baseURL || this.baseURL || window.location.origin;
+      const buildURL = this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+        ? this.$helpers.buildUploadURL
+        : ((base, path) => `${base.replace(/\/$/, '')}/uploads/${path}`);
+      return window.CustomColorSwatch.resolveSwatch(color, {
+        baseURL,
+        buildURL,
+        includeColorConcentrate: !!options.includeColorConcentrate,
+        forceOriginal: !!options.forceOriginal
+      });
+    },
+    resolveSwatchByCode(code, options = {}) {
+      const color = this.colorByCode(code);
+      return color ? this.resolveSwatchForColor(color, options) : null;
+    },
+    computeSwatchStyle(swatch) {
+      if (!swatch) return {};
+      if (swatch.type === 'image' && swatch.imageUrl) {
+        return {
+          backgroundImage: `url(${swatch.imageUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        };
+      }
+      if (swatch.type === 'pure' || swatch.type === 'color') {
+        return swatch.style || {};
+      }
+      return {};
+    },
+    swatchStyleByCode(code) {
+      return this.computeSwatchStyle(this.resolveSwatchByCode(code));
+    },
+    swatchClassByCode(code) {
+      const swatch = this.resolveSwatchByCode(code);
+      return {
+        'no-image': !swatch || swatch.type === 'empty',
+        'image-swatch': !!(swatch && swatch.type === 'image' && swatch.imageUrl)
+      };
+    },
+    swatchStyleForColor(color) {
+      return this.computeSwatchStyle(this.resolveSwatchForColor(color));
+    },
+    swatchClassForColor(color) {
+      const swatch = this.resolveSwatchForColor(color);
+      return {
+        'no-image': !swatch || swatch.type === 'empty',
+        'image-swatch': !!(swatch && swatch.type === 'image' && swatch.imageUrl)
+      };
     },
     // 将配方字符串拆成一行一条成分：匹配 “名称 数值单位” 组合
     parseFormulaLines(formula) {

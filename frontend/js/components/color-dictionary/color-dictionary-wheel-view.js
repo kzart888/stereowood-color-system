@@ -85,9 +85,9 @@
                         :class="{ 'selected': isSelected(color) }"
                     >
                         <div class="color-preview"
-                             :class="{ 'blank-color': !getColorStyle(color) }"
-                             :style="getColorStyle(color) ? { background: getColorStyle(color) } : {}">
-                            <span v-if="!getColorStyle(color)" class="blank-text">无</span>
+                             :class="swatchClass(color)"
+                             :style="getSwatchStyle(color)">
+                            <span v-if="isSwatchEmpty(color)" class="blank-text">无</span>
                         </div>
                         <div class="color-code">{{ color.color_code }}</div>
                         <div class="delta-e-value">ΔE: {{ color.deltaE.toFixed(1) }}</div>
@@ -205,6 +205,27 @@
 
             getColorStyle(color) {
                 return service.getColorStyle(color);
+            },
+
+            getSwatchStyle(color) {
+                return service.getSwatchStyle(color);
+            },
+
+            isSwatchEmpty(color) {
+                const swatch = color && (color.swatch || service.resolveColorSwatch(color));
+                return !swatch || swatch.type === 'empty';
+            },
+
+            swatchClass(color) {
+                const swatch = color && (color.swatch || service.resolveColorSwatch(color));
+                const classes = [];
+                if (!swatch || swatch.type === 'empty') {
+                    classes.push('blank-color');
+                }
+                if (swatch && swatch.type === 'image' && swatch.imageUrl) {
+                    classes.push('image-swatch');
+                }
+                return classes.join(' ');
             },
 
             selectColor(color) {
