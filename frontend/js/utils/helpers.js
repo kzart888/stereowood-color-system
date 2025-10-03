@@ -20,6 +20,28 @@ const helpers = {
     const withPrefix = cleaned.startsWith('uploads/') ? cleaned : `uploads/${cleaned}`;
     return `${baseURL || window.location.origin}/${withPrefix}`;
     },
+    normalizePantoneCode(value) {
+        if (value === null || value === undefined) {
+            return null;
+        }
+        const raw = String(value).trim();
+        if (!raw) {
+            return null;
+        }
+        let code = raw.replace(/^PANTON(E)?\s+/i, '');
+        code = code.replace(/\s+/g, ' ').trim();
+        const suffixMatch = code.match(/^(.*?)(\s+)?([cCuU])$/);
+        if (suffixMatch) {
+            const base = suffixMatch[1].trim();
+            const suffix = suffixMatch[3].toUpperCase();
+            const baseCompact = base.replace(/\s+/g, '');
+            if (/^\d+[A-Z]?$/i.test(baseCompact)) {
+                return `${baseCompact.toUpperCase()}${suffix}`;
+            }
+            return `${base} ${suffix}`.replace(/\s+/g, ' ').trim();
+        }
+        return code;
+    },
     /**
      * 格式化日期
      * @param {String} dateString - 日期字符串

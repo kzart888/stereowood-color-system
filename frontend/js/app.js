@@ -298,6 +298,16 @@ const app = createApp({
             } else {
                 color.hasPureColor = !!color.pure_hex_color;
             }
+            if (window.helpers && typeof window.helpers.normalizePantoneCode === 'function') {
+                if (color.pantone_coated) {
+                    const normalizedCoated = window.helpers.normalizePantoneCode(color.pantone_coated);
+                    color.pantone_coated = normalizedCoated || color.pantone_coated;
+                }
+                if (color.pantone_uncoated) {
+                    const normalizedUncoated = window.helpers.normalizePantoneCode(color.pantone_uncoated);
+                    color.pantone_uncoated = normalizedUncoated || color.pantone_uncoated;
+                }
+            }
             if (window.CustomColorSwatch && typeof window.CustomColorSwatch.resolveSwatch === 'function') {
                 try {
                     color.swatch = window.CustomColorSwatch.resolveSwatch(color, {

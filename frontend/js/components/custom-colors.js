@@ -1066,6 +1066,33 @@ const CustomColorsComponent = {
             }
         },
 
+        normalizePantoneCode(value) {
+            const helperFn = (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode);
+            if (typeof helperFn === 'function') {
+                return helperFn(value);
+            }
+            if (value === null || value === undefined) {
+                return null;
+            }
+            const raw = String(value).trim();
+            if (!raw) {
+                return null;
+            }
+            let code = raw.replace(/^PANTON(E)?\s+/i, '');
+            code = code.replace(/\s+/g, ' ').trim();
+            const suffixMatch = code.match(/^(.*?)(\s+)?([cCuU])$/);
+            if (suffixMatch) {
+                const base = suffixMatch[1].trim();
+                const suffix = suffixMatch[3].toUpperCase();
+                const baseCompact = base.replace(/\s+/g, '');
+                if (/^\d+[A-Z]?$/i.test(baseCompact)) {
+                    return `${baseCompact.toUpperCase()}${suffix}`;
+                }
+                return `${base} ${suffix}`.replace(/\s+/g, ' ').trim();
+            }
+            return code;
+        },
+
         handleImageChange(file) {
             this.form.imageFile = file.raw;
             if (this.form.imagePreview) {
@@ -1373,18 +1400,17 @@ const CustomColorsComponent = {
                 }
 
                 if (coatedMatch) {
-                    const cleanName = coatedMatch.name.replace(/^PANTONE\\s+/i, '').replace(/\\s+C$/i, 'C');
+                    const cleanName = this.normalizePantoneCode(coatedMatch.name) || coatedMatch.name;
                     this.form.pantone_coated = cleanName;
                 }
                 if (uncoatedMatch) {
-                    const cleanName = uncoatedMatch.name.replace(/^PANTONE\\s+/i, '').replace(/\\s+U$/i, 'U');
+                    const cleanName = this.normalizePantoneCode(uncoatedMatch.name) || uncoatedMatch.name;
                     this.form.pantone_uncoated = cleanName;
                 }
 
-                const coatedDisplay = coatedMatch ? coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C') : '无';
-                const uncoatedDisplay = uncoatedMatch ? uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U') : '无';
-                msg.success(`已匹配潘通色号: ${coatedDisplay} / ${uncoatedDisplay}`);
-
+                const coatedDisplay = coatedMatch ? (this.normalizePantoneCode(coatedMatch.name) || coatedMatch.name) : '无';
+                const uncoatedDisplay = uncoatedMatch ? (this.normalizePantoneCode(uncoatedMatch.name) || uncoatedMatch.name) : '无';
+                msg.success(`已匹配潘通色号：${coatedDisplay} / ${uncoatedDisplay}`);
             } catch (error) {
                 console.warn('findPantoneMatch failed:', error);
                 msg.error('匹配潘通色号失败');
@@ -1460,8 +1486,8 @@ const CustomColorsComponent = {
                 cmyk_y: color.cmyk_y,
                 cmyk_k: color.cmyk_k,
                 hex_color: color.hex_color,
-                pantone_coated: color.pantone_coated,
-                pantone_uncoated: color.pantone_uncoated,
+                pantone_coated: this.normalizePantoneCode(color.pantone_coated) || color.pantone_coated,
+                pantone_uncoated: this.normalizePantoneCode(color.pantone_uncoated) || color.pantone_uncoated,
                 pureColor: pureColorState,
                 pureColorCleared: false
             };
@@ -1501,8 +1527,16 @@ const CustomColorsComponent = {
                 if (this.form.cmyk_y != null) formData.append('cmyk_y', this.form.cmyk_y);
                 if (this.form.cmyk_k != null) formData.append('cmyk_k', this.form.cmyk_k);
                 if (this.form.hex_color) formData.append('hex_color', this.form.hex_color);
-                if (this.form.pantone_coated) formData.append('pantone_coated', this.form.pantone_coated);
-                if (this.form.pantone_uncoated) formData.append('pantone_uncoated', this.form.pantone_uncoated);
+                const normalizedPantoneCoated = this.normalizePantoneCode(this.form.pantone_coated);
+                if (normalizedPantoneCoated) {
+                    formData.append('pantone_coated', normalizedPantoneCoated);
+                    this.form.pantone_coated = normalizedPantoneCoated;
+                }
+                const normalizedPantoneUncoated = this.normalizePantoneCode(this.form.pantone_uncoated);
+                if (normalizedPantoneUncoated) {
+                    formData.append('pantone_uncoated', normalizedPantoneUncoated);
+                    this.form.pantone_uncoated = normalizedPantoneUncoated;
+                }
                 
                 if (this.form.pureColor && this.form.pureColor.hex) {
                     const pure = this.form.pureColor;
@@ -1812,8 +1846,12 @@ const CustomColorsComponent = {
             if (!pantoneCode || !window.PantoneHelper) {
                 return { background: '#f5f5f5', border: '1px dashed #ccc' };
             }
-            
-            const color = window.PantoneHelper.getColorByName(pantoneCode);
+
+            const normalized = this.normalizePantoneCode(pantoneCode) || pantoneCode;
+            let color = window.PantoneHelper.getColorByName(normalized);
+            if (!color && normalized !== pantoneCode) {
+                color = window.PantoneHelper.getColorByName(pantoneCode);
+            }
             if (color && color.rgb) {
                 return { 
                     background: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
