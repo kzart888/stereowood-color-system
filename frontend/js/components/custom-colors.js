@@ -246,38 +246,63 @@ const CustomColorsComponent = {
                             :mont-marte-colors="montMarteColors"
                         />
                     </el-form-item>
-                    
                     <el-form-item label="颜色样本">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="scheme-thumbnail" 
-                                 :class="{ 'no-image': !form.imagePreview }" 
-                                 style="width: 80px; height: 80px; flex-shrink: 0;"
-                                 @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)">
-                                <template v-if="!form.imagePreview">未上传图片</template>
-                                <img v-else :src="form.imagePreview" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
-                            </div>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <el-upload
-                                    :auto-upload="false"
-                                    :show-file-list="false"
-                                    :on-change="handleImageChange"
-                                    accept="image/*"
-                                >
-                                    <el-button size="small" type="primary">
-                                        <el-icon><Upload /></el-icon>
-                                        {{ form.imagePreview ? '更换图片' : '上传图片' }}
+                        <div class="color-sample-grid">
+                            <div class="color-sample-card">
+                                <div class="scheme-thumbnail"
+                                     :class="{ 'no-image': !form.imagePreview }"
+                                     @click="form.imagePreview && $thumbPreview && $thumbPreview.show($event, form.imagePreview)">
+                                    <template v-if="!form.imagePreview">未上传图片</template>
+                                    <img v-else :src="form.imagePreview" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                                </div>
+                                <div class="color-sample-actions">
+                                    <el-upload
+                                        :auto-upload="false"
+                                        :show-file-list="false"
+                                        :on-change="handleImageChange"
+                                        accept="image/*"
+                                    >
+                                        <el-button size="small" type="primary">
+                                            <el-icon><Upload /></el-icon>
+                                            {{ form.imagePreview ? '更换图片' : '上传图片' }}
+                                        </el-button>
+                                    </el-upload>
+                                    <el-button 
+                                        v-if="form.imagePreview"
+                                        size="small"
+                                        @click="clearImage"
+                                    >
+                                        <el-icon><Delete /></el-icon>
+                                        清除图片
                                     </el-button>
-                                </el-upload>
-                                
-                                <el-button 
-                                    v-if="form.imagePreview"
-                                    size="small"
-                                    @click="clearImage"
-                                >
-                                    <el-icon><Delete /></el-icon>
-                                    清除图片
-                                </el-button>
+                                </div>
+                            </div>
+                            <div class="color-sample-card">
+                                <div class="scheme-thumbnail pure-thumbnail"
+                                     :class="{ 'no-image': !hasPureColor }"
+                                     @click="openPurePreview($event)">
+                                    <template v-if="hasPureColor">
+                                        <img :src="form.pureColor.previewDataUrl" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" alt="平均色缩略图" />
+                                    </template>
+                                    <span v-else class="blank-text">待计算</span>
+                                </div>
+                                <div class="color-sample-actions">
+                                    <el-button 
+                                        size="small" 
+                                        type="primary" 
+                                        :disabled="!hasImageAvailable || computingPureColor"
+                                        @click="computePureColor">
+                                        <el-icon><Brush /></el-icon>
+                                        计算平均色
+                                    </el-button>
+                                    <el-button 
+                                        size="small" 
+                                        :disabled="!hasPureColor"
+                                        @click="clearPureColor">
+                                        <el-icon><Delete /></el-icon>
+                                        清除平均色
+                                    </el-button>
+                                </div>
                             </div>
                         </div>
                     </el-form-item>
@@ -448,6 +473,7 @@ const CustomColorsComponent = {
             highlightCode: null,
             refreshKey: 0,
             extracting: false,
+            computingPureColor: false,
             
             // Card selection
             selectedColorId: null,
@@ -469,7 +495,9 @@ const CustomColorsComponent = {
                 cmyk_k: null,
                 hex_color: null,
                 pantone_coated: null,
-                pantone_uncoated: null
+                pantone_uncoated: null,
+                pureColor: null,
+                pureColorCleared: false
             },
             
             rules: {
@@ -664,6 +692,16 @@ const CustomColorsComponent = {
         // Image availability check
         hasImageAvailable() {
             return !!(this.form.imageFile || (this.editingColor && this.editingColor.image_path) || this.form.imagePreview);
+        },
+
+        hasPureColor() {
+            return !!(this.form.pureColor && this.form.pureColor.hex);
+        },
+
+        pureColorHex() {
+            const hex = this.form.pureColor && this.form.pureColor.hex;
+            const normalizer = window.CustomColorSwatch && window.CustomColorSwatch.normalizeHex;
+            return hex ? (normalizer ? normalizer(hex) : hex) : null;
         },
         
         // Color value checks
@@ -964,6 +1002,7 @@ const CustomColorsComponent = {
                 URL.revokeObjectURL(this.form.imagePreview);
             }
             this.form.imagePreview = URL.createObjectURL(file.raw);
+            this.resetPureColorState({ markCleared: true });
         },
         
         clearImage() {
@@ -972,6 +1011,222 @@ const CustomColorsComponent = {
                 URL.revokeObjectURL(this.form.imagePreview);
                 this.form.imagePreview = null;
             }
+            this.resetPureColorState({ markCleared: true });
+        },
+        
+        // Keep pure-color flags aligned with image actions
+        resetPureColorState({ markCleared = false } = {}) {
+            if (!this.form) return;
+            this.form.pureColor = null;
+            this.form.pureColorCleared = !!markCleared;
+        },
+        
+        // Standardize hex for downstream modules
+        normalizeHexValue(hex) {
+            if (!hex) return null;
+            const swatch = window.CustomColorSwatch;
+            if (swatch && typeof swatch.normalizeHex === 'function') {
+                return swatch.normalizeHex(hex);
+            }
+            if (window.ColorConverter && typeof window.ColorConverter.formatHex === 'function') {
+                return window.ColorConverter.formatHex(hex);
+            }
+            const trimmed = String(hex).trim();
+            if (!trimmed) return null;
+            return trimmed.startsWith('#') ? trimmed.toUpperCase() : ('#' + trimmed.toUpperCase());
+        },
+        
+        // Hydrate dialog state from backend pure-color fields
+        buildPureColorStateFromExisting(color) {
+            if (!color) return null;
+            const hex = this.normalizeHexValue(color.pure_hex_color);
+            if (!hex) return null;
+            const converter = window.ColorConverter;
+            let rgb = null;
+            if ([color.pure_rgb_r, color.pure_rgb_g, color.pure_rgb_b].every(v => v !== null && v !== undefined)) {
+                rgb = {
+                    r: Number(color.pure_rgb_r),
+                    g: Number(color.pure_rgb_g),
+                    b: Number(color.pure_rgb_b)
+                };
+            } else if (converter && typeof converter.hexToRgb === 'function') {
+                const converted = converter.hexToRgb(hex);
+                if (converted) {
+                    rgb = {
+                        r: Number(converted.r),
+                        g: Number(converted.g),
+                        b: Number(converted.b)
+                    };
+                }
+            }
+            let cmyk = null;
+            if (converter && rgb && typeof converter.rgbToCmyk === 'function') {
+                cmyk = converter.rgbToCmyk(rgb.r, rgb.g, rgb.b);
+            }
+            const previewDataUrl = window.PureColorUtils && typeof window.PureColorUtils.createSolidSwatchDataUrl === 'function'
+                ? window.PureColorUtils.createSolidSwatchDataUrl(hex)
+                : null;
+            return {
+                hex,
+                rgb,
+                cmyk,
+                generatedAt: color.pure_generated_at || null,
+                previewDataUrl
+            };
+        },
+        
+        // Prefer original upload but gracefully fall back to existing previews
+        async resolveImageFileForProcessing() {
+            if (this.form && this.form.imageFile) {
+                return this.form.imageFile;
+            }
+            if (this.form && this.form.imagePreview) {
+                const fetched = await this.fetchImageAsFile(this.form.imagePreview);
+                if (fetched) {
+                    return fetched;
+                }
+            }
+            if (this.editingColor && this.editingColor.image_path) {
+                const imageUrl = this.$helpers.buildUploadURL(this.baseURL, this.editingColor.image_path);
+                const fetched = await this.fetchImageAsFile(imageUrl);
+                if (fetched) {
+                    return fetched;
+                }
+            }
+            return null;
+        },
+        
+        // Copy computed averages into user-visible color fields
+        applyPureColorToFormFields(pureColor, { silent = false } = {}) {
+            if (!pureColor) return;
+            const converter = window.ColorConverter;
+            let rgb = pureColor.rgb;
+            if ((!rgb || rgb.r == null || rgb.g == null || rgb.b == null) && converter && typeof converter.hexToRgb === 'function' && pureColor.hex) {
+                const converted = converter.hexToRgb(pureColor.hex);
+                if (converted) {
+                    rgb = { r: Number(converted.r), g: Number(converted.g), b: Number(converted.b) };
+                }
+            }
+            if (rgb) {
+                this.form.rgb_r = Math.round(rgb.r);
+                this.form.rgb_g = Math.round(rgb.g);
+                this.form.rgb_b = Math.round(rgb.b);
+            }
+            let cmyk = pureColor.cmyk;
+            if ((!cmyk || cmyk.c == null) && converter && rgb && typeof converter.rgbToCmyk === 'function') {
+                cmyk = converter.rgbToCmyk(Math.round(rgb.r), Math.round(rgb.g), Math.round(rgb.b));
+            }
+            if (cmyk) {
+                this.form.cmyk_c = Math.round(cmyk.c);
+                this.form.cmyk_m = Math.round(cmyk.m);
+                this.form.cmyk_y = Math.round(cmyk.y);
+                this.form.cmyk_k = Math.round(cmyk.k);
+            }
+            let resolvedHex = pureColor.hex;
+            if (!resolvedHex && converter && rgb && typeof converter.rgbToHex === 'function') {
+                resolvedHex = converter.rgbToHex(Math.round(rgb.r), Math.round(rgb.g), Math.round(rgb.b));
+            }
+            if (resolvedHex) {
+                this.form.hex_color = this.normalizeHexValue(resolvedHex);
+            }
+            if (!silent) {
+                const msg = this.getMsg();
+                msg.success('已根据平均色填充颜色值');
+            }
+        },
+        
+        // Generate and persist the averaged swatch backing all calculations
+        async computePureColor({ silent = false, force = false } = {}) {
+            if (this.computingPureColor && !force) {
+                return this.form.pureColor;
+            }
+            const msg = this.getMsg();
+            const utils = window.PureColorUtils;
+            if (!utils || typeof utils.computeAverageColorFromFile !== 'function') {
+                msg.error('平均色工具未加载');
+                return null;
+            }
+            const imageFile = await this.resolveImageFileForProcessing();
+            if (!imageFile) {
+                msg.warning('请先上传颜色样本');
+                return null;
+            }
+            this.computingPureColor = true;
+            try {
+                const result = await utils.computeAverageColorFromFile(imageFile);
+                const converter = window.ColorConverter;
+                let rgb = null;
+                if (result.rgb && typeof result.rgb === 'object') {
+                    rgb = {
+                        r: Math.round(result.rgb.r),
+                        g: Math.round(result.rgb.g),
+                        b: Math.round(result.rgb.b)
+                    };
+                }
+                const hex = this.normalizeHexValue(result.hex || (converter && rgb && typeof converter.rgbToHex === 'function' ? converter.rgbToHex(rgb.r, rgb.g, rgb.b) : null));
+                if (!hex) {
+                    throw new Error('无法生成有效的平均色 HEX 值');
+                }
+                let cmyk = null;
+                if (result.cmyk && typeof result.cmyk === 'object') {
+                    cmyk = {
+                        c: Number(result.cmyk.c),
+                        m: Number(result.cmyk.m),
+                        y: Number(result.cmyk.y),
+                        k: Number(result.cmyk.k)
+                    };
+                } else if (converter && rgb && typeof converter.rgbToCmyk === 'function') {
+                    cmyk = converter.rgbToCmyk(rgb.r, rgb.g, rgb.b);
+                }
+                const previewDataUrl = result.previewDataUrl || (utils.createSolidSwatchDataUrl ? utils.createSolidSwatchDataUrl(hex) : null);
+                const pureColor = {
+                    hex,
+                    rgb,
+                    cmyk,
+                    previewDataUrl,
+                    generatedAt: new Date().toISOString()
+                };
+                this.form.pureColor = pureColor;
+                this.form.pureColorCleared = false;
+                this.applyPureColorToFormFields(pureColor, { silent: true });
+                if (!silent) {
+                    msg.success('平均色已计算');
+                }
+                return pureColor;
+            } catch (error) {
+                console.warn('computePureColor failed:', error);
+                msg.error('计算平均色失败');
+                return null;
+            } finally {
+                this.computingPureColor = false;
+            }
+        },
+        
+        // Shared gate that reuses cached pure color when possible
+        async ensurePureColor({ silent = false, force = false } = {}) {
+            if (this.hasPureColor && !force) {
+                return this.form.pureColor;
+            }
+            return await this.computePureColor({ silent, force });
+        },
+        
+        // Manual reset keeps persisted metadata aligned with the dialog
+        clearPureColor() {
+            if (!this.hasPureColor && !this.form.pureColorCleared) {
+                return;
+            }
+            this.resetPureColorState({ markCleared: true });
+            const msg = this.getMsg();
+            msg.success('已清除平均色');
+        },
+        
+        // Reuse the global preview layer to inspect the averaged swatch
+        openPurePreview(event) {
+            if (!this.hasPureColor || !this.form.pureColor || !this.form.pureColor.previewDataUrl) {
+                return;
+            }
+            if (!this.$thumbPreview) return;
+            this.$thumbPreview.show(event, this.form.pureColor.previewDataUrl);
         },
         
         async fetchImageAsFile(imageUrl) {
@@ -986,44 +1241,11 @@ const CustomColorsComponent = {
         },
         
         async extractColorFromImage() {
-            const msg = this.getMsg();
-            let imageToProcess = null;
-            
-            if (this.form.imageFile) {
-                imageToProcess = this.form.imageFile;
-            } else if (this.editingColor && this.editingColor.image_path) {
-                const imageUrl = this.$helpers.buildUploadURL(this.baseURL, this.editingColor.image_path);
-                imageToProcess = await this.fetchImageAsFile(imageUrl);
-            } else if (this.form.imagePreview) {
-                imageToProcess = await this.fetchImageAsFile(this.form.imagePreview);
-            }
-            
-            if (!imageToProcess) {
-                msg.warning('没有可用的图片');
+            const pureColor = await this.ensurePureColor({ silent: true });
+            if (!pureColor) {
                 return;
             }
-            
-            try {
-                const color = await ColorConverter.extractColorFromImage(imageToProcess);
-                
-                // ColorConverter returns {r, g, b} directly
-                this.form.rgb_r = color.r;
-                this.form.rgb_g = color.g;
-                this.form.rgb_b = color.b;
-                
-                const cmyk = ColorConverter.rgbToCmyk(color.r, color.g, color.b);
-                this.form.cmyk_c = cmyk.c;
-                this.form.cmyk_m = cmyk.m;
-                this.form.cmyk_y = cmyk.y;
-                this.form.cmyk_k = cmyk.k;
-                
-                this.form.hex_color = ColorConverter.rgbToHex(color.r, color.g, color.b);
-                
-                msg.success('已提取颜色值');
-            } catch (error) {
-                // Error extracting color - silently handle
-                msg.error('提取颜色失败');
-            }
+            this.applyPureColorToFormFields(pureColor, { silent: false });
         },
         
         clearColorValues() {
@@ -1043,50 +1265,58 @@ const CustomColorsComponent = {
         
         async findPantoneMatch() {
             const msg = this.getMsg();
-            if (this.form.rgb_r === null || this.form.rgb_g === null || this.form.rgb_b === null) {
-                msg.warning('请先输入或提取 RGB 颜色值');
+            const pureColor = await this.ensurePureColor({ silent: true });
+            if (!pureColor) {
                 return;
             }
-            
+            this.applyPureColorToFormFields(pureColor, { silent: true });
+
+            if (this.form.rgb_r === null || this.form.rgb_g === null || this.form.rgb_b === null) {
+                msg.warning('请先生成平均色以获取 RGB 值');
+                return;
+            }
+
             try {
                 const rgb = {
-                    r: parseInt(this.form.rgb_r),
-                    g: parseInt(this.form.rgb_g),
-                    b: parseInt(this.form.rgb_b)
+                    r: parseInt(this.form.rgb_r, 10),
+                    g: parseInt(this.form.rgb_g, 10),
+                    b: parseInt(this.form.rgb_b, 10)
                 };
-                
-                if (!ColorConverter.isValidRGB(rgb.r, rgb.g, rgb.b)) {
-                    msg.error('RGB 值无效，请检查输入');
+
+                if (!ColorConverter || typeof ColorConverter.isValidRGB !== 'function' || !ColorConverter.isValidRGB(rgb.r, rgb.g, rgb.b)) {
+                    msg.error('平均色 RGB 值无效');
                     return;
                 }
-                
-                let coatedMatch, uncoatedMatch;
-                
+
+                let coatedMatch = null;
+                let uncoatedMatch = null;
+
                 if (window.PantoneHelper) {
                     coatedMatch = window.PantoneHelper.findClosest(rgb, 'coated');
                     uncoatedMatch = window.PantoneHelper.findClosest(rgb, 'uncoated');
-                } else {
-                    const pantoneResult = ColorConverter.findClosestPantone(rgb);
-                    coatedMatch = pantoneResult.coated;
-                    uncoatedMatch = pantoneResult.uncoated;
+                } else if (ColorConverter && typeof ColorConverter.findClosestPantone === 'function') {
+                    const fullDb = window.PANTONE_COLORS_FULL || [];
+                    const coatedDb = fullDb.filter ? fullDb.filter(p => p.type === 'coated') : [];
+                    const uncoatedDb = fullDb.filter ? fullDb.filter(p => p.type === 'uncoated') : [];
+                    coatedMatch = ColorConverter.findClosestPantone(rgb, coatedDb.length ? coatedDb : fullDb);
+                    uncoatedMatch = ColorConverter.findClosestPantone(rgb, uncoatedDb.length ? uncoatedDb : fullDb);
                 }
-                
+
                 if (coatedMatch) {
-                    // Format: Remove "PANTONE" prefix and keep only number + C
-                    const cleanName = coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C');
+                    const cleanName = coatedMatch.name.replace(/^PANTONE\\s+/i, '').replace(/\\s+C$/i, 'C');
                     this.form.pantone_coated = cleanName;
                 }
                 if (uncoatedMatch) {
-                    // Format: Remove "PANTONE" prefix and keep only number + U
-                    const cleanName = uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U');
+                    const cleanName = uncoatedMatch.name.replace(/^PANTONE\\s+/i, '').replace(/\\s+U$/i, 'U');
                     this.form.pantone_uncoated = cleanName;
                 }
-                
+
                 const coatedDisplay = coatedMatch ? coatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+C$/i, 'C') : '无';
                 const uncoatedDisplay = uncoatedMatch ? uncoatedMatch.name.replace(/^PANTONE\s+/i, '').replace(/\s+U$/i, 'U') : '无';
                 msg.success(`已匹配潘通色号: ${coatedDisplay} / ${uncoatedDisplay}`);
+
             } catch (error) {
-                // Error finding Pantone match - silently handle
+                console.warn('findPantoneMatch failed:', error);
                 msg.error('匹配潘通色号失败');
             }
         },
@@ -1127,6 +1357,9 @@ const CustomColorsComponent = {
             this.form.pantone_coated = null;
             this.form.pantone_uncoated = null;
             
+            this.resetPureColorState({ markCleared: false });
+            this.computingPureColor = false;
+            
             this.showAddDialog = true;
         },
         
@@ -1139,12 +1372,15 @@ const CustomColorsComponent = {
             const prefix = color.color_code.substring(0, 2).toUpperCase();
             const matchedCategory = this.categories.find(cat => cat.code === prefix);
             
+            const imagePreview = color.image_path ? this.$helpers.buildUploadURL(this.baseURL, color.image_path) : null;
+            const pureColorState = this.buildPureColorStateFromExisting(color);
+            
             this.form = {
                 category_id: color.category_id, // Use the actual category_id from database
                 color_code: color.color_code,
                 formula: color.formula,
                 imageFile: null,
-                imagePreview: color.image_path ? this.$helpers.buildUploadURL(this.baseURL, color.image_path) : null,
+                imagePreview,
                 // Load color values
                 rgb_r: color.rgb_r,
                 rgb_g: color.rgb_g,
@@ -1155,12 +1391,16 @@ const CustomColorsComponent = {
                 cmyk_k: color.cmyk_k,
                 hex_color: color.hex_color,
                 pantone_coated: color.pantone_coated,
-                pantone_uncoated: color.pantone_uncoated
+                pantone_uncoated: color.pantone_uncoated,
+                pureColor: pureColorState,
+                pureColorCleared: false
             };
             
+            this.computingPureColor = false;
             this.showAddDialog = true;
         },
         
+
         async saveColor() {
             const msg = this.getMsg();
             const valid = await this.$refs.formRef.validate().catch(() => false);
@@ -1194,6 +1434,28 @@ const CustomColorsComponent = {
                 if (this.form.pantone_coated) formData.append('pantone_coated', this.form.pantone_coated);
                 if (this.form.pantone_uncoated) formData.append('pantone_uncoated', this.form.pantone_uncoated);
                 
+                if (this.form.pureColor && this.form.pureColor.hex) {
+                    const pure = this.form.pureColor;
+                    let rgb = pure.rgb;
+                    if ((!rgb || rgb.r == null || rgb.g == null || rgb.b == null) && typeof ColorConverter !== 'undefined' && ColorConverter && typeof ColorConverter.hexToRgb === 'function') {
+                        const converted = ColorConverter.hexToRgb(pure.hex);
+                        if (converted) {
+                            rgb = { r: Math.round(converted.r), g: Math.round(converted.g), b: Math.round(converted.b) };
+                        }
+                    }
+                    if (rgb) {
+                        formData.append('pure_rgb_r', Math.round(rgb.r));
+                        formData.append('pure_rgb_g', Math.round(rgb.g));
+                        formData.append('pure_rgb_b', Math.round(rgb.b));
+                    }
+                    formData.append('pure_hex_color', pure.hex);
+                    if (pure.generatedAt) {
+                        formData.append('pure_generated_at', pure.generatedAt);
+                    }
+                } else if (this.form.pureColorCleared) {
+                    formData.append('clear_pure_color', '1');
+                }
+
                 if (this.editingColor) {
                     if (!this.form.imageFile && this.editingColor.image_path) {
                         formData.append('existingImagePath', this.editingColor.image_path);
@@ -1242,8 +1504,11 @@ const CustomColorsComponent = {
                 cmyk_k: null,
                 hex_color: null,
                 pantone_coated: null,
-                pantone_uncoated: null
+                pantone_uncoated: null,
+                pureColor: null,
+                pureColorCleared: false
             };
+            this.computingPureColor = false;
             if (this.$refs.formRef) {
                 this.$refs.formRef.resetFields();
             }
@@ -1251,6 +1516,7 @@ const CustomColorsComponent = {
             this._unbindEsc();
         },
         
+
         // Other methods remain the same...
         onOpenColorDialog() {
             this.initForm();
