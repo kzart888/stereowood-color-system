@@ -1,4 +1,4 @@
-/* 作品配色管理组件
+﻿/* 作品配色管理组件
   - 顶部“视图切换”双按钮：层号优先 / 自配色优先
   - 顶部“排序”双按钮：按时间 / 按名称（外部传入 sortMode）
    - 顶部“+ 新作品”按钮：新增母bar（作品）
@@ -908,30 +908,40 @@ const ArtworksComponent = {
     },
     // Formula structure method removed - using shared formulaUtils.structured instead
     normalizedMappings(scheme) {
-      // scheme.layers: [{layer, colorCode}] or { [layer]: colorCode }
+      if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.normalizeMappings === 'function') {
+        return window.ArtworkSchemeUtils.normalizeMappings(scheme);
+      }
       let rows = [];
-      if (Array.isArray(scheme.layers)) {
-        rows = scheme.layers.map(x => ({ layer: Number(x.layer), colorCode: x.colorCode || x.code || x.custom_color_code || '' }));
-      } else if (scheme.layers && typeof scheme.layers === 'object') {
-        rows = Object.keys(scheme.layers).map(k => ({ layer: Number(k), colorCode: scheme.layers[k] }));
+      if (scheme && Array.isArray(scheme.layers)) {
+        rows = scheme.layers.map((x) => ({
+          layer: Number(x.layer),
+          colorCode: x.colorCode || x.code || x.custom_color_code || ''
+        }));
+      } else if (scheme && scheme.layers && typeof scheme.layers === 'object') {
+        rows = Object.keys(scheme.layers).map((key) => ({
+          layer: Number(key),
+          colorCode: scheme.layers[key]
+        }));
       }
       return rows
-        .filter(x => Number.isFinite(x.layer))
+        .filter((item) => Number.isFinite(item.layer))
         .sort((a, b) => a.layer - b.layer);
     },
     groupedByColor(scheme) {
-      const m = this.normalizedMappings(scheme);
+      if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.groupByColor === 'function') {
+        return window.ArtworkSchemeUtils.groupByColor(scheme);
+      }
+      const rows = this.normalizedMappings(scheme);
       const map = new Map();
       const emptyLayers = [];
-      m.forEach(x => {
-        const raw = x.colorCode;
-        if (!raw) {
-          emptyLayers.push(x.layer);
-        } else {
-          const key = raw;
-          if (!map.has(key)) map.set(key, []);
-          map.get(key).push(x.layer);
+      rows.forEach((entry) => {
+        const code = entry.colorCode;
+        if (!code) {
+          emptyLayers.push(entry.layer);
+          return;
         }
+        if (!map.has(code)) map.set(code, []);
+        map.get(code).push(entry.layer);
       });
       const arr = Array.from(map.entries()).map(([code, layers]) => ({
         code,
@@ -939,9 +949,8 @@ const ArtworksComponent = {
         isEmptyGroup: false
       }));
       if (emptyLayers.length) {
-        arr.push({ code: '', layers: emptyLayers.sort((a,b)=>a-b), isEmptyGroup: true });
+        arr.push({ code: '', layers: emptyLayers.sort((a, b) => a - b), isEmptyGroup: true });
       }
-      // 排序：正常 code 字典序，其次空组（未指定）放最后
       arr.sort((a, b) => {
         if (a.isEmptyGroup && b.isEmptyGroup) return 0;
         if (a.isEmptyGroup) return 1;
@@ -951,20 +960,31 @@ const ArtworksComponent = {
       return arr;
     },
     duplicateLayerSet(scheme) {
-      const dupSet = new Set();
+      if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.duplicateLayerSet === 'function') {
+        return window.ArtworkSchemeUtils.duplicateLayerSet(scheme);
+      }
+      const duplicates = new Set();
       const seen = new Map();
       const rows = this.normalizedMappings(scheme);
-      rows.forEach(r => {
-        const cnt = (seen.get(r.layer) || 0) + 1;
-        seen.set(r.layer, cnt);
-        if (cnt > 1) dupSet.add(r.layer);
+      rows.forEach((row) => {
+        const count = (seen.get(row.layer) || 0) + 1;
+        seen.set(row.layer, count);
+        if (count > 1) {
+          duplicates.add(row.layer);
+        }
       });
-      return dupSet;
+      return duplicates;
     },
     groupedByColorWithFlags(scheme) {
+      if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.groupedByColorWithFlags === 'function') {
+        return window.ArtworkSchemeUtils.groupedByColorWithFlags(scheme);
+      }
       const groups = this.groupedByColor(scheme);
-      const dup = this.duplicateLayerSet(scheme);
-  return groups.map(g => ({ ...g, hasDup: (g.layers || []).some(l => dup.has(l)) }));
+      const duplicates = this.duplicateLayerSet(scheme);
+      return groups.map((group) => ({
+        ...group,
+        hasDup: (group.layers || []).some((layer) => duplicates.has(layer))
+      }));
     },
     hasScheme(schemeId) {
       schemeId = Number(schemeId);
@@ -1083,18 +1103,18 @@ const ArtworksComponent = {
       this.showArtworkDialog = false;
     },
     async saveNewArtwork() {
-  const valid = await this.$refs.artworkFormRef.validate().catch(()=>false);
-  if (!valid) return; // 校验失败，错误信息已在输入框下显示
-  const parsed = this._parseArtworkTitle(this.artworkForm.title);
-  if (!parsed) return; // 理论上不会到这
-  const { code, name } = parsed;
+      const valid = await this.$refs.artworkFormRef.validate().catch(() => false);
+      if (!valid) return;
+      const parsed = this._parseArtworkTitle(this.artworkForm.title);
+      if (!parsed) return;
+      const { code, name } = parsed;
       try {
-  await axios.post(`${window.location.origin}/api/artworks`, { code, name });
+        await axios.post(`${window.location.origin}/api/artworks`, { code, name });
         msg.success('已创建新作品');
         await this.refreshAll();
         this.showArtworkDialog = false;
-      } catch(e) {
-        console.error(e);
+      } catch (error) {
+        console.error(error);
         msg.error('创建失败');
       }
     },
@@ -1130,16 +1150,21 @@ const ArtworksComponent = {
     addScheme(art) {
       this.editingArtId = art.id;
       this.schemeEditing = { art, scheme: null };
-      this.schemeForm = {
-        id: null,
-        name: '',
-        thumbnailFile: null,
-        thumbnailPreview: null,
-        initialThumbnailFile: null,
-        initialThumbnailPreview: null,
-        existingInitialThumbnailPath: null,
-        mappings: [{ layer: 1, colorCode: '' }]
-      };
+      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.createEmptyForm === 'function') {
+        this.schemeForm = window.ArtworkSchemeDialog.createEmptyForm();
+        this.schemeForm.id = null;
+      } else {
+        this.schemeForm = {
+          id: null,
+          name: '',
+          thumbnailFile: null,
+          thumbnailPreview: null,
+          initialThumbnailFile: null,
+          initialThumbnailPreview: null,
+          existingInitialThumbnailPath: null,
+          mappings: [{ layer: 1, colorCode: '' }]
+        };
+      }
       this.showSchemeDialog = true;
     },
 
@@ -1147,17 +1172,25 @@ const ArtworksComponent = {
     editScheme(art, scheme) {
       this.editingArtId = art.id;
       this.schemeEditing = { art, scheme };
-      const rows = this.normalizedMappings(scheme);
-      this.schemeForm = {
-        id: scheme.id,
-        name: scheme.name || '',
-        thumbnailFile: null,
-        thumbnailPreview: scheme.thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.thumbnail_path) : null,
-        initialThumbnailFile: null,
-        initialThumbnailPreview: scheme.initial_thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.initial_thumbnail_path) : null,
-        existingInitialThumbnailPath: scheme.initial_thumbnail_path,
-        mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }]
-      };
+      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.hydrateFormFromScheme === 'function') {
+        this.schemeForm = window.ArtworkSchemeDialog.hydrateFormFromScheme({
+          scheme,
+          baseURL: this.baseURL,
+          helpers: this.$helpers
+        });
+      } else {
+        const rows = this.normalizedMappings(scheme);
+        this.schemeForm = {
+          id: scheme.id,
+          name: scheme.name || '',
+          thumbnailFile: null,
+          thumbnailPreview: scheme.thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.thumbnail_path) : null,
+          initialThumbnailFile: null,
+          initialThumbnailPreview: scheme.initial_thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.initial_thumbnail_path) : null,
+          existingInitialThumbnailPath: scheme.initial_thumbnail_path,
+          mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }]
+        };
+      }
       this.showSchemeDialog = true;
     },
 
@@ -1166,14 +1199,20 @@ const ArtworksComponent = {
     },
 
     onOpenDialog() {
-      // 创建初始快照
-      this._schemeOriginalSnapshot = JSON.stringify(this._normalizedSchemeForm());
+      this._schemeOriginalSnapshot = this._createSchemeSnapshot();
       this._bindEsc();
     },
     onCloseDialog() {
       this._schemeOriginalSnapshot = null;
       this._unbindEsc();
     },
+    _createSchemeSnapshot() {
+      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.createSnapshot === 'function') {
+        return window.ArtworkSchemeDialog.createSnapshot(this.schemeForm);
+      }
+      return JSON.stringify(this._normalizedSchemeForm());
+    },
+
     _normalizedSchemeForm() {
       return {
         id: this.schemeForm.id || null,
@@ -1185,7 +1224,7 @@ const ArtworksComponent = {
     },
     _isSchemeDirty() {
       if (!this._schemeOriginalSnapshot) return false;
-      return JSON.stringify(this._normalizedSchemeForm()) !== this._schemeOriginalSnapshot;
+      return this._createSchemeSnapshot() !== this._schemeOriginalSnapshot;
     },
     async attemptCloseSchemeDialog() {
       if (this._isSchemeDirty()) {
@@ -1345,25 +1384,41 @@ const ArtworksComponent = {
       }
     },
 
-    addRow() {
-      const maxLayer = Math.max(0, ...this.schemeForm.mappings.map(x => Number(x.layer) || 0));
-      this.schemeForm.mappings.push({ layer: maxLayer + 1, colorCode: '' });
+    addRow(index) {
+      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.addRow === 'function') {
+        const options = (typeof index === 'number' && Number.isFinite(index)) ? { index } : {};
+        window.ArtworkSchemeDialog.addRow(this.schemeForm, options);
+      } else {
+        const maxLayer = Math.max(0, ...(this.schemeForm.mappings || []).map((x) => Number(x.layer) || 0));
+        this.schemeForm.mappings.push({ layer: maxLayer + 1, colorCode: '' });
+      }
     },
     duplicateRow(idx) {
-      const row = this.schemeForm.mappings[idx];
-      this.schemeForm.mappings.splice(idx + 1, 0, { layer: row.layer, colorCode: row.colorCode });
+      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.duplicateRow === 'function') {
+        window.ArtworkSchemeDialog.duplicateRow(this.schemeForm, idx);
+      } else {
+        const row = this.schemeForm.mappings[idx];
+        this.schemeForm.mappings.splice(idx + 1, 0, { layer: row.layer, colorCode: row.colorCode });
+      }
     },
     removeRow(idx) {
-      this.schemeForm.mappings.splice(idx, 1);
-      if (this.schemeForm.mappings.length === 0) {
-        this.schemeForm.mappings.push({ layer: 1, colorCode: '' });
+      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.removeRow === 'function') {
+        window.ArtworkSchemeDialog.removeRow(this.schemeForm, idx);
+      } else {
+        this.schemeForm.mappings.splice(idx, 1);
+        if (this.schemeForm.mappings.length === 0) {
+          this.schemeForm.mappings.push({ layer: 1, colorCode: '' });
+        }
       }
     },
 
     // 序列化层映射，保留重复层，按层排序
     buildLayerPayload() {
+      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.buildLayerPayload === 'function') {
+        return window.ArtworkSchemeDialog.buildLayerPayload(this.schemeForm);
+      }
       const arr = [];
-      (this.schemeForm.mappings || []).forEach(m => {
+      (this.schemeForm.mappings || []).forEach((m) => {
         const layer = Number(m.layer);
         const code = String(m.colorCode || '').trim();
         if (Number.isFinite(layer) && layer > 0) arr.push({ layer, colorCode: code });
@@ -1388,29 +1443,24 @@ const ArtworksComponent = {
     },
 
     async saveScheme() {
-      const valid = await this.$refs.schemeFormRef.validate().catch(()=>false);
-      if (!valid) return; // 内联错误已显示
-      if (this.schemeNameDuplicate) return; // 重复提示已内联
+      const valid = await this.$refs.schemeFormRef.validate().catch(() => false);
+      if (!valid) return;
+      if (this.schemeNameDuplicate) return;
       const artId = this.editingArtId;
       if (!artId) return;
 
-      // 组装 FormData
       const fd = new FormData();
       fd.append('name', this.schemeForm.name.trim());
       fd.append('layers', JSON.stringify(this.buildLayerPayload()));
       if (this.schemeForm.thumbnailFile) {
         fd.append('thumbnail', this.schemeForm.thumbnailFile);
       }
-      // 若是编辑且未选择新图但有旧图，由后端决定是否保留
       if (!this.schemeForm.thumbnailFile && this.schemeEditing?.scheme?.thumbnail_path) {
         fd.append('existingThumbnailPath', this.schemeEditing.scheme.thumbnail_path);
       }
-      
-      // Handle initial thumbnail
       if (this.schemeForm.initialThumbnailFile) {
         fd.append('initialThumbnail', this.schemeForm.initialThumbnailFile);
       }
-      // 若是编辑且未选择新初始图但有旧初始图，由后端决定是否保留
       if (!this.schemeForm.initialThumbnailFile && this.schemeForm.existingInitialThumbnailPath) {
         fd.append('existingInitialThumbnailPath', this.schemeForm.existingInitialThumbnailPath);
       }
@@ -1418,7 +1468,6 @@ const ArtworksComponent = {
       this.saving = true;
       try {
         if (this.schemeForm.id) {
-          // 更新方案
           if (window.api?.artworks?.updateScheme) {
             await window.api.artworks.updateScheme(artId, this.schemeForm.id, fd);
           } else {
@@ -1426,7 +1475,6 @@ const ArtworksComponent = {
           }
           msg.success('已保存方案修改');
         } else {
-          // 新增方案
           if (window.api?.artworks?.addScheme) {
             await window.api.artworks.addScheme(artId, fd);
           } else {
@@ -1436,72 +1484,74 @@ const ArtworksComponent = {
         }
         await this.refreshAll();
         this.showSchemeDialog = false;
-      } catch (e) {
-        console.error(e);
-        msg.error('保存失败');
+      } catch (error) {
+        console.error('保存配色方案失败', error);
+        const serverMessage = error?.response?.data?.error || '';
+        msg.error(serverMessage || '保存失败');
       } finally {
         this.saving = false;
       }
-    }
-    , async deleteScheme(art, scheme) {
-      const ok = await this.$helpers.doubleDangerConfirm({
-        firstMessage: `确定要删除配色方案 “${this.displaySchemeName(art, scheme)}” 吗？`,
+    },
+
+    async deleteScheme(art, scheme) {
+      const ok = await this..doubleDangerConfirm({
+        firstMessage: 确定要删除配色方案 "" 吗？,
         secondMessage: '删除后将无法恢复，确认最终删除？',
         secondConfirmText: '永久删除'
       });
       if (!ok) return;
       try {
-  const url = `${window.location.origin}/api/artworks/${art.id}/schemes/${scheme.id}`;
+        const url = ${window.location.origin}/api/artworks//schemes/;
         await axios.delete(url);
         msg.success('已删除配色方案');
         await this.refreshAll();
-      } catch(e) {
-        console.error('删除配色方案失败', e);
-        const status = e?.response?.status;
-        const msg = e?.response?.data?.error || '';
+      } catch (error) {
+        console.error('删除配色方案失败', error);
+        const status = error?.response?.status;
+        const serverMessage = error?.response?.data?.error || '';
         if (status === 404) {
-          msg.warning(msg || '配色方案不存在或已被删除');
-          // 前端刷新一次，清掉缓存中的 phantom 方案
+          msg.warning(serverMessage || '配色方案不存在或已被删除');
           await this.refreshAll();
         } else if (status === 400) {
-          msg.warning(msg || '无法删除该配色方案');
+          msg.warning(serverMessage || '无法删除该配色方案');
         } else if (status === 409) {
-          msg.warning(msg || '该配色方案存在引用，无法删除');
+          msg.warning(serverMessage || '该配色方案存在引用，无法删除');
         } else {
-          msg.error(msg || '删除失败');
+          msg.error(serverMessage || '删除失败');
         }
       }
-    }
-    , async deleteArtwork(art) {
-      if ((art.schemes||[]).length > 0) return; // 保险拦截
-      const ok = await this.$helpers.doubleDangerConfirm({
-        firstMessage: `确定要删除作品 "${this.$helpers.formatArtworkTitle(art)}" 吗？`,
+    },
+
+    async deleteArtwork(art) {
+      if ((art.schemes || []).length > 0) return;
+      const ok = await this..doubleDangerConfirm({
+        firstMessage: 确定要删除作品 "" 吗？,
         secondMessage: '删除后将无法恢复，确认最终删除？',
         secondConfirmText: '永久删除'
       });
       if (!ok) return;
       try {
-  const url = `${window.location.origin}/api/artworks/${art.id}`;
+        const url = ${window.location.origin}/api/artworks/;
         await axios.delete(url);
         msg.success('已删除作品');
         await this.refreshAll();
-      } catch(e) {
-        console.error('删除作品失败', e);
-        const status = e?.response?.status;
-        const msg = e?.response?.data?.error || '';
+      } catch (error) {
+        console.error('删除作品失败', error);
+        const status = error?.response?.status;
+        const serverMessage = error?.response?.data?.error || '';
         if (status === 404) {
-          msg.warning(msg || '作品不存在或已被删除');
+          msg.warning(serverMessage || '作品不存在或已被删除');
           await this.refreshAll();
         } else if (status === 400) {
-          msg.warning(msg || '无法删除该作品');
+          msg.warning(serverMessage || '无法删除该作品');
         } else if (status === 409) {
-          msg.warning(msg || '该作品存在引用，无法删除');
+          msg.warning(serverMessage || '该作品存在引用，无法删除');
         } else {
-          msg.error(msg || '删除失败');
+          msg.error(serverMessage || '删除失败');
         }
       }
-  },
-    
+    },
+
     // Pagination methods
     goToPage(page) {
       if (page === '...') return;
@@ -1638,3 +1688,8 @@ const ArtworksComponent = {
 
 // Expose to global scope for app.js to access
 window.ArtworksComponent = ArtworksComponent;
+
+
+
+
+
