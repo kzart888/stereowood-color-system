@@ -1,15 +1,45 @@
 {
-  "name": "stereowood-admin",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "typescript": "~5.9.3",
-    "vite": "^7.1.7"
-  }
+    "name":  "stereowood-admin",
+    "private":  true,
+    "version":  "0.1.0",
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "vite",
+                    "build":  "vue-tsc --noEmit \u0026\u0026 vite build",
+                    "preview":  "vite preview",
+                    "lint":  "eslint \"src/**/*.{ts,tsx,vue}\"",
+                    "test":  "npm run lint \u0026\u0026 npm run test:unit",
+                    "test:unit":  "vitest",
+                    "test:e2e":  "playwright test"
+                },
+    "dependencies":  {
+                         "@element-plus/icons-vue":  "^2.3.1",
+                         "@vueuse/core":  "^11.1.0",
+                         "axios":  "^1.7.9",
+                         "element-plus":  "^2.9.8",
+                         "pinia":  "^2.2.4",
+                         "vue":  "^3.5.12",
+                         "vue-router":  "^4.4.5"
+                     },
+    "devDependencies":  {
+                            "@playwright/test":  "^1.48.2",
+                            "@types/jsdom":  "^21.1.7",
+                            "@types/node":  "^22.7.4",
+                            "@vitejs/plugin-vue":  "^5.2.0",
+                            "@vitest/coverage-v8":  "^2.1.4",
+                            "@vitest/ui":  "^2.1.4",
+                            "@vue/test-utils":  "^2.4.6",
+                            "@typescript-eslint/eslint-plugin":  "^8.11.0",
+                            "@typescript-eslint/parser":  "^8.11.0",
+                            "eslint":  "^9.13.0",
+                            "eslint-config-prettier":  "^9.1.0",
+                            "eslint-plugin-prettier":  "^5.2.1",
+                            "eslint-plugin-vue":  "^9.28.0",
+                            "jsdom":  "^25.0.1",
+                            "prettier":  "^3.4.1",
+                            "typescript":  "~5.9.3",
+                            "vite":  "^6.0.11",
+                            "vitest":  "^2.1.4",
+                            "vue-tsc":  "^2.1.8"
+                        }
 }
