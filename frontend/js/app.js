@@ -213,6 +213,16 @@ const app = createApp({
                 const list = Array.isArray(res.data) ? res.data : [];
                 const hydrated = list.map((item) => this.hydrateCustomColor(item));
                 this.customColors = hydrated;
+                if (window.FormulaMatcher && typeof window.FormulaMatcher.buildIndex === 'function') {
+                    window.FormulaMatcher.buildIndex(hydrated);
+                }
+                if (window.IngredientSuggester && typeof window.IngredientSuggester.buildIndex === 'function') {
+                    window.IngredientSuggester.buildIndex({
+                        customColors: hydrated,
+                        rawMaterials: this.montMarteColors || [],
+                        manualSeeds: []
+                    });
+                }
                 this.registerDataset('customColors', hydrated.map(c=>({ id:c.id, code:c.color_code||c.code||'', name:c.name||'' })));
                 if (this._colorFormulaIndex) {
                     this.syncFormulasIfChanged();
@@ -227,7 +237,7 @@ const app = createApp({
         async loadArtworks() {
             try { const res = await api.artworks.getAll(); this.artworks = res.data; const artworksIdx=[]; const schemesIdx=[]; this.artworks.forEach(a=>{ const name=a.name||a.title||''; const code=a.code||a.no||''; artworksIdx.push({id:a.id,name,code}); if(Array.isArray(a.schemes)) a.schemes.forEach(s=> schemesIdx.push({id:s.id, artworkId:a.id, artworkName:name, artworkCode:code, name:s.name||''})); }); this.registerDataset('artworks', artworksIdx); this.registerDataset('schemes', schemesIdx); } catch(e){ }
         },
-        async loadMontMarteColors() { try { const res = await api.montMarteColors.getAll(); this.montMarteColors = res.data; this.registerDataset('rawMaterials', this.montMarteColors.map(m=>({id:m.id, name:m.name}))); } catch(e){ } },
+        async loadMontMarteColors() { try { const res = await api.montMarteColors.getAll(); this.montMarteColors = res.data; this.registerDataset('rawMaterials', this.montMarteColors.map(m=>({id:m.id, name:m.name}))); if (window.IngredientSuggester && typeof window.IngredientSuggester.buildIndex === 'function') { window.IngredientSuggester.buildIndex({ customColors: this.customColors || [], rawMaterials: this.montMarteColors || [], manualSeeds: [] }); } } catch(e){ } },
         async loadSuppliers() { try { const r = await axios.get(`${this.baseURL}/api/suppliers`); this.suppliers = r.data||[]; } catch(e){} },
         async loadPurchaseLinks() { try { const r = await axios.get(`${this.baseURL}/api/purchase-links`); this.purchaseLinks = r.data||[]; } catch(e){} },
         setArtworksViewMode(mode){ if(mode!==this.artworksViewMode && (mode==='byLayer'||mode==='byColor')) { this.artworksViewMode=mode; const comp=this.$refs.artworksRef; if(comp) comp.viewMode=mode; } },
