@@ -5,6 +5,17 @@ import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import prettier from 'eslint-plugin-prettier';
 
+const browserGlobals = {
+  window: 'readonly',
+  document: 'readonly',
+  console: 'readonly',
+  File: 'readonly',
+  FileReader: 'readonly',
+  HTMLImageElement: 'readonly',
+  Image: 'readonly',
+  CanvasRenderingContext2D: 'readonly',
+};
+
 const tsRecommended = tsPlugin.configs.recommended.rules;
 const vueRecommended = pluginVue.configs['flat/recommended'].rules;
 
@@ -20,6 +31,7 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
+      globals: browserGlobals,
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
@@ -41,6 +53,7 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
+      globals: browserGlobals,
     },
     plugins: {
       vue: pluginVue,

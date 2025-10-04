@@ -1,6 +1,6 @@
 ﻿import type { CMYK, ColorSwatchMetadata, RGB } from '@/models/color';
-
-export const DEFAULT_SWATCH_SIZE = 96;
+import type { ColorConverterType } from './colorConverter';
+import { ColorConverter, DEFAULT_SWATCH_SIZE } from './colorConverter';
 
 export interface ColorConverterResult {
   r: number;
@@ -10,12 +10,11 @@ export interface ColorConverterResult {
   cmyk?: CMYK;
 }
 
-export interface ColorConverter {
-  extractColorFromImage(file: File): Promise<ColorConverterResult>;
-}
-
-export interface PureColorComputeOptions {
-  previewSize?: number;
+export interface PureColorSource {
+  imageUrl: string;
+  averageHex?: string;
+  averageSwatch?: ColorSwatchMetadata;
+  updatedAt?: string;
 }
 
 export interface PureColorComputationResult {
@@ -23,6 +22,10 @@ export interface PureColorComputationResult {
   hex: string;
   cmyk?: CMYK;
   previewDataUrl: string | null;
+}
+
+export interface PureColorComputeOptions {
+  previewSize?: number;
 }
 
 export function createSolidSwatchDataUrl(
@@ -49,7 +52,7 @@ export function createSolidSwatchDataUrl(
 
 export async function computeAverageColorFromFile(
   file: File,
-  converter: ColorConverter,
+  converter: Pick<ColorConverterType, 'extractColorFromImage'>,
   options: PureColorComputeOptions = {},
 ): Promise<PureColorComputationResult> {
   if (!file) {
@@ -75,11 +78,11 @@ export async function computeAverageColorFromFile(
   };
 }
 
-export interface PureColorSource {
-  imageUrl: string;
-  averageHex?: string;
-  averageSwatch?: ColorSwatchMetadata;
-  updatedAt?: string;
+export async function computeAverageColor(
+  file: File,
+  options?: PureColorComputeOptions,
+): Promise<PureColorComputationResult> {
+  return computeAverageColorFromFile(file, ColorConverter, options);
 }
 
 export function isPureColorAvailable(source: PureColorSource | undefined): boolean {
