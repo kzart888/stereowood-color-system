@@ -603,8 +603,15 @@ const ArtworksComponent = {
     selectedSizes: [],
     shapeFilters: ['正方形', '长方形', '圆形', '不规则形'],
     selectedShapes: [],
-    showHelp: false
+    showHelp: false,
+    artworksStore: null
     };
+  },
+  created() {
+    if (window.ArtworksStore && typeof window.ArtworksStore.create === 'function') {
+      this.artworksStore = window.ArtworksStore.create({ baseURL: this.baseURL, helpers: this.$helpers });
+      this.artworksStore.setCustomColors(this.customColors);
+    }
   },
   computed: {
   // Expose formulaUtils to template
@@ -696,14 +703,6 @@ const ArtworksComponent = {
       return list.some(s => s.name === name && s.id !== this.schemeForm.id);
     },
     customColors() { return this.globalData.customColors.value || []; },
-    colorMap() {
-      const map = {};
-      (this.customColors || []).forEach(c => {
-        const code = c.code || c.colorCode || c.color_code;
-        if (code) map[code] = c;
-      });
-      return map;
-    },
     formDupCounts() {
       const counts = {};
       const rows = (this.schemeForm && Array.isArray(this.schemeForm.mappings)) ? this.schemeForm.mappings : [];
@@ -839,60 +838,49 @@ const ArtworksComponent = {
   this.$emit('view-mode-changed', this.viewMode);
     },
     colorByCode(code) {
-      return code ? this.colorMap[code] : null;
+      return this.artworksStore ? this.artworksStore.getColorByCode(code) : null;
     },
     resolveSwatchForColor(color, options = {}) {
-      if (!color || !window.CustomColorSwatch || typeof window.CustomColorSwatch.resolveSwatch !== 'function') {
+      if (!this.artworksStore) {
         return null;
       }
-      const baseURL = options.baseURL || this.baseURL || window.location.origin;
-      const buildURL = this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-        ? this.$helpers.buildUploadURL
-        : ((base, path) => `${base.replace(/\/$/, '')}/uploads/${path}`);
-      return window.CustomColorSwatch.resolveSwatch(color, {
-        baseURL,
-        buildURL,
-        includeColorConcentrate: !!options.includeColorConcentrate,
-        forceOriginal: !!options.forceOriginal
-      });
+      return this.artworksStore.resolveSwatchForColor(color, options);
     },
     resolveSwatchByCode(code, options = {}) {
-      const color = this.colorByCode(code);
-      return color ? this.resolveSwatchForColor(color, options) : null;
+      if (!this.artworksStore) {
+        return null;
+      }
+      return this.artworksStore.resolveSwatchByCode(code, options);
     },
     computeSwatchStyle(swatch) {
-      if (!swatch) return {};
-      if (swatch.type === 'image' && swatch.imageUrl) {
-        return {
-          backgroundImage: `url(${swatch.imageUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        };
+      if (!this.artworksStore) {
+        return {};
       }
-      if (swatch.type === 'pure' || swatch.type === 'color') {
-        return swatch.style || {};
-      }
-      return {};
+      return this.artworksStore.computeSwatchStyle(swatch);
     },
     swatchStyleByCode(code) {
-      return this.computeSwatchStyle(this.resolveSwatchByCode(code));
+      if (!this.artworksStore) {
+        return {};
+      }
+      return this.artworksStore.getSwatchStyleByCode(code);
     },
     swatchClassByCode(code) {
-      const swatch = this.resolveSwatchByCode(code);
-      return {
-        'no-image': !swatch || swatch.type === 'empty',
-        'image-swatch': !!(swatch && swatch.type === 'image' && swatch.imageUrl)
-      };
+      if (!this.artworksStore) {
+        return { 'no-image': true };
+      }
+      return this.artworksStore.getSwatchClassByCode(code);
     },
     swatchStyleForColor(color) {
-      return this.computeSwatchStyle(this.resolveSwatchForColor(color));
+      if (!this.artworksStore) {
+        return {};
+      }
+      return this.artworksStore.getSwatchStyleForColor(color);
     },
     swatchClassForColor(color) {
-      const swatch = this.resolveSwatchForColor(color);
-      return {
-        'no-image': !swatch || swatch.type === 'empty',
-        'image-swatch': !!(swatch && swatch.type === 'image' && swatch.imageUrl)
-      };
+      if (!this.artworksStore) {
+        return { 'no-image': true };
+      }
+      return this.artworksStore.getSwatchClassForColor(color);
     },
     // 将配方字符串拆成一行一条成分：匹配 “名称 数值单位” 组合
     parseFormulaLines(formula) {
@@ -1587,6 +1575,14 @@ const ArtworksComponent = {
   },
   
   watch: {
+    customColors: {
+      handler(list) {
+        if (this.artworksStore) {
+          this.artworksStore.setCustomColors(list);
+        }
+      },
+      immediate: true
+    },
     // Reset to page 1 when sort mode changes
     sortMode() {
       this.currentPage = 1;
