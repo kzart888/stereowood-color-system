@@ -1,6 +1,6 @@
 ﻿# Artwork Scheme Formula-Matching Redesign Plan
 
-_Last updated: 2025-10-03_
+_Last updated: 2025-10-04_
 
 ## 1. Background & Goals
 - **Primary pain point**: assigning custom color codes to artwork layers requires memorising codes even when the formula (e.g. `朱红 1g 钛白 1g`) is known. The current dialog shows formula as read-only chips once a code is selected, offering no reverse lookup.
@@ -13,6 +13,7 @@ _Last updated: 2025-10-03_
   - Modularise the oversized `artworks.js` (currently ≥1000 LOC) to isolate dialog logic, shared utilities, and view rendering.
   - Establish reusable services for formula parsing, hashing, and lookup to support future extensions (e.g. ingredient editors).
   - Ensure backwards compatibility with existing data (legacy formulas, duplicate colors).
+  - Align implementation with the new Vue 3 migration (see `docs/development/vue3-migration-strategy.md`).
 
 ## 2. Current-State Analysis
 - **Data model**:
@@ -28,111 +29,73 @@ _Last updated: 2025-10-03_
 - **Technical debt**:
   - `artworks.js` lumps state, computed, watchers, methods (UI + business logic mixed).
   - No dedicated store/service for artwork-specific lookups (custom color map, formula index).
+  - Encoding corruption throughout legacy scripts—another motivator for the Vue 3 rebuild.
 
 ## 3. Proposed Architecture
-### 3.1 Module Decomposition
-1. **`frontend/js/modules/artworks/` (new directory)**
-   - `artworks-store.js`: reactive state + derived maps (color map, formula index).
-   - `artworks-services.js`: async operations (load/save artwork, scheme CRUD, pure-color support reuse) and helper APIs (formula search).
-   - `artworks-dialog.vue.js` (or `.js` component chunk): handles Add/Edit scheme dialog UI, uses composition functions for formula entry.
-   - `artworks-table.js`: presentational logic for scheme table (by layer/by color views).
-   - Core `artworks.js` becomes orchestrator: imports store, registers components, handles view switching.
-
-2. **Formula support modules**
-   - `modules/formula-matcher.js`: wraps `FormulaParser` to produce canonical hash, caches mapping `hash -> [customColorIds]`, exposes search API to dialogs.
-   - `components/shared/formula-input.js`: new reusable ingredient input with chips, autocomplete list.
-   - `modules/ingredient-suggester.js`: builds suggestion index (from mont marte materials, existing formulas, optional user-defined), supports Chinese+Pinyin lookup.
-
-3. **Backend extension** (optional but recommended for scalability)
-   - `GET /api/custom-colors?formula_hash=...` to return matches directly. Initially can stay client-side using `globalData.customColors` cache; keep open for future when dataset grows.
+### 3.1 Module Decomposition (Vue 3)
+1. **`src/stores/artworks.ts`** (Pinia): holds artworks, schemes, formula match cache.
+2. **`src/features/artworks/useSchemeDialog.ts`**: encapsulates dialog state, maps directly from legacy `scheme-dialog.js`.
+3. **`src/features/formula/FormulaMatcher.ts`** and **`IngredientSuggester.ts`**: reusable across features.
+4. **`src/components/artworks/SchemeDialog.vue`**: Vue SFC using the composable + Element Plus dialog.
+5. **`src/components/formula/FormulaInput.vue`**: chip-based ingredient entry.
+6. **`src/components/artworks/SchemeTableByLayer.vue` / `SchemeTableByColor.vue`**: display logic consuming Pinia store + composables.
 
 ### 3.2 Data Flow Enhancements
-- On dialog init, load scheme mappings into new structure `{ layer, colorCode, formulaTokens, formulaHash, manualFormula }`.
-- Whenever user edits formula chips:
-  1. Normalise tokens via `FormulaParser.parse()` (ensures consistent hash even with spacing/pinyin variations once mapped to chosen ingredient).
-  2. Generate hash and query `FormulaMatcher.findByHash(hash)` for candidate custom colors.
-  3. Present candidates in dropdown tied to color code input (auto-select if exactly one match & user opts-in).
-- When user selects a candidate color:
-  - Display its formula chips (read-only) but keep manual input accessible for overrides.
-- When user clears color selection:
-  - Keep manual formula chips (used for documentation) and mark mapping as formula-only so table renders grey swatch + disabled calculator.
+- In Vue 3, use reactive store watchers to rebuild hash maps whenever `customColors` change.
+- Dialog emits `formulaChanged` events so stores trigger candidate lookups.
+- Manual formulas stored per layer (Pinia state) and persisted via backend API (`manual_formula` column to be added via migration script).
 
 ### 3.3 UI/UX Redesign Highlights
-- **Ingredient input bar**
-  - Single line control with chip composer: user types ingredient; suggestion dropdown supports fuzzy match on Chinese & pinyin (using combined index, accent-insensitive).
-  - After selecting ingredient, prompt for amount/unit optionally in-line (`15 g`). If left blank, stored as ingredient-only chip.
-  - Chips show `名称 | 数量单位` with close icon for quick remove.
-- **Candidate list**
-  - Display inline under color-code select; each candidate shows swatch, color code, match confidence (exact formula vs partial), and quick “Select” button.
-  - Provide “no selection” option to keep formula-only record.
-- **Layer table**
-  - Swatch column: grey placeholder `无` when no color code; calculator button hidden/disabled. Tooltip indicates “无自配色，保留人工配方”。
-  - Formula column: if formula-only, render chips from manual entry; if color selected, show color’s stored formula (ensuring clarity if user deviates).
-- **Validation**
-  - Duplicate layer detection stays (badge). New warnings: formula entered but no candidate match -> highlight in amber with tooltip.
-  - Provide quick action “Create custom color from this formula” (future backlog) if no match.
+*(Same as previously planned; now framed for Vue 3 components.)*
 
-### 3.4 Cross-Module Reuse Preparation
-- Ingredient suggester exposed globally to support planned adoption in custom color editor and raw material forms.
-- Formula matcher module to provide hashing utilities to duplicate detection and future analytics (dedupe, search).
-- Ensure modules operate on Unicode safely; all strings treated as UTF-8; pinyin index stored lowercase ASCII for search.
+## 4. Implementation Roadmap (Aligned with Vue 3 Migration)
+1. **Phase A – Foundation** *(Status: Done)*
+   - Port `FormulaMatcher` & `IngredientSuggester` into new `src/features/formula/` modules.
+   - Add unit tests ensuring hash consistency and suggestion coverage.
 
-## 4. Implementation Roadmap
-1. **Phase A – Foundation**
-   - Extract `FormulaMatcher` module with hashing, map-building from `globalData.customColors`.
-   - Build `IngredientSuggester` that merges:
-     - Mont Marte color names (`globalData.montMarteColors`),
-     - Existing custom color formula tokens (dedupe + frequency ranking),
-     - Optional manual seed list.
-   - Unit test (browser-level) for hash equivalence and suggestion lookups (via `node --check` + manual cases).
+2. **Phase B – Artworks Module Refactor** *(In Progress)*
+   - Implement `useArtworkStore` Pinia module.
+   - Compose `useSchemeDialog` with helper utilities (`scheme-utils.ts`).
+   - Rebuild `SchemeDialog.vue` using Element Plus + new formula input placeholder.
 
-2. **Phase B – Artworks Refactor**
-   - Create `artworks-store.js` to hold state and derived maps; migrate watchers & computed from monolith.
-   - Split dialog UI to separate component file that imports store/services.
-   - Ensure regression coverage: open existing schemes, edit, save, delete.
+3. **Phase C – Formula Input Component** *(Pending)*
+   - Create chip composer with IME-friendly input, suggestion dropdown.
+   - Emit structured tokens & hash updates.
 
-3. **Phase C – Formula Input Component**
-   - Implement chip-based input component using Element-Plus popper or custom dropdown; supports keyboard navigation and IME-friendly editing.
-   - Add suggestion provider hooks (filter by pinyin via transliteration utility, fallback to substring).
-   - Expose events: `update:modelValue`, `hash-change`, `candidates-change`.
+4. **Phase D – Candidate Selection Flow** *(Pending)*
+   - Integrate store-driven candidate list; support auto-select or manual leave-blank.
+   - Ensure grey swatch + disabled calculator when formula only.
 
-4. **Phase D – Candidate Selection Flow**
-   - Integrate component into dialog mappings table row.
-   - Display candidate list with select + ability to keep blank.
-   - Sync manual formula to scheme mapping (persist to backend as part of `schemeForm`). Requires backend change to store manual formula? (Assess existing schema; if none, we’ll extend `artwork_scheme_layers` table with `manual_formula` column.)
+5. **Phase E – Table & UX Polish** *(Pending)*
+   - Update by-layer / by-color tables to use new composables.
+   - Add highlight badges for duplicate layers and formula mismatch.
 
-5. **Phase E – Table & UX polish**
-   - Update scheme table renderers: grey swatch, disabled calc button, manual formula chips.
-   - Add inline status icons (match exact, multiple options, no match).
-   - Provide keyboard shortcuts for fast entry (e.g. `Enter` adds chip, `Ctrl+Space` opens suggestions).
+6. **Phase F – Backend API Updates** *(Pending)*
+   - Extend artwork scheme endpoints to persist `manual_formula`, `pure_color` hints if required.
+   - Add query endpoint for formula hash if future scalability demands it.
 
-6. **Phase F – Backend API Updates (if required)**
-   - Add optional `manual_formula` persistence.
-   - Add endpoints for formula hash lookup (if client caching insufficient).
-   - Migrate existing data where necessary (set manual formula empty).
+7. **Phase G – QA & Documentation** *(Pending)*
+   - Update docs, Playwright tests verifying formula input / scheme dialog flows.
+   - Ensure Chinese localisation reads correctly.
 
-7. **Phase G – QA & Documentation**
-   - Update docs: new workflow instructions, component usage.
-   - Add Playwright scenarios: create scheme with manual formula only, verify grey swatch; confirm candidate auto-selection.
-   - Regression on custom color + dictionary features (ensuring helper modules didn’t break them).
+## 5. Updated Risks & Mitigations
+*(Same as before, but note that the Vue 3 migration addresses many of these by design.)*
 
-## 5. Open Questions & Risks
-- **Data storage**: Do we store manual formulas per layer in backend? (Recommended to avoid losing info when reloading.)
-- **Performance**: Formula matcher on large datasets – need memoised hash map and possibly background rebuild when custom colors reload; consider Web Worker if UI lags.
-- **Ingredient normalisation**: Need strategy for mapping pinyin to Chinese (e.g. `zhuhong` → `朱红`). Possibly leverage existing dataset or add transliteration table.
-- **Duplicate formulas**: When multiple custom colors share formula, provide deterministic ordering (e.g. prefer latest updated or explicit priority field).
-- **User overrides**: If user modifies manual formula after selecting a custom color, should color auto-clear or stay linked? Proposed behaviour: prompt to clear or keep (document in UX spec).
+## 6. Immediate Next Steps (Post-migration kick-off)
+1. Scaffold Vue 3 project (`see docs/development/vue3-migration-strategy.md`).
+2. Port FormulaMatcher & IngredientSuggester into new codebase (Phase A completed on legacy branch; reimplement in Pinia).
+3. Implement `useArtworkStore` and `useSchemeDialog` to replace the legacy monolith.
+4. Build new `SchemeDialog.vue` with placeholder formula input; wire CRUD actions to Pinia + API.
+5. Continue with Phase C onwards as the new SPA matures.
 
-## 6. Future Enhancements (Backlog)
-- Allow saving “formula templates” per artwork to reuse across schemes.
-- Provide quick action to create a new custom color from manual formula if no matches.
-- Analytics on formula usage frequency to surface most common ingredients in suggestions.
-- Backend cron to flag duplicate formulas for consolidation.
-
-## 7. Immediate Next Steps (post-approval)
-1. Confirm backend support for storing manual formula entries (migration plan).
-2. Kick off Phase A implementation with dedicated formula matcher + ingredient suggester.
-3. Schedule refactor of `artworks.js` once supporting modules ready (ensure incremental PRs).
+## 7. Status Snapshot (2025-10-04)
+- Phase A - [Done] (transplant into Vue 3 pending).
+- Phase B - [In Progress] (store + composables under construction in new app).
+- Phase C - [Pending].
+- Phase D - [Pending].
+- Phase E - [Pending].
+- Phase F - [Pending].
+- Phase G - [Pending].
 
 ---
 
