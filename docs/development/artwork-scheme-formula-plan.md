@@ -1,6 +1,6 @@
 ﻿# Artwork Scheme Formula-Matching Redesign Plan
 
-_Last updated: 2025-10-06_
+_Last updated: 2025-10-08_
 
 ## 1. Background & Goals
 - **Primary pain point**: assigning custom color codes to artwork layers requires memorising codes even when the formula (e.g. `朱红 1g 钛白 1g`) is known. The current dialog shows formula as read-only chips once a code is selected, offering no reverse lookup.
@@ -58,9 +58,10 @@ _Last updated: 2025-10-06_
    - 新增 `useSchemeDialog` 组合式函数与 `SchemeDialog.vue` 骨架，可在 Vue 3 中编辑并保存手写配方。
    - 数据层新增 `scheme_layers.manual_formula` 列，并为对话状态与保存流程补充 Vitest 覆盖。
 
-3. **Phase C – Formula Input Component** *(Pending)*
-   - Create chip composer with IME-friendly input, suggestion dropdown.
-   - Emit structured tokens & hash updates.
+3. **Phase C – Formula Input Component** *(Done)*
+   - `FormulaInput.vue` delivers chip化展示、textarea 编辑与建议面板（基于自配色 + 原料索引）。
+   - 组件在输入时输出标准化 tokens/hash/segment/unit，SchemeDialog 现可感知手写配方结构。
+   - 新增单元测试覆盖基本输入与建议交互，确保后续复用稳定。
 
 4. **Phase D – Candidate Selection Flow** *(Pending)*
    - Integrate store-driven candidate list; support auto-select or manual leave-blank.
@@ -82,10 +83,9 @@ _Last updated: 2025-10-06_
 *(Same as before, but note that the Vue 3 migration addresses many of these by design.)*
 
 ## 6. Immediate Next Steps (Post-migration kick-off)
-1. 迭代 Phase C：交付配方输入组件（芯片/建议）并集成至 SchemeDialog。
-2. Phase D：落地候选自配色列表与留白逻辑，确保与手写配方共存。
-3. Phase E：刷新分层/按色展示表格，加入重复/配方异常标记。
-4. Phase F：根据需要扩展后端 API（公式哈希查询、手写配方校验）并补充 Playwright 回归用例。
+1. Phase D：落地候选自配色列表与留白逻辑，确保与手写配方共存。
+2. Phase E：刷新分层/按色展示表格，加入重复/配方异常标记。
+3. Phase F：根据需要扩展后端 API（公式哈希查询、手写配方校验）并补充 Playwright 回归用例。
 
 ## 7. Status Snapshot (2025-10-06)
 - Phase A - [Done].

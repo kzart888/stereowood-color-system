@@ -2,10 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Artwork, ArtworkScheme } from '@/models/artwork';
 import { useSchemeDialog } from '@/features/artworks/useSchemeDialog';
 
-const { editSchemeMock, messageSuccessMock, messageInfoMock } = vi.hoisted(() => ({
+const {
+  editSchemeMock,
+  messageSuccessMock,
+  messageInfoMock,
+  messageWarningMock,
+  loadCustomColorsMock,
+  loadMaterialsMock,
+} = vi.hoisted(() => ({
   editSchemeMock: vi.fn(),
   messageSuccessMock: vi.fn(),
   messageInfoMock: vi.fn(),
+  messageWarningMock: vi.fn(),
+  loadCustomColorsMock: vi.fn().mockResolvedValue(undefined),
+  loadMaterialsMock: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/stores/artworks', () => ({
@@ -14,11 +24,25 @@ vi.mock('@/stores/artworks', () => ({
   }),
 }));
 
+vi.mock('@/stores/customColors', () => ({
+  useCustomColorStore: () => ({
+    items: [],
+    loadAll: loadCustomColorsMock,
+  }),
+}));
+
+vi.mock('@/stores/materials', () => ({
+  useMaterialsStore: () => ({
+    items: [],
+    loadMaterials: loadMaterialsMock,
+  }),
+}));
+
 vi.mock('@/utils/message', () => ({
   message: {
     success: messageSuccessMock,
     error: vi.fn(),
-    warning: vi.fn(),
+    warning: messageWarningMock,
     info: messageInfoMock,
   },
 }));
@@ -62,6 +86,9 @@ describe('useSchemeDialog', () => {
     editSchemeMock.mockReset();
     messageSuccessMock.mockReset();
     messageInfoMock.mockReset();
+    messageWarningMock.mockReset();
+    loadCustomColorsMock.mockReset();
+    loadMaterialsMock.mockReset();
   });
 
   it('initialises state when opening a scheme', () => {
@@ -80,7 +107,13 @@ describe('useSchemeDialog', () => {
     editSchemeMock.mockResolvedValueOnce(undefined);
     const dialog = useSchemeDialog();
     dialog.open(artwork, scheme);
-    dialog.updateManualFormula(0, '  新配方  ');
+    dialog.updateManualFormula(0, {
+      value: '  新配方  ',
+      tokens: [],
+      hash: null,
+      segments: [],
+      units: [],
+    });
 
     expect(dialog.hasChanges.value).toBe(true);
 

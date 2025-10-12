@@ -61,14 +61,21 @@ function clampChannel(value: number): number {
 }
 
 export function getColorHex(color: CustomColor): string | null {
-  const sources = [normalizeHex(color.pure_hex_color), normalizeHex(color.hex_color)] as const;
+  const sources = [normalizeHex(color.pure_hex_color), normalizeHex(color.hex_color)];
   for (const candidate of sources) {
     if (candidate) {
       return candidate;
     }
   }
-  const rgb = getColorRgb(color);
-  return rgb ? rgbToHex(rgb.r, rgb.g, rgb.b) : null;
+  const preferred = channelTriplet(color.pure_rgb_r, color.pure_rgb_g, color.pure_rgb_b);
+  if (preferred) {
+    return rgbToHex(preferred.r, preferred.g, preferred.b);
+  }
+  const legacy = channelTriplet(color.rgb_r, color.rgb_g, color.rgb_b);
+  if (legacy) {
+    return rgbToHex(legacy.r, legacy.g, legacy.b);
+  }
+  return null;
 }
 
 export function getColorRgb(color: CustomColor): { r: number; g: number; b: number } | null {
@@ -80,8 +87,15 @@ export function getColorRgb(color: CustomColor): { r: number; g: number; b: numb
   if (legacy) {
     return legacy;
   }
-  const hex = getColorHex(color);
-  return hex ? hexToRgb(hex) : null;
+  const sources = [normalizeHex(color.pure_hex_color), normalizeHex(color.hex_color)];
+  for (const candidate of sources) {
+    if (!candidate) continue;
+    const rgb = hexToRgb(candidate);
+    if (rgb) {
+      return rgb;
+    }
+  }
+  return null;
 }
 
 export function getColorHsl(color: CustomColor): { h: number; s: number; l: number } | null {

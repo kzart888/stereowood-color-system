@@ -38,12 +38,13 @@
                 </span>
               </div>
             </header>
-            <el-input
-              type="textarea"
+            <FormulaInput
               :model-value="layer.manualFormula"
-              :autosize="{ minRows: 2, maxRows: 4 }"
+              :fetch-suggestions="dialog.fetchIngredientSuggestions"
+              :suggestions-enabled="true"
+              emit-warning-for-invalid
               placeholder="记录该层的手写配方，可与自配色无关"
-              @update:model-value="dialog.updateManualFormula(index, $event)"
+              @change="(payload) => dialog.updateManualFormula(index, payload)"
             />
             <p v-if="layer.referencedFormula" class="scheme-dialog__reference">
               参考配方：{{ layer.referencedFormula }}
@@ -76,6 +77,7 @@
 
 <script setup lang="ts">
 import type { SchemeDialogBindings } from '@/features/artworks/useSchemeDialog';
+import FormulaInput from '@/components/formula/FormulaInput.vue';
 
 const props = defineProps<{
   dialog: SchemeDialogBindings;

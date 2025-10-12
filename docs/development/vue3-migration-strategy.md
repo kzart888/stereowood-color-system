@@ -1,6 +1,6 @@
 ﻿# Vue 3 Migration & Rebuild Strategy
 
-_Last updated: 2025-10-05_
+_Last updated: 2025-10-08_
 
 ## 1. Why We Are Migrating
 
@@ -59,7 +59,7 @@ docs/
 | **1. Scaffold Modern Project**  | ✅ Complete   | Vite + Vue TS app created; toolchain (ESLint flat config, Prettier, Vitest, Playwright) configured; baseline layout/router/stores in place. | None.                                                                                                                                       |
 | **2. Migrate Core Utilities**   | ◐ In progress | Ported pure colour utilities, Pantone datasets (basic + full), swatch helpers, axios HTTP client, Pantone composables, formula parser + hash helpers, general utility suite, validators, async debounce/throttle helpers, thumbnail preview overlay, formula matcher indexer, ingredient suggester, custom colour swatch resolver, duplicate detector, performance monitor, and message helpers with Vitest coverage. | Finalise utility usage patterns inside upcoming Pinia stores and feature modules. |
 | **3. Domain Stores & Services** | ◐ In progress | Custom colour, artworks, and materials API clients with Pinia stores scaffolded (CRUD, history caching, scheme/material mutations) covered by unit tests; manual 配方记录 now persists via the new `scheme_layers.manual_formula` column and Scheme dialog composable; color dictionary view reuses shared custom-colour data with a dedicated view state store. | Flesh out dictionary (suppliers/links) APIs & stores; tighten error-handling patterns across services; surface upload progress + optimistic concurrency for artworks/materials flows. |
-| **4. Feature Views Migration**  | ◐ In progress | Color dictionary 列表、HSL 导航、色轮导航与配方匹配视图均已在 Vue 3 中重建并共享数据管线；作品配色视图提供新的 SchemeDialog 骨架，手写配方已持久化到 `manual_formula` 列。 | 引入 Vue 3 版公式输入组件并完成 SchemeDialog 候选交互；重建材料管理子页以达到功能对等；持续打磨色卡打印/筛选体验。          |
+| **4. Feature Views Migration**  | ◐ In progress | Color dictionary 列表、HSL 导航、色轮导航与配方匹配视图均已在 Vue 3 中重建并共享数据管线；作品配色视图提供新的 SchemeDialog 骨架，手写配方已持久化到 `manual_formula` 列；Phase C `FormulaInput` 组件落地并集成建议索引。 | 完成 SchemeDialog 候选交互（Phase D）与留白逻辑；重建材料管理子页以达到功能对等；持续打磨色卡打印/筛选体验。          |
 | **5. Workflow Integrations**    | ▢ Not started | —                                                                                                                                           | Reconnect pure colour + Pantone flow, formula matcher, thumbnail handling across new views; honour 色精 exceptions.                         |
 | **6. QA & Tooling**             | ▢ Not started | —                                                                                                                                           | Add Vitest coverage, Playwright smoke suites, lint scripts in CI; validate UTF-8, accessibility, performance budgets.                       |
 | **7. Cut-over & Clean-up**      | ▢ Not started | —                                                                                                                                           | Wire Express to serve Vite build; remove unused legacy code after sign-off; update deployment docs.                                         |
@@ -114,10 +114,9 @@ _(unchanged from earlier draft; keep as reference while porting)_
 
 ## 9. Immediate Next Actions
 
-1. 交付 Vue 3 版配方输入组件（Phase C），将其嵌入 SchemeDialog 与配方候选流程。
-2. Phase D：实现候选色列表、留空支持与 ΔE 提示，确保自动/手动流程共存。
-3. Phase E：刷新作品表格与色卡视图的重复/异常标记，并补充前端单元 + Playwright 覆盖。
-4. 更新部署文档以涵盖 `scheme_layers.manual_formula` 迁移，并规划后续 Phase F API 扩展与监控。
+1. Phase D：实现候选色列表、留空支持与 ΔE 提示，确保自动/手动流程共存。
+2. Phase E：刷新作品表格与色卡视图的重复/异常标记，并补充前端单元 + Playwright 覆盖。
+3. 更新部署文档以涵盖 `scheme_layers.manual_formula` 迁移，并规划后续 Phase F API 扩展与监控。
 
 ## 10. Done Definition for Migration
 

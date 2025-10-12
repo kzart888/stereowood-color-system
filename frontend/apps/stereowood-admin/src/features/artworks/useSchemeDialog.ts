@@ -8,6 +8,21 @@ import type {
 } from '@/models/artwork';
 import { useArtworkStore } from '@/stores/artworks';
 import { message } from '@/utils/message';
+import { useCustomColorStore } from '@/stores/customColors';
+import { useMaterialsStore } from '@/stores/materials';
+import {
+  buildIngredientIndex,
+  suggestIngredients,
+  type IngredientSuggestion,
+} from '@/features/formula/ingredientSuggester';
+import { tokenizeFormula } from '@/features/formula/matcher';
+import {
+  formulaUnitBuckets,
+  hashFormulaIngredients,
+  splitFormulaSegments,
+} from '@/utils/formula';
+import type { FormulaDraftChange } from '@/components/formula/types';
+import type { FormulaIngredient } from '@/models/formula';
 
 function normalizeManualFormula(value: string | null | undefined) {
   if (typeof value !== 'string') {
@@ -23,6 +38,10 @@ function cloneLayer(layer: EditableSchemeLayer): EditableSchemeLayer {
     colorCode: layer.colorCode,
     customColorId: layer.customColorId,
     manualFormula: layer.manualFormula,
+    manualTokens: [...layer.manualTokens],
+    manualHash: layer.manualHash,
+    manualSegments: [...layer.manualSegments],
+    manualUnits: [...layer.manualUnits],
     referencedFormula: layer.referencedFormula,
   };
 }
@@ -41,11 +60,46 @@ function buildSnapshot(name: string, layerList: EditableSchemeLayer[]) {
   });
 }
 
+const MANUAL_INGREDIENT_SEEDS = [
+  { name: '钛白粉', unit: 'g', weight: 2 },
+  { name: '群青', unit: 'g' },
+  { name: '朱红', unit: 'g' },
+  { name: '镉黄', unit: 'g' },
+  '水粉白',
+  '熟褐',
+] as const;
+
+function buildManualDetails(value: string): {
+  manualFormula: string;
+  manualTokens: FormulaIngredient[];
+  manualHash: string | null;
+  manualSegments: string[];
+  manualUnits: string[];
+} {
+  const manualFormula = normalizeManualFormula(value);
+  const tokens = tokenizeFormula(manualFormula);
+  const hash = tokens.length ? hashFormulaIngredients(tokens) : null;
+  const segments = splitFormulaSegments(manualFormula);
+  const units = formulaUnitBuckets(tokens);
+
+  return {
+    manualFormula,
+    manualTokens: tokens,
+    manualHash: hash,
+    manualSegments: segments,
+    manualUnits: units,
+  };
+}
+
 export interface EditableSchemeLayer {
   layer: number;
   colorCode: string | null;
   customColorId: number | null;
   manualFormula: string;
+  manualTokens: FormulaIngredient[];
+  manualHash: string | null;
+  manualSegments: string[];
+  manualUnits: string[];
   referencedFormula: string | null;
 }
 
@@ -64,12 +118,17 @@ export interface SchemeDialogBindings {
   open: (artwork: Artwork, scheme: ArtworkScheme) => void;
   close: () => void;
   resetForm: () => void;
-  updateManualFormula: (index: number, value: string) => void;
+  updateManualFormula: (index: number, draft: FormulaDraftChange) => void;
   save: () => Promise<void>;
+  ingredientSuggestionsLoading: Ref<boolean>;
+  ingredientSuggestionsReady: Ref<boolean>;
+  fetchIngredientSuggestions: (query: string) => Promise<IngredientSuggestion[]>;
 }
 
 export function useSchemeDialog(): SchemeDialogBindings {
   const store = useArtworkStore();
+  const customColorStore = useCustomColorStore();
+  const materialsStore = useMaterialsStore();
 
   const isOpen = ref(false);
   const isSaving = ref(false);
@@ -115,7 +174,7 @@ export function useSchemeDialog(): SchemeDialogBindings {
         layer: layer.layer,
         colorCode: layer.colorCode ?? null,
         customColorId: layer.custom_color_id ?? null,
-        manualFormula: normalizeManualFormula(layer.manualFormula ?? layer.formula),
+        ...buildManualDetails(layer.manualFormula ?? layer.formula),
         referencedFormula: layer.formula ?? null,
       }));
     layers.value = mappedLayers.map((layer) => cloneLayer(layer));
@@ -125,6 +184,7 @@ export function useSchemeDialog(): SchemeDialogBindings {
     };
     originalSnapshot.value = buildSnapshot(scheme.name, mappedLayers);
     isOpen.value = true;
+    void ensureIngredientSources();
   }
 
   function resetForm() {
@@ -146,13 +206,25 @@ export function useSchemeDialog(): SchemeDialogBindings {
     originalSnapshot.value = '';
   }
 
-  function updateManualFormula(index: number, value: string) {
+  function updateManualFormula(index: number, draft: FormulaDraftChange) {
     if (!layers.value[index]) {
       return;
     }
+    const normalized = normalizeManualFormula(draft.value);
+    const tokens = draft.tokens && draft.tokens.length ? draft.tokens : tokenizeFormula(normalized);
+    const hash =
+      draft.hash !== undefined ? draft.hash : tokens.length ? hashFormulaIngredients(tokens) : null;
+    const segments =
+      draft.segments && draft.segments.length ? draft.segments : splitFormulaSegments(normalized);
+    const units =
+      draft.units && draft.units.length ? draft.units : formulaUnitBuckets(tokens);
     layers.value[index] = {
       ...layers.value[index],
-      manualFormula: value,
+      manualFormula: normalized,
+      manualTokens: tokens,
+      manualHash: hash,
+      manualSegments: segments,
+      manualUnits: units,
     };
   }
 
@@ -195,6 +267,59 @@ export function useSchemeDialog(): SchemeDialogBindings {
     }
   }
 
+  const ingredientSuggestionsLoading = ref(false);
+  const ingredientSuggestionsReady = ref(false);
+
+  async function ensureIngredientSources() {
+    if (ingredientSuggestionsReady.value || ingredientSuggestionsLoading.value) {
+      return;
+    }
+    ingredientSuggestionsLoading.value = true;
+    try {
+      const tasks: Promise<unknown>[] = [];
+      if (!customColorStore.items.length) {
+        tasks.push(customColorStore.loadAll());
+      }
+      if (!materialsStore.items.length) {
+        tasks.push(materialsStore.loadMaterials());
+      }
+      if (tasks.length) {
+        await Promise.all(tasks);
+      }
+      ingredientSuggestionsReady.value =
+        customColorStore.items.length > 0 || materialsStore.items.length > 0;
+    } catch (error) {
+      ingredientSuggestionsReady.value = false;
+      const description = error instanceof Error ? error.message : '加载配方建议失败';
+      message.warning(description);
+    } finally {
+      ingredientSuggestionsLoading.value = false;
+    }
+  }
+
+  const ingredientIndex = computed(() =>
+    buildIngredientIndex(
+      {
+        customColors: customColorStore.items,
+        rawMaterials: materialsStore.items,
+        manualSeeds: MANUAL_INGREDIENT_SEEDS,
+      },
+      {
+        defaultLimit: 10,
+      },
+    ),
+  );
+
+  async function fetchIngredientSuggestions(query: string) {
+    if (!ingredientSuggestionsReady.value) {
+      await ensureIngredientSources();
+    }
+    if (!ingredientSuggestionsReady.value) {
+      return [];
+    }
+    return suggestIngredients(ingredientIndex.value, query || '', 10);
+  }
+
   return {
     isOpen,
     isSaving,
@@ -210,5 +335,8 @@ export function useSchemeDialog(): SchemeDialogBindings {
     resetForm,
     updateManualFormula,
     save,
+    ingredientSuggestionsLoading,
+    ingredientSuggestionsReady,
+    fetchIngredientSuggestions,
   };
 }

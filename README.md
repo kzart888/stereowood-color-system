@@ -20,8 +20,14 @@ npm install
 # If you are on Node >= 20 and sqlite3 native binding fails:
 npm rebuild sqlite3
 
-# Start the API server (http://localhost:9099)
+# Start the API server (http://localhost:9099 by default)
 npm start
+
+# If port 9099 is busy, choose a free port:
+PORT=9199 npm start
+
+# (Optional) Free an existing process on Linux/macOS:
+fuser -k 9099/tcp
 ```
 
 ### Vue 3 Admin (Vite + Pinia)
@@ -44,7 +50,7 @@ The dev server is pre-configured to proxy `/api` and `/uploads` to the backend.
 
 - Node.js >=14.0.0
 - Windows/Mac/Linux
-- Port 9099 available
+- Port 9099 available (override with `PORT=xxxx` if needed)
 
 ## Version
 

@@ -8,9 +8,11 @@
 start.bat
 
 # Mac/Linux  
-npm start
+npm start              # defaults to port 9099
+# or pick another port if 9099 is taken
+PORT=9199 npm start
 ```
-- System runs on: http://localhost:9099
+- System runs on: http://localhost:9099 (or chosen `PORT`)
 - Database location: `backend/color_management.db`
 
 ## Daily Operations
@@ -106,9 +108,10 @@ docker logs stereowood
 
 ### Server Won't Start
 1. Check if port 9099 is already in use
-2. Kill any existing node processes: `taskkill /F /IM node.exe` (Windows)
-3. Try `npm install` to reinstall dependencies
-4. Check database file exists at `backend/color_management.db`
+2. If needed, kill existing node processes: `taskkill /F /IM node.exe` (Windows) or `fuser -k 9099/tcp` (Linux/macOS)
+3. Alternatively run with a different port: `PORT=9199 npm start`
+4. Try `npm install` to reinstall dependencies
+5. Check database file exists at `backend/color_management.db`
 
 ### Images Not Uploading
 1. Check `backend/uploads/` folder exists
@@ -131,7 +134,7 @@ npm start  # Will auto-create new database
 ## System Information
 
 - **Version**: 0.8.1
-- **Port**: 9099 (hardcoded)
+- **Port**: 9099 by default (configurable via `PORT`)
 - **Users**: Designed for 3-5 factory users
 - **Maintenance**: By Claude Code and system owner
 - **Dependencies**: Node.js >=14.0.0
