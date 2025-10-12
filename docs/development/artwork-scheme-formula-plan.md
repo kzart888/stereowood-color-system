@@ -1,6 +1,6 @@
 ﻿# Artwork Scheme Formula-Matching Redesign Plan
 
-_Last updated: 2025-10-04_
+_Last updated: 2025-10-06_
 
 ## 1. Background & Goals
 - **Primary pain point**: assigning custom color codes to artwork layers requires memorising codes even when the formula (e.g. `朱红 1g 钛白 1g`) is known. The current dialog shows formula as read-only chips once a code is selected, offering no reverse lookup.
@@ -43,7 +43,7 @@ _Last updated: 2025-10-04_
 ### 3.2 Data Flow Enhancements
 - In Vue 3, use reactive store watchers to rebuild hash maps whenever `customColors` change.
 - Dialog emits `formulaChanged` events so stores trigger candidate lookups.
-- Manual formulas stored per layer (Pinia state) and persisted via backend API (`manual_formula` column to be added via migration script).
+- Manual formulas stored per layer (Pinia state) and persisted via backend API (`scheme_layers.manual_formula`).
 
 ### 3.3 UI/UX Redesign Highlights
 *(Same as previously planned; now framed for Vue 3 components.)*
@@ -53,10 +53,10 @@ _Last updated: 2025-10-04_
    - Port `FormulaMatcher` & `IngredientSuggester` into new `src/features/formula/` modules.
    - Add unit tests ensuring hash consistency and suggestion coverage.
 
-2. **Phase B – Artworks Module Refactor** *(In Progress)*
-   - Implement `useArtworkStore` Pinia module.
-   - Compose `useSchemeDialog` with helper utilities (`scheme-utils.ts`).
-   - Rebuild `SchemeDialog.vue` using Element Plus + new formula input placeholder.
+2. **Phase B – Artworks Module Refactor** *(Done – Vue 3 port)*
+   - `useArtworkStore` Pinia 模块已接通 CRUD / 历史记录 API。
+   - 新增 `useSchemeDialog` 组合式函数与 `SchemeDialog.vue` 骨架，可在 Vue 3 中编辑并保存手写配方。
+   - 数据层新增 `scheme_layers.manual_formula` 列，并为对话状态与保存流程补充 Vitest 覆盖。
 
 3. **Phase C – Formula Input Component** *(Pending)*
    - Create chip composer with IME-friendly input, suggestion dropdown.
@@ -71,8 +71,8 @@ _Last updated: 2025-10-04_
    - Add highlight badges for duplicate layers and formula mismatch.
 
 6. **Phase F – Backend API Updates** *(Pending)*
-   - Extend artwork scheme endpoints to persist `manual_formula`, `pure_color` hints if required.
-   - Add query endpoint for formula hash if future scalability demands it.
+   - 视需要新增公式哈希查询 / 手写配方审计接口。
+   - 巩固 optimistic locking 与历史记录，以支持公式输入组件落地。
 
 7. **Phase G – QA & Documentation** *(Pending)*
    - Update docs, Playwright tests verifying formula input / scheme dialog flows.
@@ -82,15 +82,14 @@ _Last updated: 2025-10-04_
 *(Same as before, but note that the Vue 3 migration addresses many of these by design.)*
 
 ## 6. Immediate Next Steps (Post-migration kick-off)
-1. Scaffold Vue 3 project (`see docs/development/vue3-migration-strategy.md`).
-2. Port FormulaMatcher & IngredientSuggester into new codebase (Phase A completed on legacy branch; reimplement in Pinia).
-3. Implement `useArtworkStore` and `useSchemeDialog` to replace the legacy monolith.
-4. Build new `SchemeDialog.vue` with placeholder formula input; wire CRUD actions to Pinia + API.
-5. Continue with Phase C onwards as the new SPA matures.
+1. 迭代 Phase C：交付配方输入组件（芯片/建议）并集成至 SchemeDialog。
+2. Phase D：落地候选自配色列表与留白逻辑，确保与手写配方共存。
+3. Phase E：刷新分层/按色展示表格，加入重复/配方异常标记。
+4. Phase F：根据需要扩展后端 API（公式哈希查询、手写配方校验）并补充 Playwright 回归用例。
 
-## 7. Status Snapshot (2025-10-04)
-- Phase A - [Done] (transplant into Vue 3 pending).
-- Phase B - [In Progress] (store + composables under construction in new app).
+## 7. Status Snapshot (2025-10-06)
+- Phase A - [Done].
+- Phase B - [Done] (SchemeDialog scaffolding + manual formula persistence landed in Vue 3 app).
 - Phase C - [Pending].
 - Phase D - [Pending].
 - Phase E - [Pending].

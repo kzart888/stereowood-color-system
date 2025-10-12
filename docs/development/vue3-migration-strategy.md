@@ -58,8 +58,8 @@ docs/
 | **0. Preparation**              | ◐ In progress | Archived legacy assets into `frontend/legacy/`; created Vue 3 strategy; updated formula plan; established scaffolding repo notes.           | Author `docs/development/backend-api.md`; document additional legacy dependencies (e.g. colour datasets) for reference.                     |
 | **1. Scaffold Modern Project**  | ✅ Complete   | Vite + Vue TS app created; toolchain (ESLint flat config, Prettier, Vitest, Playwright) configured; baseline layout/router/stores in place. | None.                                                                                                                                       |
 | **2. Migrate Core Utilities**   | ◐ In progress | Ported pure colour utilities, Pantone datasets (basic + full), swatch helpers, axios HTTP client, Pantone composables, formula parser + hash helpers, general utility suite, validators, async debounce/throttle helpers, thumbnail preview overlay, formula matcher indexer, ingredient suggester, custom colour swatch resolver, duplicate detector, performance monitor, and message helpers with Vitest coverage. | Finalise utility usage patterns inside upcoming Pinia stores and feature modules. |
-| **3. Domain Stores & Services** | ◐ In progress | Custom colour, artworks, and materials API clients with Pinia stores scaffolded (CRUD, history caching, scheme/material mutations) covered by unit tests; color dictionary view now backed by shared custom-colour data plus a dedicated view state store. | Flesh out dictionary (suppliers/links) APIs & stores; expand color dictionary features (HSL/色轮/配方匹配) and integrate shared error-handling patterns. |
-| **4. Feature Views Migration**  | ◐ In progress | Color dictionary list view recreated with category groupings; HSL导航视图已完成初版（滑块 + 饱和度/亮度网格 + 色卡列表）。                          | Implement colour dictionary色轮与配方匹配视图； rebuild artworks scheme dialog & materials management pages to reach full parity.          |
+| **3. Domain Stores & Services** | ◐ In progress | Custom colour, artworks, and materials API clients with Pinia stores scaffolded (CRUD, history caching, scheme/material mutations) covered by unit tests; manual 配方记录 now persists via the new `scheme_layers.manual_formula` column and Scheme dialog composable; color dictionary view reuses shared custom-colour data with a dedicated view state store. | Flesh out dictionary (suppliers/links) APIs & stores; tighten error-handling patterns across services; surface upload progress + optimistic concurrency for artworks/materials flows. |
+| **4. Feature Views Migration**  | ◐ In progress | Color dictionary list view recreated with category groupings; HSL导航视图已完成初版（滑块 + 饱和度/亮度网格 + 色卡列表）；作品配色视图现已提供 SchemeDialog 骨架，可编辑并保存手写配方，同时禁用未完成的色轮/配方匹配标签。 | Implement colour dictionary色轮与配方匹配视图；引入 Vue 3 版公式输入组件并完成作品方案对话框交互；重建材料管理子页以达到功能对等。          |
 | **5. Workflow Integrations**    | ▢ Not started | —                                                                                                                                           | Reconnect pure colour + Pantone flow, formula matcher, thumbnail handling across new views; honour 色精 exceptions.                         |
 | **6. QA & Tooling**             | ▢ Not started | —                                                                                                                                           | Add Vitest coverage, Playwright smoke suites, lint scripts in CI; validate UTF-8, accessibility, performance budgets.                       |
 | **7. Cut-over & Clean-up**      | ▢ Not started | —                                                                                                                                           | Wire Express to serve Vite build; remove unused legacy code after sign-off; update deployment docs.                                         |
@@ -114,10 +114,10 @@ _(unchanged from earlier draft; keep as reference while porting)_
 
 ## 9. Immediate Next Actions
 
-1. Draft `docs/development/backend-api.md` capturing current Express endpoints & payloads (Phase 0 remaining work).
-2. Phase 2 utilities complete: integrate the new helpers into Pinia stores/composables as they are authored.
-3. Begin designing Pinia store contracts for custom colours & artworks (pre-work for Phase 3).
-4. Decide testing scaffolding (Vitest config for stores/composables) and document in repo README once stores land.
+1. 完成色轮 / 配方匹配视图实现，并在就绪前保持前端标签禁用提示。
+2. 交付 Vue 3 版配方输入组件（Phase C），将其嵌入 SchemeDialog 与配方候选流程。
+3. 补充手写配方编辑的 Vitest + Playwright 验证，覆盖成功与取消场景。
+4. 记录 `scheme_layers.manual_formula` 数据列的上线迁移步骤，更新部署与回滚指引。
 
 ## 10. Done Definition for Migration
 
