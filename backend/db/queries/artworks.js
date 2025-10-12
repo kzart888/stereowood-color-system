@@ -17,7 +17,7 @@ function getAllArtworks() {
             SELECT a.*, 
                    cs.id as scheme_id, cs.scheme_name, cs.thumbnail_path, cs.initial_thumbnail_path,
                    cs.created_at as scheme_created_at, cs.updated_at as scheme_updated_at,
-                   sl.layer_number, sl.custom_color_id,
+                   sl.layer_number, sl.custom_color_id, sl.manual_formula,
                    cc.color_code, cc.formula, cc.image_path as color_image_path
             FROM artworks a
             LEFT JOIN color_schemes cs ON a.id = cs.artwork_id
@@ -109,7 +109,7 @@ function getArtworkSchemes(artworkId) {
     return new Promise((resolve, reject) => {
         db.all(`
             SELECT cs.*, 
-                   sl.layer_number, sl.custom_color_id,
+                   sl.layer_number, sl.custom_color_id, sl.manual_formula,
                    cc.color_code, cc.formula, cc.image_path as color_image_path
             FROM color_schemes cs
             LEFT JOIN scheme_layers sl ON cs.id = sl.scheme_id
@@ -151,9 +151,9 @@ function createScheme(schemeData) {
                     let completed = 0;
                     layers.forEach(layer => {
                         db.run(`
-                            INSERT INTO scheme_layers (scheme_id, layer_number, custom_color_id)
-                            VALUES (?, ?, ?)
-                        `, [schemeId, layer.layer_number, layer.custom_color_id], (layerErr) => {
+                            INSERT INTO scheme_layers (scheme_id, layer_number, custom_color_id, manual_formula)
+                            VALUES (?, ?, ?, ?)
+                        `, [schemeId, layer.layer_number, layer.custom_color_id ?? null, layer.manual_formula ?? null], (layerErr) => {
                             if (layerErr) {
                                 db.run('ROLLBACK');
                                 return reject(layerErr);
@@ -214,9 +214,9 @@ function updateScheme(schemeId, schemeData) {
                         let completed = 0;
                         layers.forEach(layer => {
                             db.run(`
-                                INSERT INTO scheme_layers (scheme_id, layer_number, custom_color_id)
-                                VALUES (?, ?, ?)
-                            `, [schemeId, layer.layer_number, layer.custom_color_id], (layerErr) => {
+                                INSERT INTO scheme_layers (scheme_id, layer_number, custom_color_id, manual_formula)
+                                VALUES (?, ?, ?, ?)
+                            `, [schemeId, layer.layer_number, layer.custom_color_id ?? null, layer.manual_formula ?? null], (layerErr) => {
                                 if (layerErr) {
                                     db.run('ROLLBACK');
                                     return reject(layerErr);

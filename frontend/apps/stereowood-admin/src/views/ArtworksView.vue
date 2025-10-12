@@ -96,6 +96,15 @@
                       </li>
                     </ul>
                   </div>
+                  <div class="scheme-card__actions">
+                    <el-button
+                      size="small"
+                      type="primary"
+                      @click="openSchemeDialog(artwork, scheme)"
+                    >
+                      编辑配方记录
+                    </el-button>
+                  </div>
                 </div>
 
                 <div v-if="scheme.layers.length > 0" class="scheme-card__body">
@@ -123,7 +132,7 @@
                           <span v-else class="layer-color layer-color--missing"> 未指定 </span>
                         </td>
                         <td class="layer-formula">
-                          <span>{{ layer.formula || '无配方记录' }}</span>
+                          <span>{{ layer.manualFormula ?? layer.formula ?? '无配方记录' }}</span>
                         </td>
                       </tr>
                     </tbody>
@@ -138,11 +147,14 @@
       </template>
     </div>
   </section>
+  <SchemeDialog :dialog="schemeDialog" />
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
+import SchemeDialog from '@/features/artworks/SchemeDialog.vue';
+import { useSchemeDialog } from '@/features/artworks/useSchemeDialog';
 import type { Artwork, ArtworkScheme, ArtworkSchemeLayer } from '@/models/artwork';
 import { useArtworkStore } from '@/stores/artworks';
 import { buildUploadUrl, formatArtworkTitle, formatDate } from '@/utils/general';
@@ -156,6 +168,8 @@ const sortMode = ref<SortMode>('time');
 const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 const uploadBaseUrl =
   import.meta.env.VITE_API_BASE_URL ?? (fallbackOrigin ? `${fallbackOrigin}/api` : '/api');
+
+const schemeDialog = useSchemeDialog();
 
 const isLoading = computed(() => loading.value);
 const loadError = computed(() => error.value);
@@ -212,6 +226,10 @@ function resolveArtworkDisplayDate(artwork: Artwork): string | null {
     }
   });
   return latest?.value ?? null;
+}
+
+function openSchemeDialog(artwork: Artwork, scheme: ArtworkScheme) {
+  schemeDialog.open(artwork, scheme);
 }
 
 function getSortedSchemes(artwork: Artwork): ArtworkScheme[] {
@@ -346,7 +364,7 @@ onMounted(async () => {
 .scheme-card__header {
   display: flex;
   gap: 16px;
-  align-items: center;
+  align-items: stretch;
 }
 
 .scheme-card__thumb {
@@ -372,6 +390,12 @@ onMounted(async () => {
   border-radius: 8px;
 }
 
+.scheme-card__info {
+  flex: 1;
+  display: grid;
+  gap: 8px;
+}
+
 .scheme-card__info h3 {
   margin: 0;
   font-size: 18px;
@@ -393,6 +417,16 @@ onMounted(async () => {
 .scheme-card__stats .label {
   color: #909399;
   margin-right: 4px;
+}
+
+.scheme-card__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-start;
+}
+
+.scheme-card__actions :deep(.el-button) {
+  white-space: nowrap;
 }
 
 .scheme-card__body {
@@ -464,6 +498,10 @@ onMounted(async () => {
   .scheme-card__header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .scheme-card__actions {
+    margin-left: 0;
   }
 
   .scheme-card__thumb {

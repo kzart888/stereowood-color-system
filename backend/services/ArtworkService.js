@@ -58,12 +58,13 @@ class ArtworkService {
                     artwork.schemes.push(scheme);
                 }
                 
-                if (row.layer_number && row.custom_color_id) {
+                if (row.layer_number) {
                     scheme.layers.push({
                         layer: row.layer_number,  // Frontend expects 'layer' not 'layer_number'
-                        colorCode: row.color_code,  // Frontend expects 'colorCode' not 'color_code'
-                        custom_color_id: row.custom_color_id,  // Keep for backend reference
-                        formula: row.formula
+                        colorCode: row.color_code ?? null,  // Frontend expects 'colorCode'
+                        custom_color_id: row.custom_color_id ?? null,  // Keep for backend reference
+                        formula: row.formula ?? null,
+                        manualFormula: row.manual_formula ?? null
                     });
                 }
             }
@@ -119,6 +120,12 @@ class ArtworkService {
             // Handle both frontend format (layer, colorCode) and backend format (layer_number, custom_color_id)
             const layerNumber = layer.layer || layer.layer_number;
             let colorId = layer.custom_color_id;
+            const manualFormula =
+                typeof layer.manualFormula === 'string'
+                    ? layer.manualFormula.trim()
+                    : typeof layer.manual_formula === 'string'
+                      ? layer.manual_formula.trim()
+                      : null;
             
             // If we have colorCode but not custom_color_id, look it up
             if (layer.colorCode && !layer.custom_color_id) {
@@ -138,10 +145,11 @@ class ArtworkService {
                 }
             }
             
-            if (layerNumber && colorId) {
+            if (layerNumber && (colorId || manualFormula)) {
                 convertedLayers.push({
                     layer_number: layerNumber,
-                    custom_color_id: colorId
+                    custom_color_id: colorId ?? null,
+                    manual_formula: manualFormula || null
                 });
             }
         }

@@ -3,6 +3,7 @@ export interface ArtworkSchemeLayer {
   colorCode: string | null;
   custom_color_id: number | null;
   formula: string | null;
+  manualFormula?: string | null;
 }
 
 export interface ArtworkScheme {
@@ -45,6 +46,7 @@ export interface ArtworkSchemeLayerInput {
   layer: number;
   colorCode?: string | null;
   custom_color_id?: number | null;
+  manualFormula?: string | null;
 }
 
 export interface ArtworkSchemeCreatePayload {

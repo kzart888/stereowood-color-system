@@ -143,6 +143,10 @@ async function runMigrations() {
       )
     `);
 
+    if (!(await columnExists('scheme_layers', 'manual_formula'))) {
+      await runSafe(`ALTER TABLE scheme_layers ADD COLUMN manual_formula TEXT`);
+    }
+
     if (!(await columnExists('mont_marte_colors', 'supplier_id'))) {
       await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN supplier_id INTEGER NULL`);
     }
