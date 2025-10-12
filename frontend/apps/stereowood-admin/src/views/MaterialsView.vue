@@ -7,9 +7,7 @@
           <p>维护 Mont Marte 原料、供应商与采购链接，为自配色和配方工具提供基础数据。</p>
         </div>
         <div class="view__header-actions">
-          <el-button type="primary" :disabled="true">
-            新建原料（即将上线）
-          </el-button>
+          <el-button type="primary" :disabled="true"> 新建原料（即将上线） </el-button>
         </div>
       </div>
     </header>
@@ -30,76 +28,38 @@
           v-if="items.length === 0"
           description="暂无原料数据，可稍后再试或从旧系统导入。"
         />
-        <el-table
-          v-else
-          :data="items"
-          border
-          stripe
-          class="materials-table"
-        >
-          <el-table-column
-            prop="name"
-            label="原料名称"
-            min-width="200"
-          />
-          <el-table-column
-            label="缩略图"
-            width="140"
-          >
+        <el-table v-else :data="items" border stripe class="materials-table">
+          <el-table-column prop="name" label="原料名称" min-width="200" />
+          <el-table-column label="缩略图" width="140">
             <template #default="{ row }">
               <div class="material-thumbnail">
-                <img
-                  v-if="row.image_path"
-                  :src="buildImageUrl(row.image_path)"
-                  alt=""
-                />
+                <img v-if="row.image_path" :src="buildImageUrl(row.image_path)" alt="" />
                 <span v-else>—</span>
               </div>
             </template>
           </el-table-column>
-          <el-table-column
-            label="分类"
-            width="160"
-          >
+          <el-table-column label="分类" width="160">
             <template #default="{ row }">
-              <el-tag
-                v-if="row.category_code"
-                type="info"
-                size="small"
-              >
+              <el-tag v-if="row.category_code" type="info" size="small">
                 {{ row.category_code }}
               </el-tag>
               <span v-else>{{ row.category ?? '—' }}</span>
             </template>
           </el-table-column>
-          <el-table-column
-            label="供应商"
-            width="180"
-          >
+          <el-table-column label="供应商" width="180">
             <template #default="{ row }">
               <span>{{ row.supplier_name ?? '未指定' }}</span>
             </template>
           </el-table-column>
-          <el-table-column
-            label="采购链接"
-            width="200"
-          >
+          <el-table-column label="采购链接" width="200">
             <template #default="{ row }">
-              <el-link
-                v-if="row.purchase_link_url"
-                :href="row.purchase_link_url"
-                target="_blank"
-              >
+              <el-link v-if="row.purchase_link_url" :href="row.purchase_link_url" target="_blank">
                 查看链接
               </el-link>
               <span v-else>未设置</span>
             </template>
           </el-table-column>
-          <el-table-column
-            prop="updated_at"
-            label="更新时间"
-            width="180"
-          />
+          <el-table-column prop="updated_at" label="更新时间" width="180" />
         </el-table>
       </template>
     </div>

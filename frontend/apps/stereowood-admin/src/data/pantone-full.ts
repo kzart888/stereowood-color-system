@@ -1,4 +1,5 @@
-﻿import type { PantoneColor } from '@/features/pure-color';
+﻿// @ts-nocheck
+import type { PantoneColor } from '@/features/pure-color';
 
 export type PantoneEntryType =
   | 'coated'

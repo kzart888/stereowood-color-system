@@ -39,11 +39,7 @@
           </template>
         </div>
         <div class="detail-bar__actions">
-          <el-button
-            type="primary"
-            :disabled="!selectedColor"
-            @click="navigateToCustomColor"
-          >
+          <el-button type="primary" :disabled="!selectedColor" @click="navigateToCustomColor">
             在自配色管理中查看
           </el-button>
         </div>
@@ -93,15 +89,8 @@
 
       <template v-else>
         <div v-if="viewMode === 'list'">
-          <el-empty
-            v-if="groupedList.length === 0"
-            description="没有匹配的颜色，请稍后再试。"
-          />
-          <section
-            v-for="group in groupedList"
-            :key="group.category"
-            class="category-section"
-          >
+          <el-empty v-if="groupedList.length === 0" description="没有匹配的颜色，请稍后再试。" />
+          <section v-for="group in groupedList" :key="group.category" class="category-section">
             <header class="category-header">
               <h2>{{ group.category }}</h2>
               <span class="category-count">{{ group.colors.length }} 个颜色</span>
@@ -121,18 +110,10 @@
                     {{ color.formula || '未填写配方' }}
                   </div>
                   <div class="color-card__pantone">
-                    <el-tag
-                      v-if="color.pantone_coated"
-                      size="small"
-                      type="info"
-                    >
+                    <el-tag v-if="color.pantone_coated" size="small" type="info">
                       {{ color.pantone_coated }} (C)
                     </el-tag>
-                    <el-tag
-                      v-if="color.pantone_uncoated"
-                      size="small"
-                      type="info"
-                    >
+                    <el-tag v-if="color.pantone_uncoated" size="small" type="info">
                       {{ color.pantone_uncoated }} (U)
                     </el-tag>
                     <span v-if="!color.pantone_coated && !color.pantone_uncoated">
@@ -146,9 +127,7 @@
         </div>
 
         <div v-else class="coming-soon">
-          <el-empty
-            description="该视图正在迁移中，敬请期待。"
-          />
+          <el-empty description="该视图正在迁移中，敬请期待。" />
         </div>
       </template>
     </div>
@@ -212,7 +191,7 @@ const groupedList = computed(() => {
 const selectedColor = computed(() =>
   selectedId.value == null
     ? null
-    : items.value.find((item) => item.id === selectedId.value) ?? null,
+    : (items.value.find((item) => item.id === selectedId.value) ?? null),
 );
 
 const selectedSwatchStyle = computed(() => {
@@ -418,7 +397,9 @@ onMounted(async () => {
   background: #fff;
   min-height: 90px;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .color-card__swatch {

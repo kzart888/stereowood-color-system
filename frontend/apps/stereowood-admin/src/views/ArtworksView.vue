@@ -9,9 +9,7 @@
         </p>
       </div>
       <div class="view__actions">
-        <el-button type="primary" :disabled="true">
-          新建作品（即将上线）
-        </el-button>
+        <el-button type="primary" :disabled="true"> 新建作品（即将上线） </el-button>
       </div>
     </header>
 
@@ -45,11 +43,7 @@
         />
 
         <div v-else class="artwork-list">
-          <article
-            v-for="artwork in sortedArtworks"
-            :key="artwork.id"
-            class="artwork-card"
-          >
+          <article v-for="artwork in sortedArtworks" :key="artwork.id" class="artwork-card">
             <header class="artwork-card__header">
               <div>
                 <h2 class="artwork-card__title">
@@ -114,23 +108,19 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="layer in getSortedLayers(scheme)" :key="`${scheme.id}-${layer.layer}`">
-                        <td class="layer-index">
-                          第 {{ layer.layer }} 层
-                        </td>
+                      <tr
+                        v-for="layer in getSortedLayers(scheme)"
+                        :key="`${scheme.id}-${layer.layer}`"
+                      >
+                        <td class="layer-index">第 {{ layer.layer }} 层</td>
                         <td class="layer-color">
                           <template v-if="layer.colorCode">
                             <strong>{{ layer.colorCode }}</strong>
-                            <span
-                              v-if="layer.custom_color_id != null"
-                              class="layer-color__meta"
-                            >
+                            <span v-if="layer.custom_color_id != null" class="layer-color__meta">
                               关联自配色 #{{ layer.custom_color_id }}
                             </span>
                           </template>
-                          <span v-else class="layer-color layer-color--missing">
-                            未指定
-                          </span>
+                          <span v-else class="layer-color layer-color--missing"> 未指定 </span>
                         </td>
                         <td class="layer-formula">
                           <span>{{ layer.formula || '无配方记录' }}</span>
@@ -140,9 +130,7 @@
                   </table>
                 </div>
 
-                <div v-else class="scheme-card__empty">
-                  暂未配置层与自配色映射。
-                </div>
+                <div v-else class="scheme-card__empty">暂未配置层与自配色映射。</div>
               </article>
             </section>
           </article>
@@ -229,7 +217,8 @@ function resolveArtworkDisplayDate(artwork: Artwork): string | null {
 function getSortedSchemes(artwork: Artwork): ArtworkScheme[] {
   return [...artwork.schemes].sort(
     (a, b) =>
-      resolveSchemeTimestamp(b) - resolveSchemeTimestamp(a) || a.name.localeCompare(b.name, 'zh-CN'),
+      resolveSchemeTimestamp(b) - resolveSchemeTimestamp(a) ||
+      a.name.localeCompare(b.name, 'zh-CN'),
   );
 }
 
