@@ -4,16 +4,11 @@ import vueParser from 'vue-eslint-parser';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import prettier from 'eslint-plugin-prettier';
+import globals from 'globals';
 
 const browserGlobals = {
-  window: 'readonly',
-  document: 'readonly',
-  console: 'readonly',
-  File: 'readonly',
-  FileReader: 'readonly',
-  HTMLImageElement: 'readonly',
-  Image: 'readonly',
-  CanvasRenderingContext2D: 'readonly',
+  ...globals.browser,
+  ...globals.es2021,
 };
 
 const tsRecommended = tsPlugin.configs.recommended.rules;
@@ -42,6 +37,12 @@ export default [
       ...tsRecommended,
       'prettier/prettier': 'error',
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    files: ['src/data/**/*.ts'],
+    rules: {
+      '@typescript-eslint/ban-ts-comment': 'off',
     },
   },
   {
