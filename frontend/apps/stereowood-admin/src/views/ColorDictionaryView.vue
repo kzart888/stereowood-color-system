@@ -88,7 +88,7 @@
       />
 
       <template v-else>
-        <div v-if="viewMode === 'list'">
+        <template v-if="viewMode === 'list'">
           <el-empty v-if="groupedList.length === 0" description="没有匹配的颜色，请稍后再试。" />
           <section v-for="group in groupedList" :key="group.category" class="category-section">
             <header class="category-header">
@@ -124,7 +124,14 @@
               </article>
             </div>
           </section>
-        </div>
+        </template>
+
+        <ColorDictionaryHslView
+          v-else-if="viewMode === 'hsl'"
+          :colors="items"
+          :selected-id="selectedId"
+          @select="selectColorById"
+        />
 
         <div v-else class="coming-soon">
           <el-empty description="该视图正在迁移中，敬请期待。" />
@@ -141,6 +148,7 @@ import { useCustomColorStore } from '@/stores/customColors';
 import { useColorDictionaryStore } from '@/stores/colorDictionary';
 import type { CustomColor } from '@/models/customColor';
 import { resolveCustomColorSwatch } from '@/features/pure-color/customColorSwatch';
+import ColorDictionaryHslView from '@/features/color-dictionary/HslView.vue';
 import { message } from '@/utils/message';
 import { useRouter } from 'vue-router';
 
@@ -233,6 +241,13 @@ function getSwatchStyle(color: CustomColor) {
 
 function selectColor(color: CustomColor) {
   dictStore.setSelectedId(color.id);
+}
+
+function selectColorById(id: number) {
+  const match = items.value.find((item) => item.id === id);
+  if (match) {
+    dictStore.setSelectedId(match.id);
+  }
 }
 
 function getHueValue(color: CustomColor): number {
