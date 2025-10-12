@@ -24,9 +24,10 @@ const { initDatabase, runMigrations } = require('./db/migrations'); // 数据库
 const routes = require('./routes');                  // 所有API路由
 
 const app = express();
-const PORT = Number.isFinite(Number.parseInt(process.env.PORT, 10))
+const DEFAULT_PORT = Number.isFinite(Number.parseInt(process.env.PORT, 10))
   ? Number.parseInt(process.env.PORT, 10)
   : 9099;
+const MAX_PORT_ATTEMPTS = 5;
 
 // ========== 中间件配置 ==========
 app.use(cors());                                     // 允许跨域请求
@@ -110,13 +111,40 @@ app.use((req, res) => {
 });
 
 // ========== 启动服务器 ==========
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
-});
+let serverInstance = null;
+
+function startServer(port, attempt = 0) {
+  const server = app
+    .listen(port, () => {
+      console.log(`✅ Server running at http://localhost:${port}`);
+    })
+    .on('error', (error) => {
+      if (error && error.code === 'EADDRINUSE' && attempt < MAX_PORT_ATTEMPTS) {
+        const nextPort = port + 1;
+        console.warn(
+          `⚠️  Port ${port} is in use. Attempting to start on port ${nextPort} (attempt ${
+            attempt + 2
+          }/${MAX_PORT_ATTEMPTS + 1}).`,
+        );
+        startServer(nextPort, attempt + 1);
+        return;
+      }
+      console.error('服务器启动失败:', error);
+      process.exitCode = 1;
+    });
+
+  serverInstance = server;
+}
+
+startServer(DEFAULT_PORT);
 
 // 优雅关闭
 process.on('SIGTERM', () => {
-  server.close(() => {
+  if (!serverInstance) {
+    process.exit(0);
+    return;
+  }
+  serverInstance.close(() => {
     if (db) {
       db.close(() => {
         process.exit(0);
@@ -125,6 +153,10 @@ process.on('SIGTERM', () => {
       process.exit(0);
     }
   });
+});
+
+process.on('SIGINT', () => {
+  process.emit('SIGTERM');
 });
 
 module.exports = app;
