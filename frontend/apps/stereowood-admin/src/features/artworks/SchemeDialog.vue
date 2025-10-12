@@ -1,13 +1,14 @@
 <template>
   <el-dialog
-    v-model="dialog.isOpen"
-    :title="dialog.dialogTitle"
+    :model-value="dialog.isOpen.value"
+    @update:model-value="(value) => (dialog.isOpen.value = value)"
+    :title="dialog.dialogTitle.value"
     width="720px"
     class="scheme-dialog"
     destroy-on-close
     @close="dialog.close"
   >
-    <section v-if="dialog.activeScheme">
+    <section v-if="dialog.activeScheme.value">
       <el-form label-position="top" class="scheme-dialog__form">
         <el-form-item label="方案名称">
           <el-input
@@ -18,9 +19,9 @@
           />
         </el-form-item>
         <el-divider />
-        <template v-if="dialog.layers.length">
+        <template v-if="dialog.layers.value.length">
           <article
-            v-for="(layer, index) in dialog.layers"
+            v-for="(layer, index) in dialog.layers.value"
             :key="`${layer.layer}-${layer.colorCode ?? 'empty'}`"
             class="scheme-dialog__layer"
           >
@@ -58,12 +59,12 @@
 
     <template #footer>
       <div class="scheme-dialog__footer">
-        <el-button @click="dialog.resetForm" :disabled="!dialog.hasChanges">重置</el-button>
+        <el-button @click="dialog.resetForm" :disabled="!dialog.hasChanges.value">重置</el-button>
         <el-button @click="dialog.close">取消</el-button>
         <el-button
           type="primary"
-          :disabled="!dialog.canSave"
-          :loading="dialog.isSaving"
+          :disabled="!dialog.canSave.value"
+          :loading="dialog.isSaving.value"
           @click="dialog.save"
         >
           保存
