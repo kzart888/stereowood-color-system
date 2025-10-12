@@ -156,9 +156,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useCustomColorStore } from '@/stores/customColors';
+import { useColorDictionaryStore } from '@/stores/colorDictionary';
 import type { CustomColor } from '@/models/customColor';
 import { resolveCustomColorSwatch } from '@/features/pure-color/customColorSwatch';
 import { message } from '@/utils/message';
@@ -169,6 +170,10 @@ type ListSortMode = 'code' | 'hue';
 
 const store = useCustomColorStore();
 const { items, loading, error } = storeToRefs(store);
+const dictStore = useColorDictionaryStore();
+const viewMode = computed(() => dictStore.viewMode);
+const listSortMode = computed(() => dictStore.sortMode);
+const selectedId = computed(() => dictStore.selectedId);
 const router = useRouter();
 
 const viewTabs = [
@@ -177,13 +182,6 @@ const viewTabs = [
   { value: 'wheel', label: '色轮导航' },
   { value: 'matcher', label: '配方匹配' },
 ] as const;
-
-const viewMode = ref<ViewMode>(
-  (localStorage.getItem('color-dict-view') as ViewMode) || 'list',
-);
-const listSortMode = ref<ListSortMode>(
-  (localStorage.getItem('color-dict-sort') as ListSortMode) || 'code',
-);
 
 const isLoading = computed(() => loading.value);
 const loadError = computed(() => error.value);
@@ -211,8 +209,6 @@ const groupedList = computed(() => {
   }));
 });
 
-const selectedId = ref<number | null>(null);
-
 const selectedColor = computed(() =>
   selectedId.value == null
     ? null
@@ -227,12 +223,11 @@ const selectedSwatchStyle = computed(() => {
 });
 
 function setSortMode(mode: ListSortMode) {
-  if (listSortMode.value === mode) return;
-  listSortMode.value = mode;
+  dictStore.setSortMode(mode);
 }
 
 function switchView(mode: ViewMode) {
-  viewMode.value = mode;
+  dictStore.setViewMode(mode);
 }
 
 function getSwatchStyle(color: CustomColor) {
@@ -258,7 +253,7 @@ function getSwatchStyle(color: CustomColor) {
 }
 
 function selectColor(color: CustomColor) {
-  selectedId.value = color.id;
+  dictStore.setSelectedId(color.id);
 }
 
 function getHueValue(color: CustomColor): number {
@@ -340,26 +335,10 @@ function navigateToCustomColor() {
   router.push({ name: 'custom-colors' }).catch(() => {});
 }
 
-watch(viewMode, (mode) => {
-  localStorage.setItem('color-dict-view', mode);
-});
-
-watch(listSortMode, (mode) => {
-  localStorage.setItem('color-dict-sort', mode);
-});
-
 watch(
   () => items.value,
   (list) => {
-    if (!selectedColor.value && list.length) {
-      selectedId.value = list[0].id;
-    }
-    if (
-      selectedId.value != null &&
-      list.every((item) => item.id !== selectedId.value)
-    ) {
-      selectedId.value = list.length ? list[0].id : null;
-    }
+    dictStore.syncSelection(list.map((item) => item.id));
   },
   { deep: true },
 );
@@ -372,9 +351,7 @@ onMounted(async () => {
       /* handled via store error */
     }
   }
-  if (!selectedColor.value && items.value.length > 0) {
-    selectedId.value = items.value[0].id;
-  }
+  dictStore.syncSelection(items.value.map((item) => item.id));
 });
 </script>
 

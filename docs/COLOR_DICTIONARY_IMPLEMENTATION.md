@@ -6,9 +6,9 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
 ## Status Overview
 - **Phase 0**: ✅ COMPLETED - Urgent fixes
 - **Phase 1**: ✅ COMPLETED - Basic infrastructure
-- **Phase 2**: 🔄 IN PROGRESS - View navigation refinement
-- **Phase 3**: ⏳ PENDING - List view enhancement
-- **Phase 4**: ⏳ PENDING - Header info bar polish
+- **Phase 2**: ✅ COMPLETED - View navigation refinement
+- **Phase 3**: 🔄 IN PROGRESS - List view enhancement
+- **Phase 4**: 🔄 IN PROGRESS - Header info bar polish
 - **Phase 5**: ⏳ PENDING - Print optimization
 - **Phase 6**: ⏳ PENDING - Interaction refinement
 - **Phase 7**: ⏳ PENDING - Global help system
@@ -33,8 +33,8 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
 
 ### 3. Header Bar Behavior
 - **Requirement**: Sticky header bar, no pagination on dictionary page
-- **Status**: ⏳ Pending refinement
-- **Implementation**: Header works, pagination removal needs completion
+- **Status**: ✅ Complete
+- **Implementation**: Header is fixed with detail bar; pagination removed and replaced with grouped sections.
 
 ### 4. View Naming and Order
 - **Requirement**: Rename to 列表导航/HSL导航/色轮导航 in that order
@@ -43,22 +43,21 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
 
 ### 5. Simplified List View
 - **Requirement**: Only compact layout, category labels on left, two sort modes
-- **Status**: ⏳ Pending full implementation
+- **Status**: 🔄 In progress
 - **Details**:
-  - Remove grid/list modes ⏳
-  - Category vertical labels ✅
-  - 按名称 sorting (alphabetical) ⏳
-  - 按色彩 sorting (HSL-based) ⏳
+  - Standalone list layout with category grouping ✅
+  - 按编号排序 (默认) / 按色相排序 切换 ✅
+  - 剩余任务：补充网格导航（HSL / 色轮）和列表过滤 ⏳
 
 ### 6. Header Color Info Bar
 - **Requirement**: Always visible, grayed when no selection, full details when selected
-- **Status**: ✅ Partially complete
-- **Fields needed**: Name, RGB, CMYK, HEX, HSL, Pantone C/U, 配方, 适用层, 分类, 更新时间
+- **Status**: ✅ Complete
+- **Implementation**: Detail bar shows HEX、RGB、CMYK、Pantone、适用层、更新时间；未选中时显示提示状态。
 
 ### 7. Navigation to Management Page
 - **Requirement**: Button to navigate to 自配色管理 and highlight color
-- **Status**: ✅ Complete
-- **Implementation**: `navigateToColor()` method implemented
+- **Status**: 🔄 In progress
+- **Implementation**: Button已就绪；导航将在 Vue 3 自配色管理页面支持选中后启用。
 
 ### 8. ESC and Click Behavior
 - **Requirement**: ESC deselects, click on blank deselects
