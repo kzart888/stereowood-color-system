@@ -39,17 +39,17 @@ describe('useColorDictionaryStore', () => {
     expect(store.selectedId).toBeNull();
   });
 
-  it('allows only enabled view modes and persists sort mode', () => {
+  it('persists view and sort modes', () => {
     const store = useColorDictionaryStore();
-    store.setViewMode('hsl');
     store.setViewMode('wheel');
     store.setSortMode('hue');
+    store.setViewMode('matcher');
 
-    expect(store.viewMode).toBe<'hsl'>('hsl');
+    expect(store.viewMode).toBe<'matcher'>('matcher');
     expect(store.sortMode).toBe<'hue'>('hue');
-    expect(storage.setItem).toHaveBeenCalledWith('color-dict-view', 'hsl');
+    expect(storage.setItem).toHaveBeenCalledWith('color-dict-view', 'wheel');
+    expect(storage.setItem).toHaveBeenCalledWith('color-dict-view', 'matcher');
     expect(storage.setItem).toHaveBeenCalledWith('color-dict-sort', 'hue');
-    expect(storage.setItem).not.toHaveBeenCalledWith('color-dict-view', 'wheel');
   });
 
   it('syncs selected id with available colours', () => {

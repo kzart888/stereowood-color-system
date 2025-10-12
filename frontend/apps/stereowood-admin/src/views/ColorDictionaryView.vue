@@ -134,9 +134,19 @@
           @select="selectColorById"
         />
 
-        <div v-else class="coming-soon">
-          <el-empty description="该视图正在迁移中，敬请期待。" />
-        </div>
+        <ColorDictionaryWheelView
+          v-else-if="viewMode === 'wheel'"
+          :colors="items"
+          :selected-id="selectedId"
+          @select="selectColorById"
+        />
+
+        <ColorDictionaryMatcherView
+          v-else
+          :colors="items"
+          :selected-id="selectedId"
+          @select="selectColorById"
+        />
       </template>
     </div>
   </section>
@@ -150,6 +160,8 @@ import { useColorDictionaryStore } from '@/stores/colorDictionary';
 import type { CustomColor } from '@/models/customColor';
 import { resolveCustomColorSwatch } from '@/features/pure-color/customColorSwatch';
 import ColorDictionaryHslView from '@/features/color-dictionary/HslView.vue';
+import ColorDictionaryWheelView from '@/features/color-dictionary/WheelView.vue';
+import ColorDictionaryMatcherView from '@/features/color-dictionary/MatcherView.vue';
 import { message } from '@/utils/message';
 import { useRouter } from 'vue-router';
 
@@ -167,8 +179,8 @@ const router = useRouter();
 const viewTabs: Array<{ value: ViewMode; label: string; enabled: boolean }> = [
   { value: 'list', label: '列表导航', enabled: true },
   { value: 'hsl', label: 'HSL 导航', enabled: true },
-  { value: 'wheel', label: '色轮导航', enabled: false },
-  { value: 'matcher', label: '配方匹配', enabled: false },
+  { value: 'wheel', label: '色轮导航', enabled: true },
+  { value: 'matcher', label: '配方匹配', enabled: true },
 ];
 
 const isLoading = computed(() => loading.value);

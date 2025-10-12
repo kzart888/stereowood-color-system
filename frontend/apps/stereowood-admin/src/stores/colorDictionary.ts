@@ -34,7 +34,12 @@ const VIEW_KEY = 'color-dict-view';
 const SORT_KEY = 'color-dict-sort';
 const SELECTED_KEY = 'color-dict-selected';
 
-const ENABLED_VIEW_MODES: ReadonlyArray<ColorDictionaryViewMode> = ['list', 'hsl'];
+const ENABLED_VIEW_MODES: ReadonlyArray<ColorDictionaryViewMode> = [
+  'list',
+  'hsl',
+  'wheel',
+  'matcher',
+];
 
 function parseViewMode(value: string | null): ColorDictionaryViewMode {
   if (value && ENABLED_VIEW_MODES.includes(value as ColorDictionaryViewMode)) {

@@ -99,8 +99,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { CustomColor } from '@/models/customColor';
-import { hexToRgb, rgbToHsl } from '@/features/pure-color/colorConverter';
-import { resolveCustomColorSwatch } from '@/features/pure-color/customColorSwatch';
+import { enrichColor, type ColorSwatchInfo } from '@/features/color-dictionary/utils';
 
 const HUE_WINDOW = 15;
 const DEFAULT_GRID = 10;
@@ -128,11 +127,7 @@ interface ColorWithHsl {
   color: CustomColor;
   hex: string | null;
   hsl: { h: number; s: number; l: number } | null;
-  swatch: {
-    type: 'empty' | 'image' | 'color';
-    style: Record<string, string>;
-    className: string | undefined;
-  };
+  swatch: ColorSwatchInfo;
 }
 
 interface GridCell {
@@ -149,87 +144,15 @@ const sliderStyle = computed(() => ({
     'linear-gradient(to right, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%))',
 }));
 
-function extractHex(color: CustomColor): string | null {
-  if (color.pure_hex_color) {
-    return normalizeHex(color.pure_hex_color);
-  }
-  if (color.hex_color) {
-    return normalizeHex(color.hex_color);
-  }
-  if (
-    color.pure_rgb_r != null &&
-    color.pure_rgb_g != null &&
-    color.pure_rgb_b != null &&
-    isFinite(color.pure_rgb_r) &&
-    isFinite(color.pure_rgb_g) &&
-    isFinite(color.pure_rgb_b)
-  ) {
-    return rgbChannelToHex(color.pure_rgb_r, color.pure_rgb_g, color.pure_rgb_b);
-  }
-  if (
-    color.rgb_r != null &&
-    color.rgb_g != null &&
-    color.rgb_b != null &&
-    isFinite(color.rgb_r) &&
-    isFinite(color.rgb_g) &&
-    isFinite(color.rgb_b)
-  ) {
-    return rgbChannelToHex(color.rgb_r, color.rgb_g, color.rgb_b);
-  }
-  return null;
-}
-
-function normalizeHex(value: string): string | null {
-  const cleaned = value.trim();
-  if (!cleaned) return null;
-  const prefixed = cleaned.startsWith('#') ? cleaned : `#${cleaned}`;
-  return /^#[0-9a-fA-F]{6}$/.test(prefixed) ? prefixed.toUpperCase() : null;
-}
-
-function rgbChannelToHex(r: number, g: number, b: number): string | null {
-  if (![r, g, b].every((channel) => Number.isFinite(channel))) {
-    return null;
-  }
-  const clamp = (channel: number) => Math.max(0, Math.min(255, Math.round(channel)));
-  return (
-    '#' +
-    [clamp(r), clamp(g), clamp(b)]
-      .map((channel) => channel.toString(16).padStart(2, '0'))
-      .join('')
-      .toUpperCase()
-  );
-}
-
 const colorsWithHsl = computed<ColorWithHsl[]>(() =>
   props.colors.map((color) => {
-    const hex = extractHex(color);
-    const rgb = hex ? hexToRgb(hex) : null;
-    const hsl = rgb ? rgbToHsl(rgb.r, rgb.g, rgb.b) : null;
-    const swatchRaw = resolveCustomColorSwatch(color, { includeColorConcentrate: false });
-
-    let swatch: ColorWithHsl['swatch'];
-    if (!swatchRaw) {
-      swatch = { type: 'empty', style: {}, className: undefined };
-    } else if (swatchRaw.type === 'image') {
-      swatch = {
-        type: 'image',
-        style: {
-          backgroundImage: swatchRaw.imageUrl ? `url(${swatchRaw.imageUrl})` : '',
-          backgroundSize: 'cover',
-        },
-        className: undefined,
-      };
-    } else if (swatchRaw.type === 'color' || swatchRaw.type === 'pure') {
-      swatch = {
-        type: 'color',
-        style: { backgroundColor: swatchRaw.hex ?? '#f6f6f9' },
-        className: swatchRaw.className,
-      };
-    } else {
-      swatch = { type: 'empty', style: {}, className: undefined };
-    }
-
-    return { color, hex, hsl, swatch };
+    const enriched = enrichColor(color);
+    return {
+      color: enriched.base,
+      hex: enriched.hex,
+      hsl: enriched.hsl,
+      swatch: enriched.swatch,
+    };
   }),
 );
 

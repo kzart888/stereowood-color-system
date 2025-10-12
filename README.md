@@ -11,16 +11,29 @@ Simple color management system for factory production (3-5 users).
 
 ## Quick Start
 
-```bash
-# Windows
-start.bat
+### Backend API (Express + SQLite)
 
-# Mac/Linux
-npm install  # First time only
+```bash
+# First-time setup (installs dependencies at repo root)
+npm install
+
+# If you are on Node >= 20 and sqlite3 native binding fails:
+npm rebuild sqlite3
+
+# Start the API server (http://localhost:9099)
 npm start
 ```
 
-Open browser: http://localhost:9099
+### Vue 3 Admin (Vite + Pinia)
+
+```bash
+cd frontend/apps/stereowood-admin
+npm install           # first time only
+npm run dev -- --host 127.0.0.1 --port 0
+```
+
+Vite will print the local dev URL (usually http://127.0.0.1:5173).  
+The dev server is pre-configured to proxy `/api` and `/uploads` to the backend.
 
 ## Documentation
 
