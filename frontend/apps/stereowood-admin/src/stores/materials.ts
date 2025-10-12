@@ -33,7 +33,11 @@ export const useMaterialsStore = defineStore('materials', () => {
     loading.value = true;
     error.value = null;
     try {
-      items.value = await fetchMaterials();
+      const response = await fetchMaterials();
+      if (!Array.isArray(response)) {
+        throw new Error('无效的原料数据响应');
+      }
+      items.value = response;
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载原料时发生错误';
       throw err;
@@ -48,6 +52,9 @@ export const useMaterialsStore = defineStore('materials', () => {
       fetchSuppliers(),
       fetchPurchaseLinks(),
     ]);
+    if (!Array.isArray(cat) || !Array.isArray(supp) || !Array.isArray(links)) {
+      throw new Error('无效的字典数据响应');
+    }
     categories.value = cat;
     suppliers.value = supp;
     purchaseLinks.value = links;

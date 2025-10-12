@@ -26,7 +26,11 @@ export const useArtworkStore = defineStore('artworks', () => {
     loading.value = true;
     error.value = null;
     try {
-      items.value = await fetchArtworks();
+      const response = await fetchArtworks();
+      if (!Array.isArray(response)) {
+        throw new Error('无效的作品数据响应');
+      }
+      items.value = response;
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载作品时发生错误';
       throw err;

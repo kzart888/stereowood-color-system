@@ -25,7 +25,11 @@ export const useCustomColorStore = defineStore('customColors', () => {
     loading.value = true;
     error.value = null;
     try {
-      items.value = await fetchCustomColors();
+      const response = await fetchCustomColors();
+      if (!Array.isArray(response)) {
+        throw new Error('无效的自配色数据响应');
+      }
+      items.value = response;
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载自配色时发生错误';
       throw err;
@@ -61,9 +65,14 @@ export const useCustomColorStore = defineStore('customColors', () => {
     historyLoading.value = { ...historyLoading.value, [id]: true };
     try {
       const history = await fetchCustomColorHistory(id);
+      if (!Array.isArray(history)) {
+        throw new Error('无效的历史记录响应');
+      }
       historyById.value = { ...historyById.value, [id]: history };
-      historyLoading.value = { ...historyLoading.value, [id]: false };
       return history;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '加载历史记录时发生错误';
+      throw err;
     } finally {
       historyLoading.value = { ...historyLoading.value, [id]: false };
     }

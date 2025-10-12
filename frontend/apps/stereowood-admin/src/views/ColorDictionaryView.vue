@@ -51,6 +51,7 @@
             v-for="tab in viewTabs"
             :key="tab.value"
             :type="viewMode === tab.value ? 'primary' : 'default'"
+            :disabled="!tab.enabled"
             @click="switchView(tab.value)"
           >
             {{ tab.label }}
@@ -163,12 +164,12 @@ const listSortMode = computed(() => dictStore.sortMode);
 const selectedId = computed(() => dictStore.selectedId);
 const router = useRouter();
 
-const viewTabs = [
-  { value: 'list', label: '列表导航' },
-  { value: 'hsl', label: 'HSL 导航' },
-  { value: 'wheel', label: '色轮导航' },
-  { value: 'matcher', label: '配方匹配' },
-] as const;
+const viewTabs: Array<{ value: ViewMode; label: string; enabled: boolean }> = [
+  { value: 'list', label: '列表导航', enabled: true },
+  { value: 'hsl', label: 'HSL 导航', enabled: true },
+  { value: 'wheel', label: '色轮导航', enabled: false },
+  { value: 'matcher', label: '配方匹配', enabled: false },
+];
 
 const isLoading = computed(() => loading.value);
 const loadError = computed(() => error.value);
@@ -214,6 +215,11 @@ function setSortMode(mode: ListSortMode) {
 }
 
 function switchView(mode: ViewMode) {
+  const tab = viewTabs.find((item) => item.value === mode);
+  if (!tab || !tab.enabled) {
+    message.info('该视图正在迁移中，敬请期待。');
+    return;
+  }
   dictStore.setViewMode(mode);
 }
 

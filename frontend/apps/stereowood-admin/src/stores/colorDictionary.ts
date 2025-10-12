@@ -34,8 +34,10 @@ const VIEW_KEY = 'color-dict-view';
 const SORT_KEY = 'color-dict-sort';
 const SELECTED_KEY = 'color-dict-selected';
 
+const ENABLED_VIEW_MODES: ReadonlyArray<ColorDictionaryViewMode> = ['list', 'hsl'];
+
 function parseViewMode(value: string | null): ColorDictionaryViewMode {
-  if (value === 'hsl' || value === 'wheel' || value === 'matcher') {
+  if (value && ENABLED_VIEW_MODES.includes(value as ColorDictionaryViewMode)) {
     return value;
   }
   return 'list';
@@ -62,6 +64,9 @@ export const useColorDictionaryStore = defineStore('colorDictionary', () => {
   const selectedId = ref<number | null>(parseSelectedId(readStorage(SELECTED_KEY)));
 
   function setViewMode(mode: ColorDictionaryViewMode) {
+    if (!ENABLED_VIEW_MODES.includes(mode)) {
+      return;
+    }
     if (viewMode.value === mode) {
       return;
     }
