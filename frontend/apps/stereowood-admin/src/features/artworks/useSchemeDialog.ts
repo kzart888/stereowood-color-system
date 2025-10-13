@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
 import type {
   Artwork,
@@ -15,7 +15,13 @@ import {
   suggestIngredients,
   type IngredientSuggestion,
 } from '@/features/formula/ingredientSuggester';
-import { tokenizeFormula } from '@/features/formula/matcher';
+import {
+  buildFormulaMatcherIndex,
+  getCandidatesByFormula,
+  tokenizeFormula,
+  type FormulaMatchEntry,
+  type FormulaMatcherIndex,
+} from '@/features/formula/matcher';
 import {
   formulaUnitBuckets,
   hashFormulaIngredients,
@@ -42,6 +48,8 @@ function cloneLayer(layer: EditableSchemeLayer): EditableSchemeLayer {
     manualHash: layer.manualHash,
     manualSegments: [...layer.manualSegments],
     manualUnits: [...layer.manualUnits],
+    candidateHash: layer.candidateHash,
+    candidateMatches: layer.candidateMatches.map((match) => ({ ...match })),
     referencedFormula: layer.referencedFormula,
   };
 }
@@ -100,6 +108,8 @@ export interface EditableSchemeLayer {
   manualHash: string | null;
   manualSegments: string[];
   manualUnits: string[];
+  candidateHash: string | null;
+  candidateMatches: FormulaMatchEntry[];
   referencedFormula: string | null;
 }
 
@@ -123,6 +133,8 @@ export interface SchemeDialogBindings {
   ingredientSuggestionsLoading: Ref<boolean>;
   ingredientSuggestionsReady: Ref<boolean>;
   fetchIngredientSuggestions: (query: string) => Promise<IngredientSuggestion[]>;
+  applyCandidate: (index: number, candidate: FormulaMatchEntry) => void;
+  clearCandidate: (index: number) => void;
 }
 
 export function useSchemeDialog(): SchemeDialogBindings {
@@ -164,6 +176,63 @@ export function useSchemeDialog(): SchemeDialogBindings {
 
   const canSave = computed(() => hasChanges.value && !isSaving.value);
 
+  const matcherIndexCache = ref<FormulaMatcherIndex | null>(null);
+
+  const formulaMatcherIndex = computed(() => {
+    const updated = buildFormulaMatcherIndex(
+      customColorStore.items,
+      matcherIndexCache.value ?? undefined,
+    );
+    matcherIndexCache.value = updated;
+    return updated;
+  });
+
+  function computeLayerCandidates(layer: EditableSchemeLayer) {
+    const { hash, matches } = getCandidatesByFormula(
+      formulaMatcherIndex.value,
+      layer.manualFormula,
+    );
+    return {
+      candidateHash: hash,
+      candidateMatches: matches,
+    };
+  }
+
+  function refreshAllLayerCandidates() {
+    if (!layers.value.length) {
+      return;
+    }
+    layers.value = layers.value.map((layer) => ({
+      ...layer,
+      ...computeLayerCandidates(layer),
+    }));
+  }
+
+  function resolveCandidateId(candidate: FormulaMatchEntry): number | null {
+    const rawId =
+      (candidate.id as number | string | null | undefined) ??
+      ((candidate.color as { id?: number | string | null })?.id ?? null);
+    if (typeof rawId === 'number' && Number.isFinite(rawId)) {
+      return rawId;
+    }
+    if (rawId != null) {
+      const parsed = Number.parseInt(String(rawId), 10);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+
+  watch(
+    () => formulaMatcherIndex.value.stats.signature,
+    () => {
+      if (isOpen.value) {
+        refreshAllLayerCandidates();
+      }
+    },
+  );
+
   function open(artwork: Artwork, scheme: ArtworkScheme) {
     activeArtworkRef.value = artwork;
     activeSchemeRef.value = scheme;
@@ -175,6 +244,8 @@ export function useSchemeDialog(): SchemeDialogBindings {
         colorCode: layer.colorCode ?? null,
         customColorId: layer.custom_color_id ?? null,
         ...buildManualDetails(layer.manualFormula ?? layer.formula),
+        candidateHash: null,
+        candidateMatches: [],
         referencedFormula: layer.formula ?? null,
       }));
     layers.value = mappedLayers.map((layer) => cloneLayer(layer));
@@ -184,6 +255,7 @@ export function useSchemeDialog(): SchemeDialogBindings {
     };
     originalSnapshot.value = buildSnapshot(scheme.name, mappedLayers);
     isOpen.value = true;
+    refreshAllLayerCandidates();
     void ensureIngredientSources();
   }
 
@@ -193,6 +265,7 @@ export function useSchemeDialog(): SchemeDialogBindings {
     }
     form.name.value = originalData.value.name;
     layers.value = originalData.value.layers.map((layer) => cloneLayer(layer));
+    refreshAllLayerCandidates();
   }
 
   function close() {
@@ -207,7 +280,8 @@ export function useSchemeDialog(): SchemeDialogBindings {
   }
 
   function updateManualFormula(index: number, draft: FormulaDraftChange) {
-    if (!layers.value[index]) {
+    const current = layers.value[index];
+    if (!current) {
       return;
     }
     const normalized = normalizeManualFormula(draft.value);
@@ -218,13 +292,21 @@ export function useSchemeDialog(): SchemeDialogBindings {
       draft.segments && draft.segments.length ? draft.segments : splitFormulaSegments(normalized);
     const units =
       draft.units && draft.units.length ? draft.units : formulaUnitBuckets(tokens);
-    layers.value[index] = {
-      ...layers.value[index],
+    const manualDetails = {
       manualFormula: normalized,
       manualTokens: tokens,
       manualHash: hash,
       manualSegments: segments,
       manualUnits: units,
+    };
+    const candidateData = computeLayerCandidates({
+      ...current,
+      ...manualDetails,
+    });
+    layers.value[index] = {
+      ...current,
+      ...manualDetails,
+      ...candidateData,
     };
   }
 
@@ -294,6 +376,9 @@ export function useSchemeDialog(): SchemeDialogBindings {
       message.warning(description);
     } finally {
       ingredientSuggestionsLoading.value = false;
+      if (isOpen.value) {
+        refreshAllLayerCandidates();
+      }
     }
   }
 
@@ -320,6 +405,51 @@ export function useSchemeDialog(): SchemeDialogBindings {
     return suggestIngredients(ingredientIndex.value, query || '', 10);
   }
 
+  function applyCandidate(index: number, candidate: FormulaMatchEntry) {
+    const current = layers.value[index];
+    if (!current) {
+      return;
+    }
+    const manualOverride =
+      !current.manualFormula && candidate.formula ? buildManualDetails(candidate.formula) : null;
+    const resolvedId = resolveCandidateId(candidate);
+    const colorCode =
+      candidate.colorCode ||
+      (candidate.color && (candidate.color as { color_code?: string }).color_code) ||
+      null;
+    const updatedLayer: EditableSchemeLayer = {
+      ...current,
+      ...(manualOverride ?? {}),
+      colorCode,
+      customColorId: resolvedId ?? current.customColorId,
+    };
+    const candidateData = computeLayerCandidates(updatedLayer);
+    layers.value[index] = {
+      ...updatedLayer,
+      ...candidateData,
+    };
+    const displayCode = colorCode ?? '候选色';
+    message.success(`已选择自配色 ${displayCode}`);
+  }
+
+  function clearCandidate(index: number) {
+    const current = layers.value[index];
+    if (!current) {
+      return;
+    }
+    const updatedLayer: EditableSchemeLayer = {
+      ...current,
+      colorCode: null,
+      customColorId: null,
+    };
+    const candidateData = computeLayerCandidates(updatedLayer);
+    layers.value[index] = {
+      ...updatedLayer,
+      ...candidateData,
+    };
+    message.info(`已清除第 ${current.layer} 层的自配色`);
+  }
+
   return {
     isOpen,
     isSaving,
@@ -338,5 +468,7 @@ export function useSchemeDialog(): SchemeDialogBindings {
     ingredientSuggestionsLoading,
     ingredientSuggestionsReady,
     fetchIngredientSuggestions,
+    applyCandidate,
+    clearCandidate,
   };
 }

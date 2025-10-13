@@ -63,9 +63,10 @@ _Last updated: 2025-10-08_
    - 组件在输入时输出标准化 tokens/hash/segment/unit，SchemeDialog 现可感知手写配方结构。
    - 新增单元测试覆盖基本输入与建议交互，确保后续复用稳定。
 
-4. **Phase D – Candidate Selection Flow** *(Pending)*
-   - Integrate store-driven candidate list; support auto-select or manual leave-blank.
-   - Ensure grey swatch + disabled calculator when formula only.
+4. **Phase D – Candidate Selection Flow** *(Done)*
+   - SchemeDialog 基于手写配方实时查询自配色候选（FormulaMatcher 哈希）。
+   - 支持一键套用或清除候选色，保留纯手写记录路径；候选及状态在 UI 中实时反馈。
+   - 新增 Vitest 覆盖候选套用/清除流程，防止回归。
 
 5. **Phase E – Table & UX Polish** *(Pending)*
    - Update by-layer / by-color tables to use new composables.
@@ -76,22 +77,22 @@ _Last updated: 2025-10-08_
    - 巩固 optimistic locking 与历史记录，以支持公式输入组件落地。
 
 7. **Phase G – QA & Documentation** *(Pending)*
-   - Update docs, Playwright tests verifying formula input / scheme dialog flows.
+   - Update docs，完成基于 Chrome DevTools 的公式输入 / SchemeDialog 测试清单，并规划后续自动化补强。
    - Ensure Chinese localisation reads correctly.
 
 ## 5. Updated Risks & Mitigations
 *(Same as before, but note that the Vue 3 migration addresses many of these by design.)*
 
 ## 6. Immediate Next Steps (Post-migration kick-off)
-1. Phase D：落地候选自配色列表与留白逻辑，确保与手写配方共存。
-2. Phase E：刷新分层/按色展示表格，加入重复/配方异常标记。
-3. Phase F：根据需要扩展后端 API（公式哈希查询、手写配方校验）并补充 Playwright 回归用例。
+1. Phase E：刷新分层/按色展示表格，加入重复/配方异常标记。
+2. Phase F：根据需要扩展后端 API（公式哈希查询、手写配方校验）并补充 Chrome DevTools 驱动的回归验证脚本。
+3. Phase G：整理 QA/文档与浏览器端验证清单，准备切换计划。
 
-## 7. Status Snapshot (2025-10-06)
+## 7. Status Snapshot (2025-10-08)
 - Phase A - [Done].
 - Phase B - [Done] (SchemeDialog scaffolding + manual formula persistence landed in Vue 3 app).
-- Phase C - [Pending].
-- Phase D - [Pending].
+- Phase C - [Done].
+- Phase D - [Done].
 - Phase E - [Pending].
 - Phase F - [Pending].
 - Phase G - [Pending].
