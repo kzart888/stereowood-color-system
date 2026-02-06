@@ -139,7 +139,7 @@ npm start  # Will auto-create new database
 
 ## System Information
 
-- **Version**: 0.8.1
+- **Version**: 0.9.8
 - **Port**: 9099 by default (configurable via `PORT`)
 - **Users**: Designed for 3-5 factory users
 - **Maintenance**: By Claude Code and system owner

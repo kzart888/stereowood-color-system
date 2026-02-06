@@ -41,6 +41,11 @@ http://localhost:9099/
 The Vue 3 app under `frontend/apps/stereowood-admin` is parked for a future rebuild
 and is not part of the current production flow.
 
+Healthcheck endpoint:
+```
+http://localhost:9099/health
+```
+
 ## Documentation
 
 - **[OPERATIONS.md](docs/OPERATIONS.md)** - Daily operations, backup, troubleshooting
@@ -54,7 +59,7 @@ and is not part of the current production flow.
 
 ## Version
 
-Current: v0.8.2 (2025-01-03)
+Current: v0.9.8
 
 ## License
 
