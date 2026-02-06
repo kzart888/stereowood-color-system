@@ -64,22 +64,22 @@ Merge repeated logic into clear shared modules without behavior change.
   - [x] Archive or remove dead duplicate code paths only after verification gate passes.
 
 ### Verification
-- [ ] `npm run phase0:verify`
-- [ ] `node --check` for all `frontend/legacy/js/**/*.js`.
-- [ ] Script load integrity check for `frontend/legacy/index.html`.
+- [x] `npm run phase0:verify`
+- [x] `node --check` for all `frontend/legacy/js/**/*.js`.
+- [x] Script load integrity check for `frontend/legacy/index.html`.
 - [ ] Browser smoke:
-  - [ ] root page render `/`
-  - [ ] tab switch: custom colors, artworks, mont-marte, color dictionary
-  - [ ] custom color add/edit dialog opens and saves without console errors
-  - [ ] formula-related interactions render without parse regressions
-  - [ ] color dictionary list/HSL/wheel/matcher views load
-- [ ] Code-review-agent gate report saved as `docs/refactor/PHASE2_REVIEW_GATE.md`.
+  - [x] root page render `/`
+  - [x] tab switch: custom colors, artworks, mont-marte, color dictionary
+  - [x] custom color add/edit dialog opens and saves without console errors
+  - [x] formula-related interactions render without parse regressions
+  - [x] color dictionary list/HSL/wheel/matcher views load
+- [x] Code-review-agent gate report saved as `docs/refactor/PHASE2_REVIEW_GATE.md`.
 
 ### Exit Gate
-- [ ] Duplicate modules removed or downgraded to wrappers with deprecation notes.
-- [ ] No regression in existing API payload handling.
-- [ ] No high-severity review findings.
-- [ ] Rollback path documented for each batch.
+- [x] Duplicate modules removed or downgraded to wrappers with deprecation notes.
+- [x] No regression in existing API payload handling.
+- [x] No high-severity review findings.
+- [x] Rollback path documented for each batch.
 
 ## Phase 3: Backend Modular Boundary Cleanup
 
@@ -156,6 +156,6 @@ Choose a suitable modernization path with low operational risk.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Execute Batch 2.5 cleanup (deprecation notes + dead duplicate branch removal).
-2. Run full Phase 2 verification matrix.
-3. Publish `docs/refactor/PHASE2_REVIEW_GATE.md` with final Phase 2 gate findings.
+1. Start Phase 3 backend modular boundary cleanup.
+2. Keep legacy production smoke checks (`npm run phase0:verify`) after each backend batch.
+3. Continue UTF-8 garbled-text cleanup in active runtime files while preserving behavior.
