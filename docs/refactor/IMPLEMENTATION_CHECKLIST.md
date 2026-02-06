@@ -59,9 +59,9 @@ Merge repeated logic into clear shared modules without behavior change.
   - [x] Standardize component usage on `frontend/legacy/js/utils/message.js` wrapper.
   - [x] Replace direct `ElementPlus.ElMessage.*` usage in high-traffic components first (`custom-colors.js`, `artworks.js`, `mont-marte.js`).
   - [x] Keep compatibility for `this.$message` where changing behavior is risky.
-- [ ] Batch 2.5: Cleanup + deprecation notes
-  - [ ] Add deprecation comments to wrapper modules.
-  - [ ] Archive or remove dead duplicate code paths only after verification gate passes.
+- [x] Batch 2.5: Cleanup + deprecation notes
+  - [x] Add deprecation comments to wrapper modules.
+  - [x] Archive or remove dead duplicate code paths only after verification gate passes.
 
 ### Verification
 - [ ] `npm run phase0:verify`

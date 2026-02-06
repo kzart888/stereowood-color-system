@@ -1,7 +1,7 @@
 # Phase 2 Dedup Plan (Consolidated)
 
 Date: 2026-02-06  
-Status: Batch 2.1-2.4 completed; Batch 2.5 ready
+Status: Batch 2.1-2.5 cleanup completed; Phase 2 final gate pending
 
 ## Scope
 - Deduplicate overlapping frontend utility logic without changing behavior.

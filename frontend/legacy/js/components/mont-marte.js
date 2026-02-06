@@ -611,9 +611,6 @@ const MontMarteComponent = {
                 setTimeout(()=> el.classList.remove('highlight-pulse'), 2100);
             });
         },
-        async saveColor() {
-            // (legacy implementation removed; using unified logic later in file)
-        },
         // 返回引用该原料的自配色编号列表（去重、按字母/数字排序）
         rawUsageCodes(color) {
             if (!color || !color.name) return [];

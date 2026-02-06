@@ -666,22 +666,6 @@ const CustomColorsComponent = {
             return this.orderedCategoriesWithOther.map(c=>c);
         },
         
-        // Computed properties for duplicate checking
-        canDeleteAny() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            for(const g of this.duplicateGroups){
-                const keepId = this.duplicateSelections[g.signature];
-                if(!keepId) continue;
-                if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
-            }
-            return false;
-        },
-        
-        canForceMerge() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
-        },
-        
         esCategoryId() {
             const es = this.categories.find(c=>c.code==='ES');
             return es ? es.id : null;

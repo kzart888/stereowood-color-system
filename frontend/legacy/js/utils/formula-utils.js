@@ -90,11 +90,13 @@ const formulaUtils = {
     },
 
     // Deprecated wrapper kept for compatibility in this phase.
+    // Removal target: Phase 4 legacy boundary cleanup.
     parse(formula) {
         return parseFormula(formula);
     },
 
     // Deprecated wrapper kept for compatibility in this phase.
+    // Removal target: Phase 4 legacy boundary cleanup.
     hash(ingredients) {
         if (window.FormulaParser && typeof window.FormulaParser.hash === 'function') {
             return window.FormulaParser.hash(ingredients);

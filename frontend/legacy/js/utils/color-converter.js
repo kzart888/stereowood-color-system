@@ -1,5 +1,8 @@
 // Color Converter Utility Module
-// Provides RGB/CMYK/HEX conversion and image color extraction
+// Provides RGB/CMYK/HEX conversion and image color extraction.
+// Deprecated compatibility note:
+// RGB/HEX primitive conversions are delegated to colorConversion.js when available.
+// Keep this facade for legacy callers until Phase 4 boundary cleanup is completed.
 // Version: 0.8.4
 
 (function(window) {
