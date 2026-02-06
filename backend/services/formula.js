@@ -2,23 +2,29 @@
    Module: backend/services/formula.js
    Responsibility: Utilities for parsing and updating formula strings
    Imports/Relations: Receives a db (sqlite3.Database) instance from callers
-   Origin: Extracted from backend/server.js (2025-08), no behavior change intended
    Contract:
      - replaceColorNameInFormula(formula, oldName, newName) -> string
      - cascadeRenameInFormulas(db, oldName, newName) -> Promise<number>
    Notes:
-     - Token-level exact match replacement. Amount tokens like "3g/5滴/2ml" are not treated as names.
+     - Token-level exact match replacement.
+     - Amount tokens in forms like "10g" and "10 g" are not treated as names.
      - All multi-row writes occur in a single transaction (BEGIN/COMMIT).
-   Related: routes that update mont_marte_colors name should call cascadeRenameInFormulas
    ========================================================= */
 
-/**
- * Returns true when token looks like an amount with unit (e.g., 3g, 5滴, 2ml)
- * @param {string} t
- * @returns {boolean}
- */
-function isAmountToken(t) {
-  return /^[\d.]+[a-zA-Z\u4e00-\u9fa5]+$/.test(String(t || ''));
+const AMOUNT_TOKEN_RE = /^[\d]+(?:\.[\d]+)?[a-zA-Z\u4e00-\u9fa5%]+$/;
+const NUMBER_ONLY_RE = /^[\d]+(?:\.[\d]+)?$/;
+const UNIT_ONLY_RE = /^[a-zA-Z\u4e00-\u9fa5%]+$/;
+
+function isCombinedAmountToken(token) {
+  return AMOUNT_TOKEN_RE.test(String(token || ''));
+}
+
+function isNumberOnlyToken(token) {
+  return NUMBER_ONLY_RE.test(String(token || ''));
+}
+
+function isUnitOnlyToken(token) {
+  return UNIT_ONLY_RE.test(String(token || ''));
 }
 
 /**
@@ -31,14 +37,31 @@ function isAmountToken(t) {
  */
 function replaceColorNameInFormula(formula, oldName, newName) {
   if (!formula || !oldName || oldName === newName) return formula;
+
   const parts = String(formula).trim().split(/\s+/);
   let changed = false;
-  for (let i = 0; i < parts.length; i++) {
-    if (!isAmountToken(parts[i]) && parts[i] === oldName) {
+
+  for (let i = 0; i < parts.length; ) {
+    const token = parts[i];
+
+    if (isCombinedAmountToken(token)) {
+      i += 1;
+      continue;
+    }
+
+    if (isNumberOnlyToken(token) && isUnitOnlyToken(parts[i + 1])) {
+      i += 2;
+      continue;
+    }
+
+    if (token === oldName) {
       parts[i] = newName;
       changed = true;
     }
+
+    i += 1;
   }
+
   return changed ? parts.join(' ') : formula;
 }
 
@@ -63,7 +86,7 @@ function cascadeRenameInFormulas(db, oldName, newName) {
           if (!original) return;
           const next = replaceColorNameInFormula(original, oldName, newName);
           if (next !== original) {
-            updatedCount++;
+            updatedCount += 1;
             db.run(
               `UPDATE custom_colors
                    SET formula = ?, updated_at = CURRENT_TIMESTAMP

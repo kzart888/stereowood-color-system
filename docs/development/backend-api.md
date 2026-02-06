@@ -82,7 +82,29 @@ Path prefix: `/artworks` (`backend/routes/artworks.js`). Uses `ArtworkService` f
 
 - **Uploads**: all image uploads land in `backend/uploads/`. Update routes remove superseded files.
 - **Services**: `ColorService` and `ArtworkService` enforce extra invariants (optimistic locking, formula cascade updates, etc.). When designing frontend calls, check their method signatures for optional fields (`backend/services/*.js`).
-- **Formula utilities**: duplicate detection and ingredient cascade updates rely on the new TypeScript ports; ensure frontend data stays in sync with hashes/tokens exposed via `src/features/formula/*`.
+
+## Formula Token Contract
+
+The system currently supports both single-token and split-token amount formats in formula strings:
+
+- **Single-token amount**: `颜料名 10g`
+- **Split-token amount**: `颜料名 10 g`
+
+Frontend canonical parser:
+- `frontend/legacy/js/utils/formula-parser.js`
+- Public methods: `parse`, `hash`, `unitBuckets`
+
+Frontend display helpers:
+- `frontend/legacy/js/utils/formula-utils.js`
+- Public methods: `segments`, `structured`
+
+Backend rename cascade:
+- `backend/services/formula.js`
+- `replaceColorNameInFormula` treats amount tokens as non-name tokens in both forms above.
+- Unit tokens may include `%` in addition to alphabetic/CJK unit strings.
+
+Practical rule:
+- Renaming a raw material via `PUT /mont-marte-colors/:id` must update formula name tokens only, without mutating quantity/unit tokens.
 
 ## Next Steps (Legacy Production)
 

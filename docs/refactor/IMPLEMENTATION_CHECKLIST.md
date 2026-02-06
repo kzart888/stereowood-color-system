@@ -45,16 +45,16 @@ Merge repeated logic into clear shared modules without behavior change.
   - [x] Map all call sites of `frontend/legacy/js/utils/formula-parser.js` and `frontend/legacy/js/utils/formula-utils.js`.
   - [x] Decide canonical module responsibilities and publish API list in `docs/refactor/PHASE2_1_INVENTORY.md`.
   - [x] Define rollback note: wrappers must remain for one phase after migration.
-- [ ] Batch 2.2: Color utility consolidation (no behavior change)
-  - [ ] Keep `frontend/legacy/js/utils/colorConversion.js` as canonical for RGB/HSL/LAB/HEX.
-  - [ ] Keep image extraction + Pantone matching capabilities available via compatibility wrapper in `frontend/legacy/js/utils/color-converter.js`.
-  - [ ] Remove duplicate implementations where function behavior overlaps exactly.
-  - [ ] Keep backward-compatible global surface (`window.ColorConverter` and existing global function names) until Phase 4.
-- [ ] Batch 2.3: Formula utility consolidation (frontend + backend contract alignment)
-  - [ ] Keep parsing/hash primitives in `frontend/legacy/js/utils/formula-parser.js`.
-  - [ ] Keep display helpers in `frontend/legacy/js/utils/formula-utils.js` and remove duplicated parsing branches.
-  - [ ] Align normalization assumptions with backend `backend/services/formula.js` (token format, unit handling, invalid tokens).
-  - [ ] Document agreed formula contract in `docs/development/backend-api.md`.
+- [x] Batch 2.2: Color utility consolidation (no behavior change)
+  - [x] Keep `frontend/legacy/js/utils/colorConversion.js` as canonical for RGB/HSL/LAB/HEX.
+  - [x] Keep image extraction + Pantone matching capabilities available via compatibility wrapper in `frontend/legacy/js/utils/color-converter.js`.
+  - [x] Remove duplicate implementations where function behavior overlaps exactly.
+  - [x] Keep backward-compatible global surface (`window.ColorConverter` and existing global function names) until Phase 4.
+- [x] Batch 2.3: Formula utility consolidation (frontend + backend contract alignment)
+  - [x] Keep parsing/hash primitives in `frontend/legacy/js/utils/formula-parser.js`.
+  - [x] Keep display helpers in `frontend/legacy/js/utils/formula-utils.js` and remove duplicated parsing branches.
+  - [x] Align normalization assumptions with backend `backend/services/formula.js` (token format, unit handling, invalid tokens).
+  - [x] Document agreed formula contract in `docs/development/backend-api.md`.
 - [ ] Batch 2.4: Message/notification entrypoint normalization
   - [ ] Standardize component usage on `frontend/legacy/js/utils/message.js` wrapper.
   - [ ] Replace direct `ElementPlus.ElMessage.*` usage in high-traffic components first (`custom-colors.js`, `artworks.js`, `mont-marte.js`).
@@ -156,6 +156,6 @@ Choose a suitable modernization path with low operational risk.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Execute Batch 2.2 (color utility consolidation) with lazy delegation safety (`color-converter.js` loads before `colorConversion.js`).
-2. Run code-review-agent on Batch 2.2 implementation diff.
-3. Run Phase 2 verification matrix and update `docs/refactor/PHASE2_REVIEW_GATE.md`.
+1. Execute Batch 2.4 (message/notification entrypoint normalization) on `custom-colors.js`, `artworks.js`, and `mont-marte.js`.
+2. Execute Batch 2.5 cleanup (deprecation notes + dead duplicate branch removal).
+3. Run full Phase 2 verification matrix and publish `docs/refactor/PHASE2_REVIEW_GATE.md`.
