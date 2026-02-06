@@ -103,4 +103,4 @@ Scope: stabilize runtime/deploy/encoding contract before deletion or modular ref
 ## Current Batch Status
 - Started Batch A (contract alignment + tooling setup): in progress
 - Completed in this run: P0-02, P0-03, P0-04, P0-05, P0-06, P0-06A, P0-08, P0-09, P0-10, P0-11
-- Next immediate step: commit Phase 0 stabilization changes and start Phase 1 inventory/cleanup batches
+- Next immediate step: follow `docs/refactor/IMPLEMENTATION_CHECKLIST.md` and start Phase 1 inventory/cleanup batches
