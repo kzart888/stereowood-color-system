@@ -830,7 +830,7 @@ const CustomColorsComponent = {
             // Reload categories and colors after changes
             await this.globalData.loadCategories();
             await this.globalData.loadCustomColors();
-            this.$message.success('分类已更新');
+            this.getMsg().success('分类已更新');
         },
         
         // Pagination methods
@@ -949,7 +949,13 @@ const CustomColorsComponent = {
         
         // Helper to get message service
         getMsg() {
-            return ElementPlus.ElMessage;
+            if (window.msg) return window.msg;
+            return {
+                success: (text) => ElementPlus.ElMessage.success(text),
+                error: (text) => ElementPlus.ElMessage.error(text),
+                warning: (text) => ElementPlus.ElMessage.warning(text),
+                info: (text) => ElementPlus.ElMessage.info(text)
+            };
         },
         
         setColorItemRef(color) {
@@ -1905,19 +1911,21 @@ const CustomColorsComponent = {
         // Keep all duplicates
         keepAllDuplicates(){
             this.showDuplicateDialog=false;
-            ElementPlus.ElMessage.info('已保留全部重复记录');
+            const notifier = this.getMsg();
+            notifier.info('已保留全部重复记录');
         },
         
         // Perform duplicate deletion - original from v0.5.6
         async performDuplicateDeletion(){
             if(this.deletionPending) return;
+            const notifier = this.getMsg();
             const toDelete=[];
             this.duplicateGroups.forEach(g=>{
                 const keepId = this.duplicateSelections[g.signature];
                 if(!keepId) return;
                 g.records.forEach(r=>{ if(r.id!==keepId && !this.isColorReferenced(r)) toDelete.push(r); });
             });
-            if(!toDelete.length){ ElementPlus.ElMessage.info('没有可删除的记录'); return; }
+            if(!toDelete.length){ notifier.info('没有可删除的记录'); return; }
             try { await ElementPlus.ElMessageBox.confirm(`将删除 ${toDelete.length} 条记录，确认继续？`, '删除确认', { type:'warning', confirmButtonText:'确认删除', cancelButtonText:'取消' }); } catch(e){ return; }
             this.deletionPending=true;
             let ok=0, fail=0;
@@ -1928,7 +1936,7 @@ const CustomColorsComponent = {
             this.deletionPending=false;
             await this.globalData.loadCustomColors();
             await this.globalData.loadArtworks();
-            ElementPlus.ElMessage.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
+            notifier.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
             // 重新检测
             this.runDuplicateCheck();
         },
@@ -1936,37 +1944,39 @@ const CustomColorsComponent = {
         // Confirm force merge - original from v0.5.6
         async confirmForceMerge(){
             if(this.mergingPending || this.deletionPending) return;
+            const notifier = this.getMsg();
             const candidates = this.duplicateGroups.filter(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
-            if(!candidates.length){ ElementPlus.ElMessage.info('请选择要保留的记录'); return; }
+            if(!candidates.length){ notifier.info('请选择要保留的记录'); return; }
             const g = candidates[0];
             const keepId = this.duplicateSelections[g.signature];
-            if(!keepId){ ElementPlus.ElMessage.info('请先选择要保留的记录'); return; }
+            if(!keepId){ notifier.info('请先选择要保留的记录'); return; }
             const removeIds = g.records.filter(r=> r.id!==keepId).map(r=> r.id);
-            if(!removeIds.length){ ElementPlus.ElMessage.info('该组没有其它记录'); return; }
+            if(!removeIds.length){ notifier.info('该组没有其它记录'); return; }
             let referenced=0; g.records.forEach(r=>{ if(r.id!==keepId && this.isColorReferenced(r)) referenced++; });
-            const msg = `将合并该组：保留 1 条，删除 ${removeIds.length} 条；其中 ${referenced} 条被引用，其引用将更新到保留记录。确认继续？`;
-            try { await ElementPlus.ElMessageBox.confirm(msg, '强制合并确认', { type:'warning', confirmButtonText:'执行合并', cancelButtonText:'取消' }); } catch(e){ return; }
+            const confirmText = `将合并该组：保留 1 条，删除 ${removeIds.length} 条；其中 ${referenced} 条被引用，其引用将更新到保留记录。确认继续？`;
+            try { await ElementPlus.ElMessageBox.confirm(confirmText, '强制合并确认', { type:'warning', confirmButtonText:'执行合并', cancelButtonText:'取消' }); } catch(e){ return; }
             this.executeForceMerge({ keepId, removeIds, signature: g.signature });
         },
         
         // Execute force merge - original from v0.5.6
         async executeForceMerge(payload){
             if(this.mergingPending) return;
+            const notifier = this.getMsg();
             this.mergingPending = true;
             try {
                 const resp = await api.customColors.forceMerge(payload);
                 const updated = resp?.updatedLayers ?? resp?.data?.updatedLayers ?? 0;
                 const deleted = resp?.deleted ?? resp?.data?.deleted ?? payload.removeIds.length;
-                ElementPlus.ElMessage.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
+                notifier.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadArtworks();
                 this.runDuplicateCheck();
                 if(!this.duplicateGroups.length){ this.showDuplicateDialog=false; }
             } catch(err){
                 const raw = err?.response?.data?.error || '';
-                if(raw){ ElementPlus.ElMessage.error('合并失败: '+raw); }
-                else if(err?.request){ ElementPlus.ElMessage.error('网络错误，合并失败'); }
-                else { ElementPlus.ElMessage.error('合并失败'); }
+                if(raw){ notifier.error('合并失败: '+raw); }
+                else if(err?.request){ notifier.error('网络错误，合并失败'); }
+                else { notifier.error('合并失败'); }
             } finally {
                 this.mergingPending = false;
             }

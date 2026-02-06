@@ -464,7 +464,7 @@ const MontMarteComponent = {
         async handleCategoriesUpdated() {
             // Reload categories after changes
             await this.loadMontMarteCategories();
-            this.$message.success('分类已更新');
+            msg.success('分类已更新');
         },
         
         // Pagination methods
@@ -593,7 +593,7 @@ const MontMarteComponent = {
                 this.montMarteCategories = await response.json();
             } catch (error) {
                 console.error('Error loading Mont-Marte categories:', error);
-                this.$message.error('加载颜料分类失败');
+                msg.error('加载颜料分类失败');
             }
         },
         focusRawMaterial(id) {
@@ -908,8 +908,8 @@ const MontMarteComponent = {
                 // 同步刷新自配色，避免引用残留提示（若后端允许删除未引用的）
                 await this.globalData.loadCustomColors();
             } catch (error) {
-                const msg = error?.response?.data?.error || '删除失败';
-                msg.error(msg);
+                const errorMessage = error?.response?.data?.error || '删除失败';
+                msg.error(errorMessage);
             }
         },
         

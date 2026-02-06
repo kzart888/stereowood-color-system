@@ -55,10 +55,10 @@ Merge repeated logic into clear shared modules without behavior change.
   - [x] Keep display helpers in `frontend/legacy/js/utils/formula-utils.js` and remove duplicated parsing branches.
   - [x] Align normalization assumptions with backend `backend/services/formula.js` (token format, unit handling, invalid tokens).
   - [x] Document agreed formula contract in `docs/development/backend-api.md`.
-- [ ] Batch 2.4: Message/notification entrypoint normalization
-  - [ ] Standardize component usage on `frontend/legacy/js/utils/message.js` wrapper.
-  - [ ] Replace direct `ElementPlus.ElMessage.*` usage in high-traffic components first (`custom-colors.js`, `artworks.js`, `mont-marte.js`).
-  - [ ] Keep compatibility for `this.$message` where changing behavior is risky.
+- [x] Batch 2.4: Message/notification entrypoint normalization
+  - [x] Standardize component usage on `frontend/legacy/js/utils/message.js` wrapper.
+  - [x] Replace direct `ElementPlus.ElMessage.*` usage in high-traffic components first (`custom-colors.js`, `artworks.js`, `mont-marte.js`).
+  - [x] Keep compatibility for `this.$message` where changing behavior is risky.
 - [ ] Batch 2.5: Cleanup + deprecation notes
   - [ ] Add deprecation comments to wrapper modules.
   - [ ] Archive or remove dead duplicate code paths only after verification gate passes.
@@ -156,6 +156,6 @@ Choose a suitable modernization path with low operational risk.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Execute Batch 2.4 (message/notification entrypoint normalization) on `custom-colors.js`, `artworks.js`, and `mont-marte.js`.
-2. Execute Batch 2.5 cleanup (deprecation notes + dead duplicate branch removal).
-3. Run full Phase 2 verification matrix and publish `docs/refactor/PHASE2_REVIEW_GATE.md`.
+1. Execute Batch 2.5 cleanup (deprecation notes + dead duplicate branch removal).
+2. Run full Phase 2 verification matrix.
+3. Publish `docs/refactor/PHASE2_REVIEW_GATE.md` with final Phase 2 gate findings.
