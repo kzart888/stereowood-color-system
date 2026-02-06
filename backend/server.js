@@ -48,8 +48,8 @@ app.use((req, res, next) => {
 // 静态文件服务 - 上传的图片
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 前端静态文件服务
-const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
+// 前端静态文件服务 (legacy production UI)
+const FRONTEND_DIR = path.join(__dirname, '..', 'frontend', 'legacy');
 if (fs.existsSync(FRONTEND_DIR)) {
   app.use('/', express.static(FRONTEND_DIR, { extensions: ['html'] }));
 }
@@ -63,6 +63,11 @@ if (!fs.existsSync(uploadDir)) {
 // ========== 数据库初始化 ==========
 initDatabase();
 runMigrations();
+
+// ========== Healthcheck ==========
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 
 // ========== API路由 ==========
 // 所有API路由都在 /api 路径下

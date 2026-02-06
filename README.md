@@ -30,16 +30,16 @@ PORT=9199 npm start
 fuser -k 9099/tcp
 ```
 
-### Vue 3 Admin (Vite + Pinia)
+### Legacy Admin UI (Production)
 
-```bash
-cd frontend/apps/stereowood-admin
-npm install           # first time only
-npm run dev -- --host 127.0.0.1 --port 0
+The legacy UI is served by the backend at the root URL:
+
+```
+http://localhost:9099/
 ```
 
-Vite will print the local dev URL (usually http://127.0.0.1:5173).  
-The dev server is pre-configured to proxy `/api` and `/uploads` to the backend.
+The Vue 3 app under `frontend/apps/stereowood-admin` is parked for a future rebuild
+and is not part of the current production flow.
 
 ## Documentation
 

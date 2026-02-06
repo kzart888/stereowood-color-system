@@ -88,6 +88,9 @@ backend/server-monolithic.js
 frontend/js/composables/
 frontend/js/stores/
 
+# Vue 3 app (excluded from legacy production images)
+frontend/apps/
+
 # Cache files
 .npm/
 .cache/

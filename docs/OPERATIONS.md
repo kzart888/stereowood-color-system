@@ -4,16 +4,15 @@
 
 ### Start the System
 ```bash
-# Windows
-start.bat
-
-# Mac/Linux  
+# Windows / Mac / Linux
 npm start              # defaults to port 9099
 # or pick another port if 9099 is taken
 PORT=9199 npm start
 ```
 - System runs on: http://localhost:9099 (or chosen `PORT`)
-- Database location: `backend/color_management.db`
+- Legacy UI is served from `frontend/legacy` at the root URL
+- Database location (local): `backend/color_management.db`
+- Database location (Docker): `/data/color_management.db`
 
 ## Daily Operations
 
@@ -88,6 +87,13 @@ docker run -d \
 docker ps
 docker logs stereowood
 ```
+
+## Rollback (Docker)
+
+If a deployment fails:
+1. Re-deploy the last known good image tag.
+2. Keep the existing `/data` volume to preserve `color_management.db`.
+3. Verify health at `http://localhost:9099/health` and the legacy UI at `/`.
 
 ## Database Structure
 
