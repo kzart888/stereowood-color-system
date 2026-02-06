@@ -12,7 +12,7 @@ Add a settings button after category tabs in both custom colors (自配色) and 
 
 ## Phase 2: Create Reusable Category Manager Component
 
-### 2.1 Create `frontend/js/components/category-manager.js`
+### 2.1 Create `frontend/legacy/js/components/category-manager.js`
 **Features:**
 - Reusable Vue component for both custom colors and Mont-Marte categories
 - Props: `categoryType` ('colors' | 'materials'), `categories` array
@@ -263,14 +263,14 @@ Same pattern but with `/api/mont-marte-categories` endpoints
 ## Files to Create/Modify
 
 ### New Files:
-- `frontend/js/components/category-manager.js` - Main component
+- `frontend/legacy/js/components/category-manager.js` - Main component
 - `frontend/css/components/category-manager.css` - Styles
 
 ### Modified Files:
-- `frontend/js/components/custom-colors.js` - Add settings button & dialog
-- `frontend/js/components/mont-marte.js` - Add settings button & dialog
+- `frontend/legacy/js/components/custom-colors.js` - Add settings button & dialog
+- `frontend/legacy/js/components/mont-marte.js` - Add settings button & dialog
 - `frontend/css/index.css` - Import category-manager.css
-- `frontend/index.html` - Register category-manager component
+- `frontend/legacy/index.html` - Register category-manager component
 
 ## Component API
 
@@ -337,6 +337,6 @@ data() {
 ## References
 - Backend API: `/backend/routes/categories.js`
 - Backend API: `/backend/routes/mont-marte-categories.js`
-- Existing dialogs: `/frontend/js/components/custom-colors.js` (showAddDialog)
+- Existing dialogs: `/frontend/legacy/js/components/custom-colors.js` (showAddDialog)
 - Style patterns: `/frontend/css/components/duplicate-dialog.css`
 - Responsive breakpoints: `/frontend/css/components/responsive-cards.css`

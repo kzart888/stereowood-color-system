@@ -226,7 +226,7 @@ const jsContent = `/**
 })(window);`;
 
 // Write the JavaScript file
-fs.writeFileSync('frontend/js/data/pantone-colors-full.js', jsContent);
+fs.writeFileSync('frontend/legacy/js/data/pantone-colors-full.js', jsContent);
 
 console.log(`Generated pantone-colors-full.js with ${pantoneColors.length} colors`);
 console.log(`- Coated colors: ${pantoneColors.filter(p => p.type === 'coated').length}`);
