@@ -4,7 +4,7 @@ FROM node:20-alpine AS base
 WORKDIR /app
 # Copy package files from root and install dependencies
 COPY package*.json ./
-RUN npm install --production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Stage 2: Runtime image
 FROM node:20-alpine

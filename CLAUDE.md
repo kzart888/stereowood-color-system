@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 🔄 ACTIVE REFACTORING PROCESS (Started: 2025-01-13)
 
 ### CRITICAL: Follow These Rules During Refactoring
-1. **Always refer to REFACTORING_PLAN.md** for each phase and step
+1. **Always refer to `archives/phase1-legacy-cleanup-2026-02-06/REFACTORING_PLAN.md` and `docs/refactor/PHASE0_EXECUTION_CHECKLIST.md`** for current phase steps
 2. **Commit after each completed step** with descriptive messages
 3. **Test with Playwright MCP** when functionality changes
 4. **Archive old code** - never delete, move to `/archives/` directory

@@ -37,7 +37,6 @@ backend/*.db-shm
 
 # Node modules (will be installed fresh)
 node_modules/
-package-lock.json
 
 # Build artifacts
 dist/
@@ -83,10 +82,6 @@ nul
 # Old server files
 backend/server-old.js
 backend/server-monolithic.js
-
-# Empty directories
-frontend/js/composables/
-frontend/js/stores/
 
 # Vue 3 app (excluded from legacy production images)
 frontend/apps/
