@@ -65,8 +65,6 @@ npm run dev
 npm run backup    # Creates timestamped backup in /backups directory
 npm run restore   # Restores from latest backup
 
-# Windows users can also use
-start.bat
 ```
 
 ### Testing & Code Quality
@@ -100,7 +98,7 @@ docker ps
 docker logs stereowood
 ```
 
-## Current State (v0.8.2)
+## Current State (v0.9.8)
 
 - **Backend**: Modularized with routes/, db/, services/ layers
 - **Frontend**: Monolithic components (1800+ lines each) to be refactored
@@ -110,12 +108,12 @@ docker logs stereowood
 ## Architecture Overview
 
 ### Three-Tier Architecture
-1. **Frontend (Vue 3 + Element Plus)** - Located in `/frontend`
-   - Single-page application with component-based architecture
-   - Main entry: `frontend/index.html`
-   - Components in `frontend/js/components/` (large files kept intact for stability)
-   - API client in `frontend/js/api/api.js` (centralized API calls)
-   - CSS modules in `frontend/css/` (fully modularized)
+1. **Frontend (Legacy Vue 3 + Element Plus via CDN)** - Located in `/frontend/legacy`
+   - Single-page application with global script loading
+   - Main entry: `frontend/legacy/index.html`
+   - Components in `frontend/legacy/js/components/` (large files kept intact for stability)
+   - API client in `frontend/legacy/js/api/api.js` (centralized API calls)
+   - CSS modules in `frontend/legacy/css/` (fully modularized)
 
 2. **Backend (Node.js + Express)** - Located in `/backend`
    - RESTful API server on port 9099
@@ -216,7 +214,7 @@ Base URL: `http://localhost:9099/api`
 - Formula parsing: Extracts material names and quantities from space-separated format
 
 ### Formula Calculator Logic
-- Frontend component: `frontend/js/components/formula-calculator.js`
+- Frontend component: `frontend/legacy/js/components/formula-calculator.js`
 - State persistence: Uses localStorage to maintain calculator state
 - Overflow handling: Automatically rebalances ratios when quantities exceed limits
 - Real-time updates: No server-side calculation, all done in browser
@@ -231,9 +229,9 @@ Base URL: `http://localhost:9099/api`
 ## Quick Reference for Refactoring
 
 ### Key Files to Focus On
-- **Monolithic Components**: `custom-colors.js` (1822 lines), `artworks.js` (1583 lines), `color-dictionary.js` (1891 lines)
-- **Performance Issue**: `pantone-colors-full.js` (1.13 MB loaded on every page)
-- **Duplicate Utils**: `color-converter.js` vs `colorConversion.js`
+- **Monolithic Components**: `frontend/legacy/js/components/custom-colors.js` (1822 lines), `frontend/legacy/js/components/artworks.js` (1583 lines), `frontend/legacy/js/components/color-dictionary.js` (1891 lines)
+- **Performance Issue**: `frontend/legacy/js/data/pantone-colors-full.js` (1.13 MB loaded on every page)
+- **Duplicate Utils**: `frontend/legacy/js/utils/color-converter.js` vs `frontend/legacy/js/utils/colorConversion.js`
 
 ### Testing with Playwright MCP
 ```javascript
@@ -244,7 +242,13 @@ mcp__playwright__browser_click({ element: "button", ref: "..." })
 ```
 
 ### Remember During Refactoring
-1. Archive before changing: `cp -r frontend/js/components archives/v0.8.2-baseline/`
+1. Archive before changing: `cp -r frontend/legacy/js/components archives/v0.8.2-baseline/`
 2. Test after each change: Run E2E tests with Playwright MCP
 3. Commit frequently: Use descriptive messages with proper prefixes
 4. Update this file: Mark completed phases and update current status
+
+## Vue 3 Migration Status
+
+The Vue 3 app has been archived under:
+`archives/phase1-vue3-2026-02-06/frontend/apps/stereowood-admin`
+It is not part of the current production flow.

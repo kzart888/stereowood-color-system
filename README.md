@@ -38,8 +38,8 @@ The legacy UI is served by the backend at the root URL:
 http://localhost:9099/
 ```
 
-The Vue 3 app under `frontend/apps/stereowood-admin` is parked for a future rebuild
-and is not part of the current production flow.
+The Vue 3 app is archived under `archives/phase1-vue3-2026-02-06/` and is not part
+of the current production flow.
 
 Healthcheck endpoint:
 ```

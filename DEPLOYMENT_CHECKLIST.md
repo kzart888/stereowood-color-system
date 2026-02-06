@@ -9,7 +9,7 @@ This checklist ensures proper configuration when switching between development a
 Used when running Playwright tests or during development to reduce context usage.
 
 ```javascript
-// In frontend/js/components/*.js files:
+// In frontend/legacy/js/components/*.js files:
 itemsPerPage: 3  // Reduced pagination for less context
 ```
 
@@ -17,7 +17,7 @@ itemsPerPage: 3  // Reduced pagination for less context
 Used for actual user-facing deployment.
 
 ```javascript
-// In frontend/js/components/*.js files:
+// In frontend/legacy/js/components/*.js files:
 itemsPerPage: 12  // Normal pagination for better UX
 ```
 
@@ -25,9 +25,9 @@ itemsPerPage: 12  // Normal pagination for better UX
 
 | File | Line | Dev Value | Prod Value | Purpose |
 |------|------|-----------|------------|---------|
-| `frontend/js/components/custom-colors.js` | 476 | `itemsPerPage: 3` | `itemsPerPage: 12` | Custom colors grid |
-| `frontend/js/components/mont-marte.js` | 304 | `itemsPerPage: 3` | `itemsPerPage: 12` | Materials grid |
-| `frontend/js/components/artworks.js` | 566 | `itemsPerPage: 3` | `itemsPerPage: 12` | Artworks grid |
+| `frontend/legacy/js/components/custom-colors.js` | 476 | `itemsPerPage: 3` | `itemsPerPage: 12` | Custom colors grid |
+| `frontend/legacy/js/components/mont-marte.js` | 304 | `itemsPerPage: 3` | `itemsPerPage: 12` | Materials grid |
+| `frontend/legacy/js/components/artworks.js` | 566 | `itemsPerPage: 3` | `itemsPerPage: 12` | Artworks grid |
 
 ## Quick Switch Methods
 
@@ -53,7 +53,7 @@ data() {
 ```
 
 ### Method 3: Global Configuration Variable
-Add to `frontend/index.html` before other scripts:
+Add to `frontend/legacy/index.html` before other scripts:
 
 ```html
 <script>

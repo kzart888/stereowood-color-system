@@ -84,9 +84,8 @@ Path prefix: `/artworks` (`backend/routes/artworks.js`). Uses `ArtworkService` f
 - **Services**: `ColorService` and `ArtworkService` enforce extra invariants (optimistic locking, formula cascade updates, etc.). When designing frontend calls, check their method signatures for optional fields (`backend/services/*.js`).
 - **Formula utilities**: duplicate detection and ingredient cascade updates rely on the new TypeScript ports; ensure frontend data stays in sync with hashes/tokens exposed via `src/features/formula/*`.
 
-## Next Steps for the Vue 3 Migration
+## Next Steps (Legacy Production)
 
-1. Author `docs/development/backend-api.md` (this document) – keep it updated as endpoints evolve.
-2. While building Pinia stores and API clients, refer to the tables above to shape request/response types.
-3. Verify upload handling in the new codebase (Element Plus forms must send `multipart/form-data` with matching field names).
-4. Capture any new endpoints introduced during the migration back in this document to keep the backend contract visible to the team.
+1. Keep this document updated as endpoints evolve.
+2. Verify upload handling in the legacy UI (forms must send `multipart/form-data` with matching field names).
+3. Capture any new endpoints introduced during maintenance back in this document to keep the backend contract visible to the team.
