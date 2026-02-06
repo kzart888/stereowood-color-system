@@ -22,7 +22,6 @@ const AppHeaderBar = {
 		'add-custom-color',
 		'add-raw-material',
 		'check-duplicates',
-		'show-color-palette',
 		'global-search-input',
 		'search-select',
 		'open-search-dropdown',

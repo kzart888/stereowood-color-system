@@ -1494,14 +1494,14 @@ const ArtworksComponent = {
     },
 
     async deleteScheme(art, scheme) {
-      const ok = await this..doubleDangerConfirm({
-        firstMessage: 确定要删除配色方案 "" 吗？,
+      const ok = await this.$helpers.doubleDangerConfirm({
+        firstMessage: `确定要删除配色方案 "${scheme?.name || ''}" 吗？`,
         secondMessage: '删除后将无法恢复，确认最终删除？',
         secondConfirmText: '永久删除'
       });
       if (!ok) return;
       try {
-        const url = ${window.location.origin}/api/artworks//schemes/;
+        const url = `${window.location.origin}/api/artworks/${art.id}/schemes/${scheme.id}`;
         await axios.delete(url);
         msg.success('已删除配色方案');
         await this.refreshAll();
@@ -1524,14 +1524,14 @@ const ArtworksComponent = {
 
     async deleteArtwork(art) {
       if ((art.schemes || []).length > 0) return;
-      const ok = await this..doubleDangerConfirm({
-        firstMessage: 确定要删除作品 "" 吗？,
+      const ok = await this.$helpers.doubleDangerConfirm({
+        firstMessage: `确定要删除作品 "${art?.name || ''}" 吗？`,
         secondMessage: '删除后将无法恢复，确认最终删除？',
         secondConfirmText: '永久删除'
       });
       if (!ok) return;
       try {
-        const url = ${window.location.origin}/api/artworks/;
+        const url = `${window.location.origin}/api/artworks/${art.id}`;
         await axios.delete(url);
         msg.success('已删除作品');
         await this.refreshAll();

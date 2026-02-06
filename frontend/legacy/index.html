@@ -45,7 +45,6 @@
                 @add-custom-color="$refs.customColorsRef && $refs.customColorsRef.openAddDialog && $refs.customColorsRef.openAddDialog()"
                 @add-raw-material="$refs.montMarteRef && $refs.montMarteRef.openDialog && $refs.montMarteRef.openDialog()"
                 @check-duplicates="$refs.customColorsRef && $refs.customColorsRef.runDuplicateCheck && $refs.customColorsRef.runDuplicateCheck()"
-                @show-color-palette="$refs.customColorsRef && $refs.customColorsRef.showColorPalette && $refs.customColorsRef.showColorPalette()"
                 @show-help="showHelp"
             ></app-header-bar>
 
@@ -150,8 +149,6 @@
     <script src="js/components/mont-marte.js"></script>
     <!-- 分类管理组件 -->
     <script src="js/components/category-manager.js"></script>
-    <!-- 高级颜色选择对话框组件 -->
-    <script src="js/components/color-palette-dialog.js"></script>
     <!-- 自配色字典页面组件 -->
     <script src="js/components/color-dictionary/color-dictionary-service.js"></script>
     <script src="js/components/color-dictionary/color-dictionary-list-view.js"></script>

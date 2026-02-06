@@ -15,24 +15,24 @@ Baseline: Phase 0 stabilization completed on branch `stabilize-legacy`.
 Identify and remove obsolete code/files with low regression risk.
 
 ### Tasks
-- [ ] Generate an inventory of active runtime files vs historical/unused paths.
-- [ ] Classify candidates: `delete`, `archive`, `keep`, `needs-manual-check`.
-- [ ] Remove empty residual paths under `frontend/apps/stereowood-color-system/` if truly unused.
-- [ ] Remove stale references to deprecated UI flow (for example color-palette dialog wiring if no runtime path remains).
-- [ ] Clean stale docs that point to moved/archived files.
+- [x] Generate an inventory of active runtime files vs historical/unused paths.
+- [x] Classify candidates: `delete`, `archive`, `keep`, `needs-manual-check`.
+- [x] Remove empty residual paths under `frontend/apps/stereowood-color-system/` if truly unused.
+- [x] Remove stale references to deprecated UI flow (for example color-palette dialog wiring if no runtime path remains).
+- [x] Clean stale docs/files that point to moved/archived paths.
 
 ### Verification
-- [ ] `npm run phase0:verify`
-- [ ] Start app and verify main tabs still render:
-  - [ ] `/` root page
-  - [ ] custom colors
-  - [ ] artworks
-  - [ ] mont-marte
-  - [ ] color dictionary
+- [x] `npm run phase0:verify`
+- [x] Start app and verify main tabs still render:
+  - [x] `/` root page
+  - [x] custom colors
+  - [x] artworks
+  - [x] mont-marte
+  - [x] color dictionary
 
 ### Exit Gate
-- [ ] No high-severity review findings.
-- [ ] No broken script loads from `frontend/legacy/index.html`.
+- [x] No high-severity review findings.
+- [x] No broken script loads from `frontend/legacy/index.html`.
 
 ## Phase 2: Deduplicate Shared Logic
 
