@@ -73,17 +73,17 @@ Merge repeated logic into clear shared modules without behavior change.
 Make backend layering explicit and maintainable: route -> service -> db/query.
 
 ### Batch 3.1: Backend Inventory and Contract Freeze
-- [ ] Map route-to-service-to-db flow for:
-  - [ ] `backend/routes/custom-colors.js`
-  - [ ] `backend/routes/artworks.js`
-  - [ ] `backend/routes/mont-marte-colors.js`
-  - [ ] `backend/routes/categories.js`
-  - [ ] `backend/routes/mont-marte-categories.js`
-- [ ] Identify duplicated validation and error handling patterns.
-- [ ] Create `docs/refactor/PHASE3_1_INVENTORY.md` with:
-  - [ ] canonical ownership map (route/service/db)
-  - [ ] migration-safe candidates (`migrate-now`, `wrap`, `defer`)
-  - [ ] rollback notes for each target area.
+- [x] Map route-to-service-to-db flow for:
+  - [x] `backend/routes/custom-colors.js`
+  - [x] `backend/routes/artworks.js`
+  - [x] `backend/routes/mont-marte-colors.js`
+  - [x] `backend/routes/categories.js`
+  - [x] `backend/routes/mont-marte-categories.js`
+- [x] Identify duplicated validation and error handling patterns.
+- [x] Create `docs/refactor/PHASE3_1_INVENTORY.md` with:
+  - [x] canonical ownership map (route/service/db)
+  - [x] migration-safe candidates (`migrate-now`, `wrap`, `defer`)
+  - [x] rollback notes for each target area.
 
 ### Batch 3.2: Validation and Error Mapping Normalization
 - [ ] Standardize error response structure and status code policy in routes.
@@ -191,6 +191,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Execute Phase 3 Batch 3.1 inventory and contract freeze.
-2. Run code-review-agent on Phase 3.1 outputs before edits in Batch 3.2.
-3. Start Batch 3.2 with one route family at a time (`categories` first).
+1. Execute Batch 3.2 with `categories` and `mont-marte-categories` first (highest duplication payoff).
+2. Fix the scheme-delete thumbnail cleanup gap in `ArtworkService` as the first Batch 3.2 correctness item.
+3. Run `npm run phase0:verify` and a code-review-agent pass after Batch 3.2 before Batch 3.3.
