@@ -1,7 +1,7 @@
 # Refactor Implementation Checklist (Remaining Phases)
 
 Last updated: 2026-02-06  
-Baseline: Phase 0 stabilization completed on branch `stabilize-legacy`.
+Baseline: Phase 0 stabilization completed. Phase 1 completed in commit `9bc5c5f` on branch `stabilize-legacy`.
 
 ## Working Rules
 - [ ] Work in small batches (one logical change-set per commit).
@@ -40,26 +40,46 @@ Identify and remove obsolete code/files with low regression risk.
 Merge repeated logic into clear shared modules without behavior change.
 
 ### Tasks
-- [ ] Consolidate color utility overlap:
-  - [ ] `frontend/legacy/js/utils/color-converter.js`
-  - [ ] `frontend/legacy/js/utils/colorConversion.js`
-- [ ] Consolidate formula parsing/formatting boundaries:
-  - [ ] `frontend/legacy/js/utils/formula-parser.js`
-  - [ ] `frontend/legacy/js/utils/formula-utils.js`
-  - [ ] backend `services/formula.js` contract alignment
-- [ ] Keep one canonical message/notification entrypoint.
-- [ ] Add lightweight compatibility wrappers where direct replacement is risky.
+- [x] Batch 2.1: Build duplication inventory and canonical contracts
+  - [x] Map all call sites of `frontend/legacy/js/utils/color-converter.js` and `frontend/legacy/js/utils/colorConversion.js`.
+  - [x] Map all call sites of `frontend/legacy/js/utils/formula-parser.js` and `frontend/legacy/js/utils/formula-utils.js`.
+  - [x] Decide canonical module responsibilities and publish API list in `docs/refactor/PHASE2_1_INVENTORY.md`.
+  - [x] Define rollback note: wrappers must remain for one phase after migration.
+- [ ] Batch 2.2: Color utility consolidation (no behavior change)
+  - [ ] Keep `frontend/legacy/js/utils/colorConversion.js` as canonical for RGB/HSL/LAB/HEX.
+  - [ ] Keep image extraction + Pantone matching capabilities available via compatibility wrapper in `frontend/legacy/js/utils/color-converter.js`.
+  - [ ] Remove duplicate implementations where function behavior overlaps exactly.
+  - [ ] Keep backward-compatible global surface (`window.ColorConverter` and existing global function names) until Phase 4.
+- [ ] Batch 2.3: Formula utility consolidation (frontend + backend contract alignment)
+  - [ ] Keep parsing/hash primitives in `frontend/legacy/js/utils/formula-parser.js`.
+  - [ ] Keep display helpers in `frontend/legacy/js/utils/formula-utils.js` and remove duplicated parsing branches.
+  - [ ] Align normalization assumptions with backend `backend/services/formula.js` (token format, unit handling, invalid tokens).
+  - [ ] Document agreed formula contract in `docs/development/backend-api.md`.
+- [ ] Batch 2.4: Message/notification entrypoint normalization
+  - [ ] Standardize component usage on `frontend/legacy/js/utils/message.js` wrapper.
+  - [ ] Replace direct `ElementPlus.ElMessage.*` usage in high-traffic components first (`custom-colors.js`, `artworks.js`, `mont-marte.js`).
+  - [ ] Keep compatibility for `this.$message` where changing behavior is risky.
+- [ ] Batch 2.5: Cleanup + deprecation notes
+  - [ ] Add deprecation comments to wrapper modules.
+  - [ ] Archive or remove dead duplicate code paths only after verification gate passes.
 
 ### Verification
 - [ ] `npm run phase0:verify`
-- [ ] Manual smoke of color conversion dependent flows:
-  - [ ] custom color add/edit
-  - [ ] dictionary views
-  - [ ] formula-related UI interactions
+- [ ] `node --check` for all `frontend/legacy/js/**/*.js`.
+- [ ] Script load integrity check for `frontend/legacy/index.html`.
+- [ ] Browser smoke:
+  - [ ] root page render `/`
+  - [ ] tab switch: custom colors, artworks, mont-marte, color dictionary
+  - [ ] custom color add/edit dialog opens and saves without console errors
+  - [ ] formula-related interactions render without parse regressions
+  - [ ] color dictionary list/HSL/wheel/matcher views load
+- [ ] Code-review-agent gate report saved as `docs/refactor/PHASE2_REVIEW_GATE.md`.
 
 ### Exit Gate
 - [ ] Duplicate modules removed or downgraded to wrappers with deprecation notes.
 - [ ] No regression in existing API payload handling.
+- [ ] No high-severity review findings.
+- [ ] Rollback path documented for each batch.
 
 ## Phase 3: Backend Modular Boundary Cleanup
 
@@ -136,6 +156,6 @@ Choose a suitable modernization path with low operational risk.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Phase 1 inventory and classify obsolete candidates.
-2. Run code-review-agent on Phase 1 candidate list before deletion batch.
-3. Execute first low-risk cleanup batch and re-run verification.
+1. Execute Batch 2.2 (color utility consolidation) with lazy delegation safety (`color-converter.js` loads before `colorConversion.js`).
+2. Run code-review-agent on Batch 2.2 implementation diff.
+3. Run Phase 2 verification matrix and update `docs/refactor/PHASE2_REVIEW_GATE.md`.
