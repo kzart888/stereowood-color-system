@@ -171,17 +171,17 @@ Split monolith components into reusable modules while keeping runtime stable.
 - [x] Produce `docs/refactor/PHASE4_5_REVIEW_GATE.md`.
 
 ### Batch 4.6: Frontend Gate
-- [ ] Produce `docs/refactor/PHASE4_REVIEW_GATE.md`.
+- [x] Produce `docs/refactor/PHASE4_REVIEW_GATE.md`.
 
 ### Verification
-- [ ] `npm run phase0:verify`
-- [ ] `node --check frontend/legacy/js/**/*.js`
+- [x] `npm run phase0:verify`
+- [x] `node --check frontend/legacy/js/**/*.js`
 - [ ] Browser smoke on all major tabs and dialogs
 - [ ] Console clean (no new warnings/errors)
 
 ### Exit Gate
-- [ ] Reduced component complexity with no runtime breakage.
-- [ ] No new encoding regressions in active UI files.
+- [x] Reduced component complexity with no runtime breakage.
+- [x] No new encoding regressions in active UI files.
 
 ## Phase 5: Tech Stack Decision and Migration Preparation
 
@@ -208,6 +208,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Batch 4.6 and produce `docs/refactor/PHASE4_REVIEW_GATE.md`.
-2. Run full Phase 4 verification (`npm run phase0:verify` + syntax checks + tab/dialog smoke).
-3. Decide whether to archive or delete non-runtime `original_artworks.js` in Phase 5 cleanup.
+1. Run browser-level tab/dialog smoke and capture console logs to close remaining Phase 4 test gaps.
+2. Decide whether to archive or delete non-runtime `original_artworks.js` in Phase 5 cleanup.
+3. Start Phase 5 architecture decision doc (legacy-hardening vs fresh Vue rebuild).
