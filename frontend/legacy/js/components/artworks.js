@@ -887,6 +887,9 @@ const ArtworksComponent = {
     },
     // 将配方字符串拆成一行一条成分：匹配 “名称 数值单位” 组合
     parseFormulaLines(formula) {
+      if (window.ArtworksFormulaView && typeof window.ArtworksFormulaView.parseFormulaLines === 'function') {
+        return window.ArtworksFormulaView.parseFormulaLines(formula);
+      }
       const str = (formula || '').trim();
       if (!str) return [];
       const parts = str.split(/\s+/);
@@ -909,85 +912,40 @@ const ArtworksComponent = {
       if (buffer) lines.push(buffer);
       return lines;
     },
+    getSchemeUtilsModule() {
+      return window.ArtworkSchemeUtils || null;
+    },
+    getSchemeDialogModule() {
+      return window.ArtworkSchemeDialog || null;
+    },
     // Formula structure method removed - using shared formulaUtils.structured instead
     normalizedMappings(scheme) {
-      if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.normalizeMappings === 'function') {
-        return window.ArtworkSchemeUtils.normalizeMappings(scheme);
+      const utils = this.getSchemeUtilsModule();
+      if (utils && typeof utils.normalizeMappings === 'function') {
+        return utils.normalizeMappings(scheme);
       }
-      let rows = [];
-      if (scheme && Array.isArray(scheme.layers)) {
-        rows = scheme.layers.map((x) => ({
-          layer: Number(x.layer),
-          colorCode: x.colorCode || x.code || x.custom_color_code || ''
-        }));
-      } else if (scheme && scheme.layers && typeof scheme.layers === 'object') {
-        rows = Object.keys(scheme.layers).map((key) => ({
-          layer: Number(key),
-          colorCode: scheme.layers[key]
-        }));
-      }
-      return rows
-        .filter((item) => Number.isFinite(item.layer))
-        .sort((a, b) => a.layer - b.layer);
+      return [];
     },
     groupedByColor(scheme) {
-      if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.groupByColor === 'function') {
-        return window.ArtworkSchemeUtils.groupByColor(scheme);
+      const utils = this.getSchemeUtilsModule();
+      if (utils && typeof utils.groupByColor === 'function') {
+        return utils.groupByColor(scheme);
       }
-      const rows = this.normalizedMappings(scheme);
-      const map = new Map();
-      const emptyLayers = [];
-      rows.forEach((entry) => {
-        const code = entry.colorCode;
-        if (!code) {
-          emptyLayers.push(entry.layer);
-          return;
-        }
-        if (!map.has(code)) map.set(code, []);
-        map.get(code).push(entry.layer);
-      });
-      const arr = Array.from(map.entries()).map(([code, layers]) => ({
-        code,
-        layers: layers.sort((a, b) => a - b),
-        isEmptyGroup: false
-      }));
-      if (emptyLayers.length) {
-        arr.push({ code: '', layers: emptyLayers.sort((a, b) => a - b), isEmptyGroup: true });
-      }
-      arr.sort((a, b) => {
-        if (a.isEmptyGroup && b.isEmptyGroup) return 0;
-        if (a.isEmptyGroup) return 1;
-        if (b.isEmptyGroup) return -1;
-        return a.code.localeCompare(b.code);
-      });
-      return arr;
+      return [];
     },
     duplicateLayerSet(scheme) {
-      if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.duplicateLayerSet === 'function') {
-        return window.ArtworkSchemeUtils.duplicateLayerSet(scheme);
+      const utils = this.getSchemeUtilsModule();
+      if (utils && typeof utils.duplicateLayerSet === 'function') {
+        return utils.duplicateLayerSet(scheme);
       }
-      const duplicates = new Set();
-      const seen = new Map();
-      const rows = this.normalizedMappings(scheme);
-      rows.forEach((row) => {
-        const count = (seen.get(row.layer) || 0) + 1;
-        seen.set(row.layer, count);
-        if (count > 1) {
-          duplicates.add(row.layer);
-        }
-      });
-      return duplicates;
+      return new Set();
     },
     groupedByColorWithFlags(scheme) {
-      if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.groupedByColorWithFlags === 'function') {
-        return window.ArtworkSchemeUtils.groupedByColorWithFlags(scheme);
+      const utils = this.getSchemeUtilsModule();
+      if (utils && typeof utils.groupedByColorWithFlags === 'function') {
+        return utils.groupedByColorWithFlags(scheme);
       }
-      const groups = this.groupedByColor(scheme);
-      const duplicates = this.duplicateLayerSet(scheme);
-      return groups.map((group) => ({
-        ...group,
-        hasDup: (group.layers || []).some((layer) => duplicates.has(layer))
-      }));
+      return [];
     },
     hasScheme(schemeId) {
       schemeId = Number(schemeId);
@@ -1168,8 +1126,9 @@ const ArtworksComponent = {
     addScheme(art) {
       this.editingArtId = art.id;
       this.schemeEditing = { art, scheme: null };
-      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.createEmptyForm === 'function') {
-        this.schemeForm = window.ArtworkSchemeDialog.createEmptyForm();
+      const dialog = this.getSchemeDialogModule();
+      if (dialog && typeof dialog.createEmptyForm === 'function') {
+        this.schemeForm = dialog.createEmptyForm();
         this.schemeForm.id = null;
       } else {
         this.schemeForm = {
@@ -1190,8 +1149,9 @@ const ArtworksComponent = {
     editScheme(art, scheme) {
       this.editingArtId = art.id;
       this.schemeEditing = { art, scheme };
-      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.hydrateFormFromScheme === 'function') {
-        this.schemeForm = window.ArtworkSchemeDialog.hydrateFormFromScheme({
+      const dialog = this.getSchemeDialogModule();
+      if (dialog && typeof dialog.hydrateFormFromScheme === 'function') {
+        this.schemeForm = dialog.hydrateFormFromScheme({
           scheme,
           baseURL: this.baseURL,
           helpers: this.$helpers
@@ -1233,8 +1193,9 @@ const ArtworksComponent = {
       this._unbindEsc();
     },
     _createSchemeSnapshot() {
-      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.createSnapshot === 'function') {
-        return window.ArtworkSchemeDialog.createSnapshot(this.schemeForm);
+      const dialog = this.getSchemeDialogModule();
+      if (dialog && typeof dialog.createSnapshot === 'function') {
+        return dialog.createSnapshot(this.schemeForm);
       }
       return JSON.stringify(this._normalizedSchemeForm());
     },
@@ -1414,25 +1375,28 @@ const ArtworksComponent = {
     },
 
     addRow(index) {
-      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.addRow === 'function') {
+      const dialog = this.getSchemeDialogModule();
+      if (dialog && typeof dialog.addRow === 'function') {
         const options = (typeof index === 'number' && Number.isFinite(index)) ? { index } : {};
-        window.ArtworkSchemeDialog.addRow(this.schemeForm, options);
+        dialog.addRow(this.schemeForm, options);
       } else {
         const maxLayer = Math.max(0, ...(this.schemeForm.mappings || []).map((x) => Number(x.layer) || 0));
         this.schemeForm.mappings.push({ layer: maxLayer + 1, colorCode: '' });
       }
     },
     duplicateRow(idx) {
-      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.duplicateRow === 'function') {
-        window.ArtworkSchemeDialog.duplicateRow(this.schemeForm, idx);
+      const dialog = this.getSchemeDialogModule();
+      if (dialog && typeof dialog.duplicateRow === 'function') {
+        dialog.duplicateRow(this.schemeForm, idx);
       } else {
         const row = this.schemeForm.mappings[idx];
         this.schemeForm.mappings.splice(idx + 1, 0, { layer: row.layer, colorCode: row.colorCode });
       }
     },
     removeRow(idx) {
-      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.removeRow === 'function') {
-        window.ArtworkSchemeDialog.removeRow(this.schemeForm, idx);
+      const dialog = this.getSchemeDialogModule();
+      if (dialog && typeof dialog.removeRow === 'function') {
+        dialog.removeRow(this.schemeForm, idx);
       } else {
         this.schemeForm.mappings.splice(idx, 1);
         if (this.schemeForm.mappings.length === 0) {
@@ -1443,8 +1407,9 @@ const ArtworksComponent = {
 
     // 序列化层映射，保留重复层，按层排序
     buildLayerPayload() {
-      if (window.ArtworkSchemeDialog && typeof window.ArtworkSchemeDialog.buildLayerPayload === 'function') {
-        return window.ArtworkSchemeDialog.buildLayerPayload(this.schemeForm);
+      const dialog = this.getSchemeDialogModule();
+      if (dialog && typeof dialog.buildLayerPayload === 'function') {
+        return dialog.buildLayerPayload(this.schemeForm);
       }
       const arr = [];
       (this.schemeForm.mappings || []).forEach((m) => {

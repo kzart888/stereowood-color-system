@@ -153,9 +153,11 @@ Split monolith components into reusable modules while keeping runtime stable.
 - [x] Produce `docs/refactor/PHASE4_2_REVIEW_GATE.md`.
 
 ### Batch 4.3: Artworks Extraction
-- [ ] Extract mapping, formula display helpers, and dialog state logic into modules.
+- [x] Extract mapping, formula display helpers, and dialog state logic into modules.
 - [x] Batch 4.3 checkpoint A: extract artworks API orchestration and adopt shared list/dialog guard seams.
-- [ ] Keep calculator integration behavior unchanged.
+- [x] Batch 4.3 checkpoint B: reduce fallback duplication in artworks mapping/dialog helper delegates.
+- [x] Keep calculator integration behavior unchanged.
+- [x] Produce `docs/refactor/PHASE4_3_REVIEW_GATE.md`.
 
 ### Batch 4.4: Mont-Marte Extraction
 - [ ] Extract dictionary management and form-save workflows into modules.
@@ -204,6 +206,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Continue Batch 4.3 checkpoint B: reduce fallback duplication in `artworks` mapping/dialog helpers.
-2. Run Batch 4.3 gate with code-review-agent after checkpoint B completion.
-3. Keep calculator integration behavior unchanged during extractions.
+1. Start Batch 4.4 mont-marte extraction for dictionary/form-save seams.
+2. Run Batch 4.4 gate with code-review-agent after extraction.
+3. Preserve supplier/purchase-link behavior and existing response assumptions.
