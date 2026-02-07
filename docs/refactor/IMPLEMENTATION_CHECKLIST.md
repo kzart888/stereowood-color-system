@@ -192,5 +192,5 @@ Choose a suitable modernization path after legacy stabilization.
 
 ## Current Next Actions
 1. Start Phase 4 Batch 4.1: produce frontend seam inventory for legacy component modules.
-2. Plan the next backend hardening mini-batch for carried Phase 3 medium findings.
+2. Execute Phase 3 follow-up issue plan in `docs/refactor/PHASE3_OPEN_ISSUES_PLAN.md`.
 3. Decide dictionaries layering direction before Phase 5 architecture decision finalization.
