@@ -147,6 +147,7 @@ Split monolith components into reusable modules while keeping runtime stable.
 
 ### Batch 4.2: Custom Colors Extraction
 - [ ] Extract non-UI logic into focused modules under `frontend/legacy/js/modules/custom-colors/`.
+- [x] Batch 4.2 checkpoint A: extract shared UI behaviors into `frontend/legacy/js/modules/ui/` and wire `custom-colors`.
 - [ ] Keep compatibility wrappers for global access during migration.
 - [ ] Remove dead branches only after smoke verification.
 
@@ -201,6 +202,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Batch 4.2 shared module extraction (`ui/list-state`, `ui/dialog-guard`) and custom-colors migration.
-2. Run Batch 4.2 gate with `node --check frontend/legacy/js/**/*.js` and smoke verification.
+1. Continue Batch 4.2 checkpoint B: extract custom-colors domain modules under `frontend/legacy/js/modules/custom-colors/`.
+2. Run Batch 4.2 final gate with `node --check frontend/legacy/js/**/*.js` and smoke verification.
 3. Continue with Batch 4.3 artworks API consolidation and fallback cleanup.

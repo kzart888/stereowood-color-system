@@ -37,7 +37,7 @@ const CustomColorsComponent = {
                 
                 <!-- Grid Container for Cards -->
                 <div class="color-cards-grid">
-                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :data-color-id="color.id" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id)">
+                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :data-color-id="color.id" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id, $event)">
                     <div class="artwork-header" style="display:flex; padding:8px; align-items:center; justify-content:space-between;">
                         <div style="display:flex; align-items:center;">
                             <div class="artwork-title" style="width:88px; flex-shrink:0;">
@@ -471,6 +471,8 @@ const CustomColorsComponent = {
             editingColor: null,
             saving: false,
             _colorItemRefs: new Map(),
+            _listState: null,
+            _dialogGuard: null,
             
             // Pagination
             currentPage: 1,
@@ -819,36 +821,36 @@ const CustomColorsComponent = {
         
         // Pagination methods
         goToPage(page) {
+            if (this._listState && typeof this._listState.goToPage === 'function') {
+                this._listState.goToPage(page);
+                return;
+            }
             if (page === '...') return;
             if (page < 1 || page > this.totalPages) return;
-            
             this.currentPage = page;
-            
-            // Scroll to top of content area
             this.$nextTick(() => {
                 const container = this.$el.querySelector('.color-cards-grid');
                 if (container) {
                     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             });
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-colors-page', page);
-            } catch(e) {}
+            try { localStorage.setItem('sw-colors-page', page); } catch(e) {}
         },
         
         onItemsPerPageChange() {
-            // Reset to first page when changing items per page
+            if (this._listState && typeof this._listState.onItemsPerPageChange === 'function') {
+                this._listState.onItemsPerPageChange();
+                return;
+            }
             this.currentPage = 1;
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-colors-items-per-page', this.itemsPerPage);
-            } catch(e) {}
+            try { localStorage.setItem('sw-colors-items-per-page', this.itemsPerPage); } catch(e) {}
         },
         
         restorePaginationState() {
+            if (this._listState && typeof this._listState.restorePaginationState === 'function') {
+                this._listState.restorePaginationState();
+                return;
+            }
             try {
                 const savedPage = localStorage.getItem('sw-colors-page');
                 const savedItems = localStorage.getItem('sw-colors-items-per-page');
@@ -868,6 +870,10 @@ const CustomColorsComponent = {
         
         // Update pagination based on app config
         updatePaginationFromConfig() {
+            if (this._listState && typeof this._listState.updatePaginationFromConfig === 'function') {
+                this._listState.updatePaginationFromConfig();
+                return;
+            }
             if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
                 const config = this.globalData.appConfig.value;
                 
@@ -888,23 +894,30 @@ const CustomColorsComponent = {
         },
         
         // Card selection methods
-        toggleColorSelection(colorId) {
-            // Prevent propagation to avoid conflicts with other handlers
-            event.stopPropagation();
-            
-            // Toggle selection
-            if (this.selectedColorId === colorId) {
-                this.selectedColorId = null;
-            } else {
-                this.selectedColorId = colorId;
+        toggleColorSelection(colorId, event) {
+            if (this._listState && typeof this._listState.toggleSelection === 'function') {
+                this._listState.toggleSelection(colorId, event || window.event);
+                return;
             }
+            if (event && typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+            this.selectedColorId = this.selectedColorId === colorId ? null : colorId;
         },
         
         clearSelection() {
+            if (this._listState && typeof this._listState.clearSelection === 'function') {
+                this._listState.clearSelection();
+                return;
+            }
             this.selectedColorId = null;
         },
         
         handleGlobalClick(event) {
+            if (this._listState && typeof this._listState.handleGlobalClick === 'function') {
+                this._listState.handleGlobalClick(event);
+                return;
+            }
             // Clear selection if clicking outside the cards
             if (!event.target.closest('.artwork-bar')) {
                 this.clearSelection();
@@ -912,6 +925,10 @@ const CustomColorsComponent = {
         },
         
         handleEscKey(event) {
+            if (this._listState && typeof this._listState.handleEscKey === 'function') {
+                this._listState.handleEscKey(event);
+                return;
+            }
             // Only clear selection if ESC is pressed and no input is focused
             if (event.key === 'Escape') {
                 // Check if any input, textarea, or select is focused
@@ -1606,7 +1623,11 @@ const CustomColorsComponent = {
             if (this.$refs.formRef) {
                 this.$refs.formRef.resetFields();
             }
-            this._originalColorFormSnapshot = null;
+            if (this._dialogGuard && typeof this._dialogGuard.clearSnapshot === 'function') {
+                this._dialogGuard.clearSnapshot();
+            } else {
+                this._originalColorFormSnapshot = null;
+            }
             this._unbindEsc();
         },
         
@@ -1614,8 +1635,13 @@ const CustomColorsComponent = {
         // Other methods remain the same...
         onOpenColorDialog() {
             this.initForm();
-            this._originalColorFormSnapshot = JSON.stringify(this._normalizedColorForm());
-            this._bindEscForDialog();
+            if (this._dialogGuard && typeof this._dialogGuard.setSnapshot === 'function') {
+                this._dialogGuard.setSnapshot(this._normalizedColorForm());
+                this._dialogGuard.bindEsc(() => this.attemptCloseAddDialog());
+            } else {
+                this._originalColorFormSnapshot = JSON.stringify(this._normalizedColorForm());
+                this._bindEscForDialog();
+            }
         },
         
         _normalizedColorForm() {
@@ -1628,6 +1654,9 @@ const CustomColorsComponent = {
         },
         
         _isColorFormDirty() {
+            if (this._dialogGuard && typeof this._dialogGuard.isDirty === 'function') {
+                return this._dialogGuard.isDirty(this._normalizedColorForm());
+            }
             if (!this._originalColorFormSnapshot) return false;
             return JSON.stringify(this._normalizedColorForm()) !== this._originalColorFormSnapshot;
         },
@@ -1646,6 +1675,10 @@ const CustomColorsComponent = {
         },
         
         _bindEscForDialog() {
+            if (this._dialogGuard && typeof this._dialogGuard.bindEsc === 'function') {
+                this._dialogGuard.bindEsc(() => this.attemptCloseAddDialog());
+                return;
+            }
             this._unbindEsc();
             this._escHandler = (e) => {
                 if (e.key === 'Escape') {
@@ -1657,6 +1690,10 @@ const CustomColorsComponent = {
         },
         
         _unbindEsc() {
+            if (this._dialogGuard && typeof this._dialogGuard.unbindEsc === 'function') {
+                this._dialogGuard.unbindEsc();
+                return;
+            }
             if (this._escHandler) {
                 document.removeEventListener('keydown', this._escHandler);
                 this._escHandler = null;
@@ -2191,20 +2228,47 @@ const CustomColorsComponent = {
     
     // Restore pagination state on mount
     mounted() {
+        if (window.LegacyListState && typeof window.LegacyListState.create === 'function') {
+            this._listState = window.LegacyListState.create({
+                vm: this,
+                selectedKey: 'selectedColorId',
+                pageKey: 'sw-colors-page',
+                itemsKey: 'sw-colors-items-per-page',
+                listSelector: '.color-cards-grid',
+                configSection: 'custom-colors'
+            });
+        }
+        if (window.LegacyDialogGuard && typeof window.LegacyDialogGuard.create === 'function') {
+            this._dialogGuard = window.LegacyDialogGuard.create({
+                vm: this,
+                snapshotKey: '_originalColorFormSnapshot',
+                escHandlerKey: '_escHandler'
+            });
+        }
+
         // Update items per page based on app config
         this.updatePaginationFromConfig();
         
         this.restorePaginationState();
         
-        // Add global event listeners for selection
-        document.addEventListener('click', this.handleGlobalClick);
-        document.addEventListener('keydown', this.handleEscKey);
+        if (this._listState && typeof this._listState.bindGlobalEvents === 'function') {
+            this._listState.bindGlobalEvents();
+        } else {
+            // Add global event listeners for selection
+            document.addEventListener('click', this.handleGlobalClick);
+            document.addEventListener('keydown', this.handleEscKey);
+        }
     },
     
     beforeUnmount() {
-        // Clean up event listeners
-        document.removeEventListener('click', this.handleGlobalClick);
-        document.removeEventListener('keydown', this.handleEscKey);
+        if (this._listState && typeof this._listState.unbindGlobalEvents === 'function') {
+            this._listState.unbindGlobalEvents();
+        } else {
+            // Clean up event listeners
+            document.removeEventListener('click', this.handleGlobalClick);
+            document.removeEventListener('keydown', this.handleEscKey);
+        }
+        this._unbindEsc();
     }
 };
 
