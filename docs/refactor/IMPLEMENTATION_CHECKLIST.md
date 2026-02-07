@@ -190,14 +190,14 @@ Split monolith components into reusable modules while keeping runtime stable.
 Choose a suitable modernization path after legacy stabilization.
 
 ### Batch 5.1: Architecture Decision Record (ADR)
-- [ ] Write ADR: legacy-hardening vs fresh Vue rebuild (scope, risks, timeline, staffing).
-- [ ] Define explicit decision criteria (delivery risk, maintainability, migration cost, downtime risk).
-- [ ] Record go/no-go threshold and review sign-off owners.
+- [x] Write ADR: legacy-hardening vs fresh Vue rebuild (scope, risks, timeline, staffing).
+- [x] Define explicit decision criteria (delivery risk, maintainability, migration cost, downtime risk).
+- [x] Record go/no-go threshold and review sign-off owners.
 
 ### Batch 5.2: Security and Dependency Hardening
-- [ ] Resolve `npm audit` high findings with minimal-risk upgrade path.
+- [x] Resolve `npm audit` high findings with minimal-risk upgrade path.
 - [x] Re-run `npm audit --omit=dev` and capture before/after report.
-- [ ] Lock runtime dependency policy (`npm ci`, lockfile hygiene, update cadence).
+- [x] Lock runtime dependency policy (`npm ci`, lockfile hygiene, update cadence).
 
 ### Batch 5.3: Residual Legacy Cleanup (Low-Risk Debt)
 - [x] Restore remaining mojibake in active runtime/docs (`backend/server.js`, `docs/OPERATIONS.md`, `CLAUDE.md`).
@@ -213,8 +213,8 @@ Choose a suitable modernization path after legacy stabilization.
 
 ### Verification
 - [ ] ADR reviewed and approved by maintainers.
-- [ ] `npm audit --omit=dev` high findings reduced or formally risk-accepted.
-- [ ] `npm run phase0:verify` passes after each risky batch.
+- [x] `npm audit --omit=dev` high findings reduced or formally risk-accepted.
+- [x] `npm run phase0:verify` passes after each risky batch.
 - [ ] Pilot slice plan validated by smoke and rollback rehearsal.
 - [ ] Code-review-agent gate report for Phase 5 plan and closure exists.
 
@@ -222,11 +222,11 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Approved migration RFC with timeline and risk controls.
 
 ## Cross-Phase Security and Operations
-- [ ] Track `npm audit` findings and prioritize production-impacting issues.
-- [ ] Keep deterministic Docker builds (`npm ci --omit=dev` + lockfile in git).
+- [x] Track `npm audit` findings and prioritize production-impacting issues.
+- [x] Keep deterministic Docker builds (`npm ci --omit=dev` + lockfile in git).
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Finish Batch 5.2: resolve or formally risk-accept remaining `sqlite3` transitive high findings and document mitigation.
-2. Start Batch 5.1: draft the ADR with explicit decision criteria and sign-off owners.
-3. Prepare Batch 5.4 pilot package: API compatibility contract + Synology cutover/rollback rehearsal.
+1. Run a Phase 5 code-review-agent gate for new ADR and dependency-hardening artifacts.
+2. Prepare Batch 5.4 pilot package: API compatibility contract + Synology cutover/rollback rehearsal.
+3. Validate runtime DB ignore behavior in deployment flow and close remaining DB tracking gap.
