@@ -196,12 +196,12 @@ Choose a suitable modernization path after legacy stabilization.
 
 ### Batch 5.2: Security and Dependency Hardening
 - [ ] Resolve `npm audit` high findings with minimal-risk upgrade path.
-- [ ] Re-run `npm audit --omit=dev` and capture before/after report.
+- [x] Re-run `npm audit --omit=dev` and capture before/after report.
 - [ ] Lock runtime dependency policy (`npm ci`, lockfile hygiene, update cadence).
 
 ### Batch 5.3: Residual Legacy Cleanup (Low-Risk Debt)
-- [ ] Restore remaining mojibake in active runtime/docs (`backend/server.js`, `docs/OPERATIONS.md`, `CLAUDE.md`).
-- [ ] Reconcile deployment docs drift (`DEPLOYMENT_CHECKLIST.md`) with `ConfigHelper` and current runtime behavior.
+- [x] Restore remaining mojibake in active runtime/docs (`backend/server.js`, `docs/OPERATIONS.md`, `CLAUDE.md`).
+- [x] Reconcile deployment docs drift (`DEPLOYMENT_CHECKLIST.md`) with `ConfigHelper` and current runtime behavior.
 - [ ] Decide and execute cleanup for `original_artworks.js` (archive or delete).
 - [ ] Verify whether `frontend/legacy/css/components/color-palette-dialog.css` import is still needed; remove if unused.
 
@@ -227,6 +227,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Batch 5.1: draft the ADR with explicit decision criteria and sign-off owners.
-2. Start Batch 5.2: produce a safe dependency upgrade plan from current `npm audit` highs.
-3. Start Batch 5.3: close remaining mojibake/docs drift and decide `original_artworks.js` disposition.
+1. Finish Batch 5.2: resolve or formally risk-accept remaining `sqlite3` transitive high findings and document mitigation.
+2. Finish Batch 5.3: decide `original_artworks.js` disposition and verify/remove stale `color-palette-dialog.css` import.
+3. Start Batch 5.1: draft the ADR with explicit decision criteria and sign-off owners.
