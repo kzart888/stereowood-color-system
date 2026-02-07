@@ -7,6 +7,7 @@ Baseline:
 - Phase 2 dedup and consolidation completed in `eeaa444`
 - Phase 2 final gate docs completed in `df54b63`
 - Phase 3 follow-up closure completed in `3c0a6e1`
+- Phase 4 frontend modular boundary cleanup completed in `baec979`
 
 ## Working Rules
 - [ ] Work in small batches (one logical change-set per commit).
@@ -188,16 +189,34 @@ Split monolith components into reusable modules while keeping runtime stable.
 ### Goal
 Choose a suitable modernization path after legacy stabilization.
 
-### Tasks
-- [ ] Write architecture decision doc: legacy-hardening vs fresh Vue rebuild.
-- [ ] Quantify migration scope by feature area and dependency.
-- [ ] Freeze backend API compatibility contract.
-- [ ] Define Synology cutover and rollback strategy.
-- [ ] Create phased migration pilot plan for one low-risk feature slice.
+### Batch 5.1: Architecture Decision Record (ADR)
+- [ ] Write ADR: legacy-hardening vs fresh Vue rebuild (scope, risks, timeline, staffing).
+- [ ] Define explicit decision criteria (delivery risk, maintainability, migration cost, downtime risk).
+- [ ] Record go/no-go threshold and review sign-off owners.
+
+### Batch 5.2: Security and Dependency Hardening
+- [ ] Resolve `npm audit` high findings with minimal-risk upgrade path.
+- [ ] Re-run `npm audit --omit=dev` and capture before/after report.
+- [ ] Lock runtime dependency policy (`npm ci`, lockfile hygiene, update cadence).
+
+### Batch 5.3: Residual Legacy Cleanup (Low-Risk Debt)
+- [ ] Restore remaining mojibake in active runtime/docs (`backend/server.js`, `docs/OPERATIONS.md`, `CLAUDE.md`).
+- [ ] Reconcile deployment docs drift (`DEPLOYMENT_CHECKLIST.md`) with `ConfigHelper` and current runtime behavior.
+- [ ] Decide and execute cleanup for `original_artworks.js` (archive or delete).
+- [ ] Verify whether `frontend/legacy/css/components/color-palette-dialog.css` import is still needed; remove if unused.
+
+### Batch 5.4: Migration Pilot Preparation
+- [ ] Freeze backend API compatibility contract for pilot scope.
+- [ ] Define Synology cutover + rollback runbook for pilot.
+- [ ] Create phased pilot plan for one low-risk feature slice.
+- [ ] Define success metrics and rollback trigger thresholds.
 
 ### Verification
-- [ ] Decision doc reviewed and approved.
+- [ ] ADR reviewed and approved by maintainers.
+- [ ] `npm audit --omit=dev` high findings reduced or formally risk-accepted.
+- [ ] `npm run phase0:verify` passes after each risky batch.
 - [ ] Pilot slice plan validated by smoke and rollback rehearsal.
+- [ ] Code-review-agent gate report for Phase 5 plan and closure exists.
 
 ### Exit Gate
 - [ ] Approved migration RFC with timeline and risk controls.
@@ -208,6 +227,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Decide whether to archive or delete non-runtime `original_artworks.js` in Phase 5 cleanup.
-2. Start Phase 5 architecture decision doc (legacy-hardening vs fresh Vue rebuild).
-3. Plan fallback-pruning batch for `artworks` and `mont-marte` compatibility delegates after one stable release cycle.
+1. Start Batch 5.1: draft the ADR with explicit decision criteria and sign-off owners.
+2. Start Batch 5.2: produce a safe dependency upgrade plan from current `npm audit` highs.
+3. Start Batch 5.3: close remaining mojibake/docs drift and decide `original_artworks.js` disposition.
