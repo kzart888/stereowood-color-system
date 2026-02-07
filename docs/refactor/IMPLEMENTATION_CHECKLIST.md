@@ -101,26 +101,26 @@ Make backend layering explicit and maintainable: route -> service -> db/query.
 - [x] Document any intentional route-level SQL exceptions.
 
 ### Batch 3.5: Backend Contract Docs and Gate
-- [ ] Update `docs/development/backend-api.md` with normalized contracts and error behavior.
-- [ ] Produce `docs/refactor/PHASE3_REVIEW_GATE.md`.
+- [x] Update `docs/development/backend-api.md` with normalized contracts and error behavior.
+- [x] Produce `docs/refactor/PHASE3_REVIEW_GATE.md`.
 
 ### Verification
-- [ ] `npm run phase0:verify`
-- [ ] `node --check backend/**/*.js`
+- [x] `npm run phase0:verify`
+- [x] `node --check backend/**/*.js`
 - [ ] API smoke:
-  - [ ] `GET /api/custom-colors`
-  - [ ] `GET /api/artworks`
-  - [ ] `GET /api/mont-marte-colors`
-  - [ ] `GET /api/categories`
-  - [ ] `GET /health`
+  - [x] `GET /api/custom-colors`
+  - [x] `GET /api/artworks`
+  - [x] `GET /api/mont-marte-colors`
+  - [x] `GET /api/categories`
+  - [x] `GET /health`
 - [ ] Controlled write-path smoke in disposable data set:
-  - [ ] create/update/delete one temporary record
-  - [ ] verify no regression in legacy UI reads
+  - [x] create/update/delete one temporary record
+  - [x] verify no regression in legacy UI reads
 
 ### Exit Gate
-- [ ] Routes are thin and consistent.
-- [ ] No high-severity backend review findings.
-- [ ] Backend contract doc reflects implementation.
+- [x] Routes are thin and consistent.
+- [x] No high-severity backend review findings.
+- [x] Backend contract doc reflects implementation.
 
 ## Phase 4: Legacy Frontend Modular Boundary Cleanup
 
@@ -191,6 +191,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Batch 3.5: update backend API contract docs and publish the phase-level gate report.
-2. Decide whether `dictionaries` route should stay as an intentional thin SQL endpoint or move into service/query layering.
-3. Carry forward medium findings from Batch 3.2 (error-code normalization and optimistic lock contract).
+1. Start Phase 4 Batch 4.1: produce frontend seam inventory for legacy component modules.
+2. Plan the next backend hardening mini-batch for carried Phase 3 medium findings.
+3. Decide dictionaries layering direction before Phase 5 architecture decision finalization.
