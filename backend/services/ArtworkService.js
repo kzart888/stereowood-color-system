@@ -1,7 +1,7 @@
 /**
- * 浣滃搧涓氬姟閫昏緫鏈嶅姟
- * 鑱岃矗锛氬鐞嗕綔鍝佸拰閰嶈壊鏂规鐩稿叧鐨勪笟鍔￠€昏緫
- * 寮曠敤锛氳 routes/artworks.js 浣跨敤
+ * 作品业务逻辑服务
+ * 职责：处理作品和配色方案相关的业务逻辑
+ * 引用：被 routes/artworks.js 使用
  * @module services/ArtworkService
  */
 
@@ -12,19 +12,19 @@ const path = require('path');
 
 class ArtworkService {
     /**
-     * 鑾峰彇鎵€鏈変綔鍝?
+     * 获取所有作品
      */
     async getAllArtworks() {
         try {
             const rows = await artworkQueries.getAllArtworks();
             return this.formatArtworkData(rows);
         } catch (error) {
-            throw new Error(`鑾峰彇浣滃搧鍒楄〃澶辫触: ${error.message}`);
+            throw new Error(`获取作品列表失败: ${error.message}`);
         }
     }
 
     /**
-     * 鏍煎紡鍖栦綔鍝佹暟鎹粨鏋?
+     * 格式化作品数据结构
      */
     formatArtworkData(rows) {
         const artworksMap = new Map();
@@ -74,7 +74,7 @@ class ArtworkService {
     }
 
     /**
-     * 鍒涘缓鏂颁綔鍝?
+     * 创建新作品
      */
     async createArtwork(artworkData) {
         try {
@@ -84,12 +84,12 @@ class ArtworkService {
             if (error.message.includes('UNIQUE')) {
                 throw new Error('Artwork code already exists.');
             }
-            throw new Error(`鍒涘缓浣滃搧澶辫触: ${error.message}`);
+            throw new Error(`创建作品失败: ${error.message}`);
         }
     }
 
     /**
-     * 鍒犻櫎浣滃搧
+     * 删除作品
      */
     async deleteArtwork(id) {
         try {
@@ -112,12 +112,12 @@ class ArtworkService {
             const changes = await artworkQueries.deleteArtwork(id);
             return { success: changes > 0, deletedId: id };
         } catch (error) {
-            throw new Error(`鍒犻櫎浣滃搧澶辫触: ${error.message}`);
+            throw new Error(`删除作品失败: ${error.message}`);
         }
     }
 
     /**
-     * 灏嗛鑹蹭唬鐮佽浆鎹负棰滆壊ID
+     * 将颜色代码转换为颜色ID
      */
     async convertColorCodesToIds(layers) {
         if (!layers || !layers.length) return [];
@@ -164,7 +164,7 @@ class ArtworkService {
     }
 
     /**
-     * 鍒涘缓閰嶈壊鏂规
+     * 创建配色方案
      */
     async createScheme(schemeData) {
         try {
@@ -178,12 +178,12 @@ class ArtworkService {
             const schemeId = await artworkQueries.createScheme(dataWithConvertedLayers);
             return { id: schemeId, ...schemeData };
         } catch (error) {
-            throw new Error(`鍒涘缓閰嶈壊鏂规澶辫触: ${error.message}`);
+            throw new Error(`创建配色方案失败: ${error.message}`);
         }
     }
 
     /**
-     * 鏇存柊閰嶈壊鏂规
+     * 更新配色方案
      */
     async updateScheme(schemeId, schemeData) {
         try {
@@ -197,24 +197,24 @@ class ArtworkService {
             await artworkQueries.updateScheme(schemeId, dataWithConvertedLayers);
             return { success: true };
         } catch (error) {
-            throw new Error(`鏇存柊閰嶈壊鏂规澶辫触: ${error.message}`);
+            throw new Error(`更新配色方案失败: ${error.message}`);
         }
     }
 
     /**
-     * 鍒犻櫎閰嶈壊鏂规
+     * 删除配色方案
      */
     async deleteScheme(schemeId) {
         try {
-            // 鑾峰彇鏂规淇℃伅浠ュ垹闄ょ缉鐣ュ浘
+            // 获取方案信息以删除缩略图
             const scheme = await artworkQueries.getSchemeById(schemeId);
             
             if (scheme) {
-                // 鍒犻櫎涓荤缉鐣ュ浘
+                // 删除主缩略图
                 if (scheme.thumbnail_path) {
                     await this.deleteUploadedImage(scheme.thumbnail_path);
                 }
-                // 鍒犻櫎鍒濆鏂规缂╃暐鍥?
+                // 删除初始方案缩略图
                 if (scheme.initial_thumbnail_path) {
                     await this.deleteUploadedImage(scheme.initial_thumbnail_path);
                 }
@@ -223,12 +223,12 @@ class ArtworkService {
             const changes = await artworkQueries.deleteScheme(schemeId);
             return { success: changes > 0, deletedId: schemeId };
         } catch (error) {
-            throw new Error(`鍒犻櫎閰嶈壊鏂规澶辫触: ${error.message}`);
+            throw new Error(`删除配色方案失败: ${error.message}`);
         }
     }
 
     /**
-     * 鍒犻櫎涓婁紶鐨勫浘鐗囨枃浠?
+     * 删除上传的图片文件
      */
     async deleteUploadedImage(imagePath) {
         if (!imagePath) return;
@@ -237,7 +237,7 @@ class ArtworkService {
             const fullPath = path.join(__dirname, '..', 'uploads', path.basename(imagePath));
             await fs.unlink(fullPath);
         } catch (error) {
-            console.warn('鍒犻櫎鍥剧墖鏂囦欢澶辫触:', error.message);
+            console.warn('删除图片文件失败:', error.message);
         }
     }
 }

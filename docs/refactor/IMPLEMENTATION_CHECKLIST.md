@@ -165,9 +165,10 @@ Split monolith components into reusable modules while keeping runtime stable.
 - [x] Produce `docs/refactor/PHASE4_4_REVIEW_GATE.md`.
 
 ### Batch 4.5: UTF-8 and Text Cleanup
-- [ ] Restore garbled Chinese text in active runtime files and key docs.
-- [ ] Verify no encoding regressions using `npm run audit:encoding`.
-- [ ] Keep copy text reviewable and consistent with current UX.
+- [x] Restore garbled Chinese text in active runtime files and key docs.
+- [x] Verify no encoding regressions using `npm run audit:encoding`.
+- [x] Keep copy text reviewable and consistent with current UX.
+- [x] Produce `docs/refactor/PHASE4_5_REVIEW_GATE.md`.
 
 ### Batch 4.6: Frontend Gate
 - [ ] Produce `docs/refactor/PHASE4_REVIEW_GATE.md`.
@@ -207,6 +208,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Batch 4.5 UTF-8 and text cleanup for active runtime files.
-2. Run `npm run audit:encoding` and targeted UI smoke after text cleanup.
-3. Prepare Batch 4.6 full Phase 4 gate report.
+1. Start Batch 4.6 and produce `docs/refactor/PHASE4_REVIEW_GATE.md`.
+2. Run full Phase 4 verification (`npm run phase0:verify` + syntax checks + tab/dialog smoke).
+3. Decide whether to archive or delete non-runtime `original_artworks.js` in Phase 5 cleanup.
