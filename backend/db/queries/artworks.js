@@ -124,6 +124,24 @@ function getArtworkSchemes(artworkId) {
 }
 
 /**
+ * Get a single scheme by id
+ * @param {number} schemeId - Scheme ID
+ * @returns {Promise<Object|null>}
+ */
+function getSchemeById(schemeId) {
+    return new Promise((resolve, reject) => {
+        db.get(`
+            SELECT id, artwork_id, scheme_name, thumbnail_path, initial_thumbnail_path
+            FROM color_schemes
+            WHERE id = ?
+        `, [schemeId], (err, row) => {
+            if (err) reject(err);
+            else resolve(row || null);
+        });
+    });
+}
+
+/**
  * 创建配色方案
  * @param {Object} schemeData - 方案数据
  * @returns {Promise<number>} 新创建的方案ID
@@ -283,6 +301,7 @@ module.exports = {
     updateArtwork,
     deleteArtwork,
     getArtworkSchemes,
+    getSchemeById,
     createScheme,
     updateScheme,
     deleteScheme

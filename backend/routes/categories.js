@@ -1,21 +1,27 @@
 /* =========================================================
    Module: backend/routes/categories.js
    Responsibility: Color categories full CRUD operations
-   Imports/Relations: Uses db from db/index
-   Origin: Extracted from backend/server.js (2025-08), enhanced 2025-01
    Contract: Mount under /api
    Notes: Returns errors as { error: message }
-   Related: custom-colors references category_id
    ========================================================= */
 
 const express = require('express');
 const router = express.Router();
 const { db } = require('../db/index');
+const {
+  parseRequiredName,
+  buildCategoryCode,
+  parseDisplayOrder,
+  parsePositiveId,
+  parseReorderUpdates,
+  mapWriteError,
+  sendError,
+} = require('./helpers/category-route-utils');
 
 // GET /api/categories - List all categories with color count
 router.get('/categories', (req, res) => {
   const query = `
-    SELECT 
+    SELECT
       cc.id,
       cc.code,
       cc.name,
@@ -28,74 +34,72 @@ router.get('/categories', (req, res) => {
     GROUP BY cc.id
     ORDER BY cc.display_order, cc.id
   `;
-  
+
   db.all(query, (err, rows) => {
     if (err) {
-      res.status(500).json({ error: err.message });
-    } else {
-      res.json(rows);
+      return sendError(res, 500, err.message);
     }
+    return res.json(rows);
   });
 });
 
 // POST /api/categories - Create new category
 router.post('/categories', (req, res) => {
   const { code, name, display_order } = req.body;
-  
-  // Validate input
-  if (!name) {
-    return res.status(400).json({ error: '分类名称不能为空' });
+
+  const normalizedName = parseRequiredName(name);
+  if (!normalizedName) {
+    return sendError(res, 400, 'Category name is required.');
   }
-  
-  // Generate code if not provided
-  let categoryCode = code;
-  if (!categoryCode) {
-    // Generate code from first two letters of name or use CT (Category) + number
-    const prefix = name.length >= 2 ? name.substring(0, 2).toUpperCase() : 'CT';
-    categoryCode = prefix;
+
+  const order = parseDisplayOrder(display_order);
+  if (order === null) {
+    return sendError(res, 400, 'display_order must be an integer.');
   }
-  
-  const order = display_order || 999;
-  
+
+  const categoryCode = buildCategoryCode(code, normalizedName, 'CT');
+
   db.run(
     'INSERT INTO color_categories (code, name, display_order, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
-    [categoryCode, name, order],
-    function (err) {
+    [categoryCode, normalizedName, order],
+    function onInsert(err) {
       if (err) {
-        if (err.message.includes('UNIQUE')) {
-          res.status(400).json({ error: '分类代码已存在，请使用其他代码' });
-        } else {
-          res.status(400).json({ error: err.message });
-        }
-      } else {
-        res.json({ 
-          id: this.lastID, 
-          code: categoryCode, 
-          name, 
-          display_order: order,
-          color_count: 0 
-        });
+        const mapped = mapWriteError(err, 'Category code already exists.');
+        return sendError(res, mapped.status, mapped.error);
       }
+
+      return res.json({
+        id: this.lastID,
+        code: categoryCode,
+        name: normalizedName,
+        display_order: order,
+        color_count: 0,
+      });
     }
   );
 });
 
 // PUT /api/categories/reorder - Batch update display order (must be before /:id)
 router.put('/categories/reorder', (req, res) => {
-  const updates = req.body; // Array of {id, display_order}
-  
-  if (!Array.isArray(updates)) {
-    return res.status(400).json({ error: '请提供更新数组' });
+  const parseResult = parseReorderUpdates(req.body);
+  if (parseResult.error) {
+    return sendError(res, 400, parseResult.error);
   }
-  
-  // Use transaction for atomic updates
+
+  const updates = parseResult.value;
+
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
-    
-    let errors = [];
+
+    if (updates.length === 0) {
+      db.run('COMMIT');
+      return res.json({ success: true, message: 'No category order updates provided.' });
+    }
+
+    const errors = [];
     let completed = 0;
-    
-    updates.forEach((update, index) => {
+
+    updates.forEach((update) => {
       db.run(
         'UPDATE color_categories SET display_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [update.display_order, update.id],
@@ -103,97 +107,98 @@ router.put('/categories/reorder', (req, res) => {
           if (err) {
             errors.push({ id: update.id, error: err.message });
           }
-          completed++;
-          
+          completed += 1;
+
           if (completed === updates.length) {
             if (errors.length > 0) {
               db.run('ROLLBACK');
-              res.status(400).json({ error: '部分更新失败', details: errors });
-            } else {
-              db.run('COMMIT');
-              res.json({ success: true, message: `成功更新 ${updates.length} 个分类的顺序` });
+              return sendError(res, 400, 'Failed to reorder some categories.', { details: errors });
             }
+
+            db.run('COMMIT');
+            return res.json({ success: true, message: `Updated ${updates.length} categories.` });
           }
+
+          return null;
         }
       );
     });
-    
-    if (updates.length === 0) {
-      db.run('COMMIT');
-      res.json({ success: true, message: '没有需要更新的项目' });
-    }
+
+    return null;
   });
 });
 
 // PUT /api/categories/:id - Update category name and/or code
 router.put('/categories/:id', (req, res) => {
-  const { id } = req.params;
+  const id = parsePositiveId(req.params.id);
   const { name, code } = req.body;
-  
-  if (!name) {
-    return res.status(400).json({ error: '分类名称不能为空' });
+
+  if (!id) {
+    return sendError(res, 400, 'Invalid category id.');
   }
-  
-  // Build update query dynamically based on provided fields
-  let updateFields = ['name = ?'];
-  let updateValues = [name];
-  
+
+  const normalizedName = parseRequiredName(name);
+  if (!normalizedName) {
+    return sendError(res, 400, 'Category name is required.');
+  }
+
+  const updateFields = ['name = ?'];
+  const updateValues = [normalizedName];
+
   if (code !== undefined) {
+    if (typeof code !== 'string' || !code.trim()) {
+      return sendError(res, 400, 'Category code cannot be empty when provided.');
+    }
     updateFields.push('code = ?');
-    updateValues.push(code.toUpperCase());
+    updateValues.push(code.trim().toUpperCase());
   }
-  
+
   updateFields.push('updated_at = CURRENT_TIMESTAMP');
   updateValues.push(id);
-  
+
   const updateQuery = `UPDATE color_categories SET ${updateFields.join(', ')} WHERE id = ?`;
-  
-  db.run(
-    updateQuery,
-    updateValues,
-    function (err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-      } else if (this.changes === 0) {
-        res.status(404).json({ error: '分类不存在' });
-      } else {
-        res.json({ success: true, message: '分类名称已更新' });
-      }
+
+  db.run(updateQuery, updateValues, function onUpdate(err) {
+    if (err) {
+      const mapped = mapWriteError(err, 'Category code already exists.');
+      return sendError(res, mapped.status, mapped.error);
     }
-  );
+    if (this.changes === 0) {
+      return sendError(res, 404, 'Category not found.');
+    }
+    return res.json({ success: true, message: 'Category updated.' });
+  });
 });
 
 // DELETE /api/categories/:id - Delete category (with protection)
 router.delete('/categories/:id', (req, res) => {
-  const { id } = req.params;
-  
-  // First check if category has any colors
-  db.get(
-    'SELECT COUNT(*) as count FROM custom_colors WHERE category_id = ?',
-    [id],
-    (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      
-      if (row.count > 0) {
-        return res.status(400).json({ 
-          error: `该分类下有 ${row.count} 个颜色，无法删除` 
-        });
-      }
-      
-      // Safe to delete
-      db.run('DELETE FROM color_categories WHERE id = ?', [id], function (err) {
-        if (err) {
-          res.status(500).json({ error: err.message });
-        } else if (this.changes === 0) {
-          res.status(404).json({ error: '分类不存在' });
-        } else {
-          res.json({ success: true, message: '分类已删除' });
-        }
-      });
+  const id = parsePositiveId(req.params.id);
+
+  if (!id) {
+    return sendError(res, 400, 'Invalid category id.');
+  }
+
+  db.get('SELECT COUNT(*) as count FROM custom_colors WHERE category_id = ?', [id], (err, row) => {
+    if (err) {
+      return sendError(res, 500, err.message);
     }
-  );
+
+    if (row.count > 0) {
+      return sendError(res, 400, `Category still has ${row.count} linked colors.`);
+    }
+
+    db.run('DELETE FROM color_categories WHERE id = ?', [id], function onDelete(deleteErr) {
+      if (deleteErr) {
+        return sendError(res, 500, deleteErr.message);
+      }
+      if (this.changes === 0) {
+        return sendError(res, 404, 'Category not found.');
+      }
+      return res.json({ success: true, message: 'Category deleted.' });
+    });
+
+    return null;
+  });
 });
 
 module.exports = router;

@@ -86,9 +86,9 @@ Make backend layering explicit and maintainable: route -> service -> db/query.
   - [x] rollback notes for each target area.
 
 ### Batch 3.2: Validation and Error Mapping Normalization
-- [ ] Standardize error response structure and status code policy in routes.
-- [ ] Keep response payload backward-compatible (`{ error: string }`) for legacy frontend.
-- [ ] Extract shared validation helpers where repetition is high.
+- [x] Standardize error response structure and status code policy in routes.
+- [x] Keep response payload backward-compatible (`{ error: string }`) for legacy frontend.
+- [x] Extract shared validation helpers where repetition is high.
 
 ### Batch 3.3: Category CRUD Dedup
 - [ ] Consolidate repeated category CRUD logic across color and mont-marte category routes.
@@ -191,6 +191,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Execute Batch 3.2 with `categories` and `mont-marte-categories` first (highest duplication payoff).
-2. Fix the scheme-delete thumbnail cleanup gap in `ArtworkService` as the first Batch 3.2 correctness item.
-3. Run `npm run phase0:verify` and a code-review-agent pass after Batch 3.2 before Batch 3.3.
+1. Start Batch 3.3 category CRUD dedup via shared service abstraction and thin route adapters.
+2. Move remaining direct SQL write orchestration from `mont-marte-colors` route into service layer.
+3. Carry forward medium findings from `docs/refactor/PHASE3_2_REVIEW_GATE.md` into Batch 3.3/3.4.
