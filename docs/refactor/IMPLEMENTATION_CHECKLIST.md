@@ -1,6 +1,6 @@
 # Refactor Implementation Checklist (Phase 3+)
 
-Last updated: 2026-02-06  
+Last updated: 2026-02-07  
 Baseline:
 - Phase 0 stabilization completed in `50954e8`
 - Phase 1 obsolete cleanup completed in `9bc5c5f`
@@ -67,7 +67,7 @@ Merge repeated logic into clear shared modules without behavior change.
 - [x] No high-severity review findings.
 - [x] Rollback path documented per batch.
 
-## Phase 3: Backend Modular Boundary Cleanup (Next)
+## Phase 3: Backend Modular Boundary Cleanup (Completed)
 
 ### Goal
 Make backend layering explicit and maintainable: route -> service -> db/query.
@@ -104,17 +104,26 @@ Make backend layering explicit and maintainable: route -> service -> db/query.
 - [x] Update `docs/development/backend-api.md` with normalized contracts and error behavior.
 - [x] Produce `docs/refactor/PHASE3_REVIEW_GATE.md`.
 
+### Batch 3.6: Follow-up Closure (Medium/Low Findings)
+- [x] P3.6.1 custom-colors error-code normalization.
+- [x] P3.6.2 custom-colors optimistic lock completion.
+- [x] P3.6.3 mont-marte rename/cascade transactional consistency.
+- [x] P3.6.4 dictionaries route migration to service/query layering.
+- [x] Produce `docs/refactor/PHASE3_FOLLOWUP_REVIEW_GATE.md`.
+
 ### Verification
 - [x] `npm run phase0:verify`
 - [x] `node --check backend/**/*.js`
-- [ ] API smoke:
+- [x] API smoke:
   - [x] `GET /api/custom-colors`
   - [x] `GET /api/artworks`
   - [x] `GET /api/mont-marte-colors`
   - [x] `GET /api/categories`
   - [x] `GET /health`
-- [ ] Controlled write-path smoke in disposable data set:
+- [x] Controlled write-path smoke in disposable data set:
   - [x] create/update/delete one temporary record
+  - [x] stale version update conflict (`409`)
+  - [x] dictionaries reference conflict (`409`) and cleanup path
   - [x] verify no regression in legacy UI reads
 
 ### Exit Gate
@@ -192,5 +201,5 @@ Choose a suitable modernization path after legacy stabilization.
 
 ## Current Next Actions
 1. Start Phase 4 Batch 4.1: produce frontend seam inventory for legacy component modules.
-2. Execute Phase 3 follow-up issue plan in `docs/refactor/PHASE3_OPEN_ISSUES_PLAN.md`.
-3. Decide dictionaries layering direction before Phase 5 architecture decision finalization.
+2. Execute Phase 4 Batch 4.5 UTF-8 text restoration for active runtime files.
+3. Prepare Phase 5 architecture decision doc after Phase 4 gate.

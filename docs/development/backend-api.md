@@ -35,10 +35,17 @@ Key request details:
 - `category_id` accepts positive integer or null-like (`""`, `null`, `other`).
 - Numeric color fields are normalized server-side (`rgb_*`, `cmyk_*`, `pure_rgb_*`).
 - `clear_pure_color` accepts `true/false` style values and clears pure color metadata when true.
+- `PUT` accepts optional `version` for optimistic locking.
 
-Known caveats:
-- `PUT` accepts `version`, but optimistic lock enforcement is not fully implemented in `ColorService` yet.
-- Route currently infers some status mapping from service error message text.
+Error mapping behavior:
+- Service uses stable error codes:
+  - `VALIDATION_ERROR` -> `400`
+  - `DUPLICATE_COLOR_CODE` -> `400`
+  - `COLOR_IN_USE` -> `400`
+  - `MERGE_INVALID` -> `400`
+  - `NOT_FOUND` -> `404`
+  - `VERSION_CONFLICT` -> `409` (includes `expectedVersion`, `actualVersion`, `latestData`)
+- Route maps status by error code, not by message substrings.
 
 ### Artworks and Schemes
 Source: `backend/routes/artworks.js` -> `backend/services/ArtworkService.js` -> `backend/db/queries/artworks.js`
@@ -98,13 +105,13 @@ Key request details:
 - `PUT` requires `name`, but `category/category_id` may be omitted and existing values are preserved.
 - `PUT` returns additional fields:
   - `updatedReferences` (formula cascade count)
-  - `warn` (present when cascade fails)
 
-Known caveat:
-- Rename update and formula cascade are not fully atomic; update can succeed while cascade warns.
+Consistency behavior:
+- Rename update and formula cascade run in one transaction boundary.
+- If cascade fails, the update is rolled back and API returns an error.
 
 ### Dictionaries
-Source: `backend/routes/dictionaries.js`
+Source: `backend/routes/dictionaries.js` -> `backend/services/DictionaryService.js` -> `backend/db/queries/dictionaries.js`
 
 - `GET /api/suppliers`
 - `POST /api/suppliers/upsert`
@@ -113,7 +120,7 @@ Source: `backend/routes/dictionaries.js`
 - `POST /api/purchase-links/upsert`
 
 Notes:
-- This route remains an intentional thin SQL endpoint for now (not yet migrated to service/query layering).
+- Route handlers are thin; validation and conflict checks are in service/query layers.
 
 ## Error Behavior Notes
 - Validation issues generally return `400`.
@@ -128,5 +135,4 @@ Notes:
 ## Formula Rename Behavior
 - Renaming a mont-marte color may cascade into custom color formulas.
 - Cascade logic lives in `backend/services/formula.js`.
-- If cascade fails, update still returns success with a warning field (`warn`) rather than full rollback.
-
+- Cascade is executed inside the mont-marte update transaction boundary.

@@ -2,6 +2,7 @@
 
 Date: 2026-02-07  
 Source: unresolved items from `docs/refactor/PHASE3_REVIEW_GATE.md`
+Status: completed in Batch 3.6 (see `docs/refactor/PHASE3_FOLLOWUP_REVIEW_GATE.md`)
 
 ## Scope
 - Resolve 3 medium issues:

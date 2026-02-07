@@ -1,17 +1,4 @@
-/* =========================================================
-   Module: backend/services/formula.js
-   Responsibility: Utilities for parsing and updating formula strings
-   Imports/Relations: Receives a db (sqlite3.Database) instance from callers
-   Contract:
-     - replaceColorNameInFormula(formula, oldName, newName) -> string
-     - cascadeRenameInFormulas(db, oldName, newName) -> Promise<number>
-   Notes:
-     - Token-level exact match replacement.
-     - Amount tokens in forms like "10g" and "10 g" are not treated as names.
-     - All multi-row writes occur in a single transaction (BEGIN/COMMIT).
-   ========================================================= */
-
-const AMOUNT_TOKEN_RE = /^[\d]+(?:\.[\d]+)?[a-zA-Z\u4e00-\u9fa5%]+$/;
+﻿const AMOUNT_TOKEN_RE = /^[\d]+(?:\.[\d]+)?[a-zA-Z\u4e00-\u9fa5%]+$/;
 const NUMBER_ONLY_RE = /^[\d]+(?:\.[\d]+)?$/;
 const UNIT_ONLY_RE = /^[a-zA-Z\u4e00-\u9fa5%]+$/;
 
@@ -27,14 +14,6 @@ function isUnitOnlyToken(token) {
   return UNIT_ONLY_RE.test(String(token || ''));
 }
 
-/**
- * Replace color name tokens in a formula string with a new name.
- * Only exact matches on non-amount tokens are replaced.
- * @param {string} formula
- * @param {string} oldName
- * @param {string} newName
- * @returns {string}
- */
 function replaceColorNameInFormula(formula, oldName, newName) {
   if (!formula || !oldName || oldName === newName) return formula;
 
@@ -65,46 +44,68 @@ function replaceColorNameInFormula(formula, oldName, newName) {
   return changed ? parts.join(' ') : formula;
 }
 
-/**
- * Cascade rename across all custom_colors.formula, replacing oldName with newName.
- * @param {import('sqlite3').Database} db
- * @param {string} oldName
- * @param {string} newName
- * @returns {Promise<number>} Number of updated rows
- */
-function cascadeRenameInFormulas(db, oldName, newName) {
+function dbRun(db, sql, params = []) {
   return new Promise((resolve, reject) => {
-    if (!oldName || oldName === newName) return resolve(0);
-    db.all('SELECT id, formula FROM custom_colors', [], (err, rows) => {
-      if (err) return reject(err);
-
-      let updatedCount = 0;
-      db.serialize(() => {
-        db.run('BEGIN');
-        rows.forEach((row) => {
-          const original = String(row.formula || '').trim();
-          if (!original) return;
-          const next = replaceColorNameInFormula(original, oldName, newName);
-          if (next !== original) {
-            updatedCount += 1;
-            db.run(
-              `UPDATE custom_colors
-                   SET formula = ?, updated_at = CURRENT_TIMESTAMP
-                 WHERE id = ?`,
-              [next, row.id]
-            );
-          }
-        });
-        db.run('COMMIT', (commitErr) => {
-          if (commitErr) return reject(commitErr);
-          resolve(updatedCount);
-        });
-      });
+    db.run(sql, params, function onRun(err) {
+      if (err) reject(err);
+      else resolve({ changes: this.changes, lastID: this.lastID });
     });
   });
+}
+
+function dbAll(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
+async function cascadeRenameInFormulasNoTransaction(db, oldName, newName) {
+  if (!oldName || oldName === newName) return 0;
+
+  const rows = await dbAll(db, 'SELECT id, formula FROM custom_colors', []);
+  let updatedCount = 0;
+
+  for (const row of rows) {
+    const original = String(row.formula || '').trim();
+    if (!original) continue;
+
+    const next = replaceColorNameInFormula(original, oldName, newName);
+    if (next !== original) {
+      await dbRun(
+        db,
+        `UPDATE custom_colors
+            SET formula = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`,
+        [next, row.id]
+      );
+      updatedCount += 1;
+    }
+  }
+
+  return updatedCount;
+}
+
+async function cascadeRenameInFormulas(db, oldName, newName) {
+  await dbRun(db, 'BEGIN');
+  try {
+    const updatedCount = await cascadeRenameInFormulasNoTransaction(db, oldName, newName);
+    await dbRun(db, 'COMMIT');
+    return updatedCount;
+  } catch (error) {
+    try {
+      await dbRun(db, 'ROLLBACK');
+    } catch {
+      // ignore rollback failure
+    }
+    throw error;
+  }
 }
 
 module.exports = {
   replaceColorNameInFormula,
   cascadeRenameInFormulas,
+  cascadeRenameInFormulasNoTransaction,
 };

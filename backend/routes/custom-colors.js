@@ -1,16 +1,10 @@
-/* =========================================================
-   Module: backend/routes/custom-colors.js
-   Responsibility: CRUD routes for custom colors and their history
-   Contract: Mount under /api
-   Notes: Returns errors as { error: message }
-   ========================================================= */
-
-const express = require('express');
-const router = express.Router();
-const ColorService = require('../services/ColorService');
+﻿const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const ColorService = require('../services/ColorService');
+
+const router = express.Router();
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
@@ -94,46 +88,7 @@ function parseBooleanFlag(value) {
   return normalized === '1' || normalized === 'true';
 }
 
-function inferColorServiceErrorStatus(error, fallbackStatus) {
-  const message = (error && error.message ? String(error.message) : '').toLowerCase();
-
-  if (error && error.code === 'VERSION_CONFLICT') {
-    return 409;
-  }
-  if (
-    message.includes('not found') ||
-    message.includes('not exist') ||
-    message.includes('涓嶅瓨鍦')
-  ) {
-    return 404;
-  }
-  if (
-    message.includes('already exists') ||
-    message.includes('duplicate') ||
-    message.includes('unique') ||
-    message.includes('宸插瓨鍦') ||
-    message.includes('rgb') ||
-    message.includes('cmyk') ||
-    message.includes('hex') ||
-    message.includes('validation')
-  ) {
-    return 400;
-  }
-  if (
-    message.includes('in use') ||
-    message.includes('referenced') ||
-    message.includes('used') ||
-    message.includes('浣跨敤')
-  ) {
-    return 400;
-  }
-
-  return fallbackStatus;
-}
-
 function mapColorServiceError(res, error, fallbackStatus = 500) {
-  const status = inferColorServiceErrorStatus(error, fallbackStatus);
-
   if (error && error.code === 'VERSION_CONFLICT') {
     return sendError(res, 409, error.message, {
       code: 'VERSION_CONFLICT',
@@ -143,7 +98,18 @@ function mapColorServiceError(res, error, fallbackStatus = 500) {
     });
   }
 
-  return sendError(res, status, error && error.message ? error.message : 'Internal server error');
+  if (error && error.code === 'NOT_FOUND') {
+    return sendError(res, 404, error.message);
+  }
+
+  if (
+    error &&
+    ['VALIDATION_ERROR', 'DUPLICATE_COLOR_CODE', 'COLOR_IN_USE', 'MERGE_INVALID'].includes(error.code)
+  ) {
+    return sendError(res, 400, error.message);
+  }
+
+  return sendError(res, fallbackStatus, error && error.message ? error.message : 'Internal server error');
 }
 
 function toColorPayload(body) {
@@ -167,17 +133,15 @@ function toColorPayload(body) {
   };
 }
 
-// GET /api/custom-colors
 router.get('/custom-colors', async (req, res) => {
   try {
     const colors = await ColorService.getAllColors();
-    res.json(colors);
+    return res.json(colors);
   } catch (error) {
-    mapColorServiceError(res, error, 500);
+    return mapColorServiceError(res, error, 500);
   }
 });
 
-// POST /api/custom-colors
 router.post('/custom-colors', upload.single('image'), async (req, res) => {
   try {
     const colorCode = normalizeStringOrNull(req.body.color_code);
@@ -204,7 +168,6 @@ router.post('/custom-colors', upload.single('image'), async (req, res) => {
   }
 });
 
-// GET /api/custom-colors/:id/history
 router.get('/custom-colors/:id/history', async (req, res) => {
   try {
     const colorId = parsePositiveId(req.params.id);
@@ -219,7 +182,6 @@ router.get('/custom-colors/:id/history', async (req, res) => {
   }
 });
 
-// DELETE /api/custom-colors/:id
 router.delete('/custom-colors/:id', async (req, res) => {
   try {
     const colorId = parsePositiveId(req.params.id);
@@ -234,7 +196,6 @@ router.delete('/custom-colors/:id', async (req, res) => {
   }
 });
 
-// PUT /api/custom-colors/:id
 router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
   try {
     const colorId = parsePositiveId(req.params.id);
@@ -296,15 +257,13 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
       colorData.image_path = normalizeStringOrNull(req.body.existingImagePath);
     }
 
-    await ColorService.updateColor(colorId, colorData, versionResult.value);
-    const updatedColor = await ColorService.getColorById(colorId);
+    const updatedColor = await ColorService.updateColor(colorId, colorData, versionResult.value);
     return res.json(updatedColor);
   } catch (error) {
     return mapColorServiceError(res, error, 500);
   }
 });
 
-// POST /api/custom-colors/force-merge
 router.post('/custom-colors/force-merge', async (req, res) => {
   try {
     const keepId = parsePositiveId(req.body.keepId);

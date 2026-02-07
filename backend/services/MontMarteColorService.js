@@ -1,8 +1,8 @@
-const fs = require('fs').promises;
+﻿const fs = require('fs').promises;
 const path = require('path');
-const montMarteColorQueries = require('../db/queries/mont-marte-colors');
 const { db } = require('../db/index');
-const { cascadeRenameInFormulas } = require('./formula');
+const montMarteColorQueries = require('../db/queries/mont-marte-colors');
+const { cascadeRenameInFormulasNoTransaction } = require('./formula');
 
 function createError(message, statusCode, code, extraFields = {}) {
   const error = new Error(message);
@@ -36,6 +36,11 @@ function normalizeStringOrNull(value) {
   return trimmed === '' ? null : trimmed;
 }
 
+function isConstraintError(error) {
+  const message = String(error && error.message ? error.message : '').toLowerCase();
+  return message.includes('constraint') || message.includes('unique') || message.includes('foreign key');
+}
+
 function normalizeWriteInput(body, options = {}) {
   const requireCategory = options.requireCategory !== false;
   const name = normalizeStringOrNull(body.name);
@@ -63,11 +68,38 @@ function normalizeWriteInput(body, options = {}) {
   };
 }
 
-function mapDbWriteError(error) {
-  const message = error && error.message ? String(error.message) : 'Database error';
-  const lower = message.toLowerCase();
+function dbRun(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function onRun(err) {
+      if (err) reject(err);
+      else resolve({ changes: this.changes, lastID: this.lastID });
+    });
+  });
+}
 
-  if (lower.includes('constraint') || lower.includes('unique') || lower.includes('duplicate')) {
+async function runInTransaction(work) {
+  await dbRun('BEGIN');
+  try {
+    const result = await work();
+    await dbRun('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await dbRun('ROLLBACK');
+    } catch {
+      // ignore rollback failure
+    }
+    throw error;
+  }
+}
+
+function mapDbWriteError(error) {
+  if (error && error.code && error.statusCode) {
+    throw error;
+  }
+
+  const message = error && error.message ? String(error.message) : 'Database error';
+  if (isConstraintError(error)) {
     throw createError(message, 400, 'DB_CONSTRAINT');
   }
 
@@ -80,7 +112,7 @@ async function safeDeleteUpload(fileName) {
   try {
     await fs.unlink(absolutePath);
   } catch {
-    // Keep operation successful even if file is already absent.
+    // best-effort cleanup
   }
 }
 
@@ -127,14 +159,26 @@ class MontMarteColorService {
     const finalCategory = normalized.categoryProvided ? normalized.category : existing.category;
     const finalCategoryId = normalized.categoryIdProvided ? normalized.category_id : existing.category_id;
 
+    let updatedReferences = 0;
+
     try {
-      await montMarteColorQueries.updateColor(id, {
-        name: normalized.name,
-        image_path: imagePath,
-        supplier_id: normalized.supplier_id,
-        purchase_link_id: normalized.purchase_link_id,
-        category: finalCategory,
-        category_id: finalCategoryId,
+      await runInTransaction(async () => {
+        const changes = await montMarteColorQueries.updateColor(id, {
+          name: normalized.name,
+          image_path: imagePath,
+          supplier_id: normalized.supplier_id,
+          purchase_link_id: normalized.purchase_link_id,
+          category: finalCategory,
+          category_id: finalCategoryId,
+        });
+
+        if (changes === 0) {
+          throw createError('Color not found.', 404, 'NOT_FOUND');
+        }
+
+        if (existing.name && existing.name !== normalized.name) {
+          updatedReferences = await cascadeRenameInFormulasNoTransaction(db, existing.name, normalized.name);
+        }
       });
     } catch (error) {
       mapDbWriteError(error);
@@ -144,18 +188,8 @@ class MontMarteColorService {
       await safeDeleteUpload(existing.image_path);
     }
 
-    let updatedReferences = 0;
-    let warn;
-    if (existing.name && existing.name !== normalized.name) {
-      try {
-        updatedReferences = await cascadeRenameInFormulas(db, existing.name, normalized.name);
-      } catch {
-        warn = 'Formula rename cascade failed.';
-      }
-    }
-
     const updated = await montMarteColorQueries.getColorById(id);
-    return { ...updated, updatedReferences, warn };
+    return { ...updated, updatedReferences };
   }
 
   async deleteColor(idValue) {
@@ -170,7 +204,10 @@ class MontMarteColorService {
     }
 
     try {
-      await montMarteColorQueries.deleteColor(id);
+      const changes = await montMarteColorQueries.deleteColor(id);
+      if (changes === 0) {
+        throw createError('Color not found.', 404, 'NOT_FOUND');
+      }
     } catch (error) {
       mapDbWriteError(error);
     }

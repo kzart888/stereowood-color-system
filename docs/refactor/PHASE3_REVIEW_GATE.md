@@ -73,3 +73,6 @@ Implementation areas reviewed:
 ## Gate Decision
 - Phase 3 **passes** (`no high-severity findings`).
 - Medium follow-ups should be scheduled early in the next backend contract hardening cycle.
+
+Follow-up:
+- Batch 3.6 closure and full re-gate recorded in `docs/refactor/PHASE3_FOLLOWUP_REVIEW_GATE.md`.
