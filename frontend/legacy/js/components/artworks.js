@@ -604,7 +604,10 @@ const ArtworksComponent = {
     shapeFilters: ['正方形', '长方形', '圆形', '不规则形'],
     selectedShapes: [],
     showHelp: false,
-    artworksStore: null
+    artworksStore: null,
+    _listState: null,
+    _artworkDialogGuard: null,
+    _schemeDialogGuard: null
     };
   },
   created() {
@@ -1076,17 +1079,28 @@ const ArtworksComponent = {
       this.showArtworkDialog = true;
     },
     onOpenArtworkDialog() {
-      this._artworkSnapshot = JSON.stringify(this._normalizedArtworkForm());
+      if (this._artworkDialogGuard && typeof this._artworkDialogGuard.setSnapshot === 'function') {
+        this._artworkDialogGuard.setSnapshot(this._normalizedArtworkForm());
+      } else {
+        this._artworkSnapshot = JSON.stringify(this._normalizedArtworkForm());
+      }
       this._bindEsc(); // 复用 ESC 逻辑（同方案对话框）
     },
     onCloseArtworkDialog() {
-      this._artworkSnapshot = null;
+      if (this._artworkDialogGuard && typeof this._artworkDialogGuard.clearSnapshot === 'function') {
+        this._artworkDialogGuard.clearSnapshot();
+      } else {
+        this._artworkSnapshot = null;
+      }
       if (!this.showSchemeDialog) this._unbindEsc();
     },
     _normalizedArtworkForm() {
       return { title: this.artworkForm.title || '' };
     },
     _isArtworkDirty() {
+      if (this._artworkDialogGuard && typeof this._artworkDialogGuard.isDirty === 'function') {
+        return this._artworkDialogGuard.isDirty(this._normalizedArtworkForm());
+      }
       if (!this._artworkSnapshot) return false;
       return JSON.stringify(this._normalizedArtworkForm()) !== this._artworkSnapshot;
     },
@@ -1109,7 +1123,11 @@ const ArtworksComponent = {
       if (!parsed) return;
       const { code, name } = parsed;
       try {
-        await axios.post(`${window.location.origin}/api/artworks`, { code, name });
+        if (window.ArtworksApi && typeof window.ArtworksApi.createArtwork === 'function') {
+          await window.ArtworksApi.createArtwork({ baseURL: this.baseURL, code, name });
+        } else {
+          await axios.post(`${window.location.origin}/api/artworks`, { code, name });
+        }
         msg.success('已创建新作品');
         await this.refreshAll();
         this.showArtworkDialog = false;
@@ -1199,11 +1217,19 @@ const ArtworksComponent = {
     },
 
     onOpenDialog() {
-      this._schemeOriginalSnapshot = this._createSchemeSnapshot();
+      if (this._schemeDialogGuard && typeof this._schemeDialogGuard.setSnapshot === 'function') {
+        this._schemeDialogGuard.setSnapshot(this._normalizedSchemeForm());
+      } else {
+        this._schemeOriginalSnapshot = this._createSchemeSnapshot();
+      }
       this._bindEsc();
     },
     onCloseDialog() {
-      this._schemeOriginalSnapshot = null;
+      if (this._schemeDialogGuard && typeof this._schemeDialogGuard.clearSnapshot === 'function') {
+        this._schemeDialogGuard.clearSnapshot();
+      } else {
+        this._schemeOriginalSnapshot = null;
+      }
       this._unbindEsc();
     },
     _createSchemeSnapshot() {
@@ -1223,6 +1249,9 @@ const ArtworksComponent = {
       };
     },
     _isSchemeDirty() {
+      if (this._schemeDialogGuard && typeof this._schemeDialogGuard.isDirty === 'function') {
+        return this._schemeDialogGuard.isDirty(this._normalizedSchemeForm());
+      }
       if (!this._schemeOriginalSnapshot) return false;
       return this._createSchemeSnapshot() !== this._schemeOriginalSnapshot;
     },
@@ -1467,21 +1496,25 @@ const ArtworksComponent = {
 
       this.saving = true;
       try {
-        if (this.schemeForm.id) {
+        if (window.ArtworksApi && typeof window.ArtworksApi.saveScheme === 'function') {
+          await window.ArtworksApi.saveScheme({
+            baseURL: this.baseURL,
+            artId,
+            schemeId: this.schemeForm.id || null,
+            formData: fd
+          });
+        } else if (this.schemeForm.id) {
           if (window.api?.artworks?.updateScheme) {
             await window.api.artworks.updateScheme(artId, this.schemeForm.id, fd);
           } else {
             await axios.put(`${window.location.origin}/api/artworks/${artId}/schemes/${this.schemeForm.id}`, fd);
           }
-          msg.success('已保存方案修改');
+        } else if (window.api?.artworks?.addScheme) {
+          await window.api.artworks.addScheme(artId, fd);
         } else {
-          if (window.api?.artworks?.addScheme) {
-            await window.api.artworks.addScheme(artId, fd);
-          } else {
-            await axios.post(`${window.location.origin}/api/artworks/${artId}/schemes`, fd);
-          }
-          msg.success('已新增配色方案');
+          await axios.post(`${window.location.origin}/api/artworks/${artId}/schemes`, fd);
         }
+        msg.success(this.schemeForm.id ? '已保存方案修改' : '已新增配色方案');
         await this.refreshAll();
         this.showSchemeDialog = false;
       } catch (error) {
@@ -1501,14 +1534,22 @@ const ArtworksComponent = {
       });
       if (!ok) return;
       try {
-        const url = `${window.location.origin}/api/artworks/${art.id}/schemes/${scheme.id}`;
-        await axios.delete(url);
+        if (window.ArtworksApi && typeof window.ArtworksApi.deleteScheme === 'function') {
+          await window.ArtworksApi.deleteScheme({ baseURL: this.baseURL, artId: art.id, schemeId: scheme.id });
+        } else {
+          const url = `${window.location.origin}/api/artworks/${art.id}/schemes/${scheme.id}`;
+          await axios.delete(url);
+        }
         msg.success('已删除配色方案');
         await this.refreshAll();
       } catch (error) {
         console.error('删除配色方案失败', error);
-        const status = error?.response?.status;
-        const serverMessage = error?.response?.data?.error || '';
+        const payload =
+          window.ArtworksApi && typeof window.ArtworksApi.getErrorPayload === 'function'
+            ? window.ArtworksApi.getErrorPayload(error)
+            : { status: error?.response?.status, message: error?.response?.data?.error || '' };
+        const status = payload.status;
+        const serverMessage = payload.message || '';
         if (status === 404) {
           msg.warning(serverMessage || '配色方案不存在或已被删除');
           await this.refreshAll();
@@ -1531,14 +1572,22 @@ const ArtworksComponent = {
       });
       if (!ok) return;
       try {
-        const url = `${window.location.origin}/api/artworks/${art.id}`;
-        await axios.delete(url);
+        if (window.ArtworksApi && typeof window.ArtworksApi.deleteArtwork === 'function') {
+          await window.ArtworksApi.deleteArtwork({ baseURL: this.baseURL, artId: art.id });
+        } else {
+          const url = `${window.location.origin}/api/artworks/${art.id}`;
+          await axios.delete(url);
+        }
         msg.success('已删除作品');
         await this.refreshAll();
       } catch (error) {
         console.error('删除作品失败', error);
-        const status = error?.response?.status;
-        const serverMessage = error?.response?.data?.error || '';
+        const payload =
+          window.ArtworksApi && typeof window.ArtworksApi.getErrorPayload === 'function'
+            ? window.ArtworksApi.getErrorPayload(error)
+            : { status: error?.response?.status, message: error?.response?.data?.error || '' };
+        const status = payload.status;
+        const serverMessage = payload.message || '';
         if (status === 404) {
           msg.warning(serverMessage || '作品不存在或已被删除');
           await this.refreshAll();
@@ -1554,6 +1603,10 @@ const ArtworksComponent = {
 
     // Pagination methods
     goToPage(page) {
+      if (this._listState && typeof this._listState.goToPage === 'function') {
+        this._listState.goToPage(page);
+        return;
+      }
       if (page === '...') return;
       if (page < 1 || page > this.totalPages) return;
       
@@ -1574,6 +1627,10 @@ const ArtworksComponent = {
     },
     
     onItemsPerPageChange() {
+      if (this._listState && typeof this._listState.onItemsPerPageChange === 'function') {
+        this._listState.onItemsPerPageChange();
+        return;
+      }
       // Reset to first page when changing items per page
       this.currentPage = 1;
       
@@ -1585,6 +1642,10 @@ const ArtworksComponent = {
     
     // Restore pagination state on mount
     restorePaginationState() {
+      if (this._listState && typeof this._listState.restorePaginationState === 'function') {
+        this._listState.restorePaginationState();
+        return;
+      }
       try {
         const savedPage = localStorage.getItem('sw-artworks-page');
         const savedItems = localStorage.getItem('sw-artworks-items-per-page');
@@ -1604,6 +1665,10 @@ const ArtworksComponent = {
     
     // Update pagination based on app config
     updatePaginationFromConfig() {
+      if (this._listState && typeof this._listState.updatePaginationFromConfig === 'function') {
+        this._listState.updatePaginationFromConfig();
+        return;
+      }
       if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
         const config = this.globalData.appConfig.value;
         
@@ -1657,6 +1722,28 @@ const ArtworksComponent = {
   },
   
   async mounted() {
+    if (window.LegacyListState && typeof window.LegacyListState.create === 'function') {
+      this._listState = window.LegacyListState.create({
+        vm: this,
+        pageKey: 'sw-artworks-page',
+        itemsKey: 'sw-artworks-items-per-page',
+        listSelector: '.artwork-bar',
+        configSection: 'artworks'
+      });
+    }
+    if (window.LegacyDialogGuard && typeof window.LegacyDialogGuard.create === 'function') {
+      this._artworkDialogGuard = window.LegacyDialogGuard.create({
+        vm: this,
+        snapshotKey: '_artworkSnapshot',
+        escHandlerKey: '_artworkEscHandler'
+      });
+      this._schemeDialogGuard = window.LegacyDialogGuard.create({
+        vm: this,
+        snapshotKey: '_schemeOriginalSnapshot',
+        escHandlerKey: '_schemeEscHandler'
+      });
+    }
+
     // Update items per page based on app config
     this.updatePaginationFromConfig();
     
@@ -1682,6 +1769,13 @@ const ArtworksComponent = {
     // 替换新作品校验器（此时 this 已可用）
     if (this.artworkRules && this.artworkRules.title && this.artworkRules.title.length > 1) {
       this.artworkRules.title[1].validator = (r,v,cb)=>this.validateArtworkTitle(r,v,cb);
+    }
+  },
+  beforeUnmount() {
+    this._unbindEsc();
+    if (this._highlightTimer) {
+      clearTimeout(this._highlightTimer);
+      this._highlightTimer = null;
     }
   }
 };

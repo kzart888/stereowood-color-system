@@ -154,6 +154,7 @@ Split monolith components into reusable modules while keeping runtime stable.
 
 ### Batch 4.3: Artworks Extraction
 - [ ] Extract mapping, formula display helpers, and dialog state logic into modules.
+- [x] Batch 4.3 checkpoint A: extract artworks API orchestration and adopt shared list/dialog guard seams.
 - [ ] Keep calculator integration behavior unchanged.
 
 ### Batch 4.4: Mont-Marte Extraction
@@ -203,6 +204,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Complete Batch 4.2 dead-branch cleanup after targeted browser smoke verification.
-2. Start Batch 4.3 artworks extraction on API orchestration and dialog/list state seams.
-3. Keep running code-review-agent at each batch gate before moving forward.
+1. Continue Batch 4.3 checkpoint B: reduce fallback duplication in `artworks` mapping/dialog helpers.
+2. Run Batch 4.3 gate with code-review-agent after checkpoint B completion.
+3. Keep calculator integration behavior unchanged during extractions.
