@@ -215,7 +215,7 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] ADR reviewed and approved by maintainers.
 - [x] `npm audit --omit=dev` high findings reduced or formally risk-accepted.
 - [x] `npm run phase0:verify` passes after each risky batch.
-- [ ] Pilot slice plan validated by smoke and rollback rehearsal.
+- [ ] Pilot slice plan validated by smoke and rollback rehearsal. (local interim rehearsal done; Synology Docker rehearsal pending)
 - [ ] Code-review-agent gate report for Phase 5 plan and closure exists.
 
 ### Exit Gate
@@ -227,6 +227,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Execute Batch 5.4 rollback rehearsal and record evidence in a final Phase 5 gate report.
+1. Execute Synology Docker temporary-port rehearsal and append evidence to `docs/refactor/PHASE5_4_REHEARSAL_EVIDENCE.md`.
 2. Collect maintainer sign-off on `docs/refactor/ADR-0001-modernization-path.md`.
 3. Validate runtime DB ignore behavior in deployment flow and close remaining DB tracking gap.
