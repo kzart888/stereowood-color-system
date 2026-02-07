@@ -176,8 +176,8 @@ Split monolith components into reusable modules while keeping runtime stable.
 ### Verification
 - [x] `npm run phase0:verify`
 - [x] `node --check frontend/legacy/js/**/*.js`
-- [ ] Browser smoke on all major tabs and dialogs
-- [ ] Console clean (no new warnings/errors)
+- [x] Browser smoke on all major tabs and dialogs
+- [x] Console clean (no new warnings/errors)
 
 ### Exit Gate
 - [x] Reduced component complexity with no runtime breakage.
@@ -208,6 +208,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Run browser-level tab/dialog smoke and capture console logs to close remaining Phase 4 test gaps.
-2. Decide whether to archive or delete non-runtime `original_artworks.js` in Phase 5 cleanup.
-3. Start Phase 5 architecture decision doc (legacy-hardening vs fresh Vue rebuild).
+1. Decide whether to archive or delete non-runtime `original_artworks.js` in Phase 5 cleanup.
+2. Start Phase 5 architecture decision doc (legacy-hardening vs fresh Vue rebuild).
+3. Plan fallback-pruning batch for `artworks` and `mont-marte` compatibility delegates after one stable release cycle.

@@ -61,6 +61,16 @@ Reviewed artifacts:
 - Syntax checks:
   - `node --check` on all `frontend/legacy/js/**/*.js`
   - `node --check` on all `backend/**/*.js`
+- Browser smoke (Playwright on `http://127.0.0.1:9099/`):
+  - Tab switch smoke: `custom-colors` -> `color-dictionary` -> `artworks` -> `mont-marte`
+  - Dialog open/close smoke:
+    - `custom-colors`: open `添加自配色`, then `取消`
+    - `artworks`: open `新增配色方案`, then `取消`
+    - `mont-marte`: open `新增颜色原料`, then `取消`
+  - Browser console capture:
+    - Total messages: `2`
+    - Errors: `0`
+    - Warnings: `0`
 - Prior batch gates:
   - `docs/refactor/PHASE4_2_REVIEW_GATE.md`
   - `docs/refactor/PHASE4_3_REVIEW_GATE.md`
@@ -68,8 +78,7 @@ Reviewed artifacts:
   - `docs/refactor/PHASE4_5_REVIEW_GATE.md`
 
 ## Test Gaps
-- Browser-level interaction smoke for all major tabs/dialogs in one single consolidated run is still pending.
-- Console warning/error cleanliness was not captured with a dedicated browser console log collection in this gate.
+- No additional high-risk gaps identified for Phase 4 closure.
 
 ## Gate Decision
 - Phase 4 **passes** with no high-severity findings.
