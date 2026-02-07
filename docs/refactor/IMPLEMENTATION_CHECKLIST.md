@@ -91,9 +91,9 @@ Make backend layering explicit and maintainable: route -> service -> db/query.
 - [x] Extract shared validation helpers where repetition is high.
 
 ### Batch 3.3: Category CRUD Dedup
-- [ ] Consolidate repeated category CRUD logic across color and mont-marte category routes.
-- [ ] Move shared logic into service layer with thin route handlers.
-- [ ] Preserve existing endpoint paths and request shapes.
+- [x] Consolidate repeated category CRUD logic across color and mont-marte category routes.
+- [x] Move shared logic into service layer with thin route handlers.
+- [x] Preserve existing endpoint paths and request shapes.
 
 ### Batch 3.4: Query Boundary Cleanup
 - [ ] Reduce direct SQL in route files where service abstraction is expected.
@@ -191,6 +191,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Batch 3.3 category CRUD dedup via shared service abstraction and thin route adapters.
-2. Move remaining direct SQL write orchestration from `mont-marte-colors` route into service layer.
-3. Carry forward medium findings from `docs/refactor/PHASE3_2_REVIEW_GATE.md` into Batch 3.3/3.4.
+1. Start Batch 3.4 by moving `mont-marte-colors` write orchestration into service boundary.
+2. Evaluate introducing db query helpers for category service to prepare full route->service->query layering.
+3. Carry forward medium findings from `docs/refactor/PHASE3_2_REVIEW_GATE.md` into Batch 3.4.
