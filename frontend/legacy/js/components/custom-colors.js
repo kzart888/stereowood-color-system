@@ -1010,6 +1010,15 @@ const CustomColorsComponent = {
         
 
         resolveColorSwatch(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.resolveColorSwatch === 'function') {
+                return window.CustomColorsDomainUtils.resolveColorSwatch(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             if (!color || !window.CustomColorSwatch) {
                 return null;
             }
@@ -1030,6 +1039,15 @@ const CustomColorsComponent = {
         },
 
         getSwatchStyle(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getSwatchStyle === 'function') {
+                return window.CustomColorsDomainUtils.getSwatchStyle(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             const swatch = this.resolveColorSwatch(color, options);
             if (!swatch) return {};
             if (swatch.type === 'image') {
@@ -1039,25 +1057,73 @@ const CustomColorsComponent = {
         },
 
         swatchIsImage(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchIsImage === 'function') {
+                return window.CustomColorsDomainUtils.swatchIsImage(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             const swatch = this.resolveColorSwatch(color, options);
             return !!(swatch && swatch.type === 'image' && swatch.imageUrl);
         },
 
         swatchIsEmpty(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchIsEmpty === 'function') {
+                return window.CustomColorsDomainUtils.swatchIsEmpty(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             const swatch = this.resolveColorSwatch(color, options);
             return !swatch || swatch.type === 'empty';
         },
 
         swatchThumbnailClass(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchThumbnailClass === 'function') {
+                return window.CustomColorsDomainUtils.swatchThumbnailClass(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             return { 'no-image': this.swatchIsEmpty(color, options) };
         },
 
         getSwatchImage(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getSwatchImage === 'function') {
+                return window.CustomColorsDomainUtils.getSwatchImage(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             const swatch = this.resolveColorSwatch(color, options);
             return swatch && swatch.type === 'image' ? swatch.imageUrl : null;
         },
 
         previewColorSwatch(event, color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.previewColorSwatch === 'function') {
+                const handled = window.CustomColorsDomainUtils.previewColorSwatch(event, color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined,
+                    thumbPreview: this.$thumbPreview,
+                    pureColorUtils: window.PureColorUtils
+                });
+                if (handled) return;
+            }
             const swatch = this.resolveColorSwatch(color, options);
             if (!swatch || !this.$thumbPreview) {
                 return;
@@ -1074,6 +1140,11 @@ const CustomColorsComponent = {
         },
 
         normalizePantoneCode(value) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.normalizePantoneCode === 'function') {
+                return window.CustomColorsDomainUtils.normalizePantoneCode(value, {
+                    normalizePantoneCode: (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode)
+                });
+            }
             const helperFn = (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode);
             if (typeof helperFn === 'function') {
                 return helperFn(value);
@@ -1127,6 +1198,12 @@ const CustomColorsComponent = {
         
         // Standardize hex for downstream modules
         normalizeHexValue(hex) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.normalizeHexValue === 'function') {
+                return window.CustomColorsDomainUtils.normalizeHexValue(hex, {
+                    customColorSwatch: window.CustomColorSwatch,
+                    colorConverter: window.ColorConverter
+                });
+            }
             if (!hex) return null;
             const swatch = window.CustomColorSwatch;
             if (swatch && typeof swatch.normalizeHex === 'function') {
@@ -1142,6 +1219,13 @@ const CustomColorsComponent = {
         
         // Hydrate dialog state from backend pure-color fields
         buildPureColorStateFromExisting(color) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.buildPureColorStateFromExisting === 'function') {
+                return window.CustomColorsDomainUtils.buildPureColorStateFromExisting(color, {
+                    customColorSwatch: window.CustomColorSwatch,
+                    colorConverter: window.ColorConverter,
+                    pureColorUtils: window.PureColorUtils
+                });
+            }
             if (!color) return null;
             const hex = this.normalizeHexValue(color.pure_hex_color);
             if (!hex) return null;
@@ -1861,6 +1945,11 @@ const CustomColorsComponent = {
         
         // Helper method to get CMYK color as RGB string
         getCMYKColor(c, m, y, k) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getCMYKColor === 'function') {
+                return window.CustomColorsDomainUtils.getCMYKColor(c, m, y, k, {
+                    colorConverter: window.ColorConverter
+                });
+            }
             if (window.ColorConverter) {
                 const rgb = window.ColorConverter.cmykToRgb(c, m, y, k);
                 return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
@@ -1870,6 +1959,12 @@ const CustomColorsComponent = {
         
         // Helper method to get Pantone swatch style
         getPantoneSwatchStyle(pantoneCode) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getPantoneSwatchStyle === 'function') {
+                return window.CustomColorsDomainUtils.getPantoneSwatchStyle(pantoneCode, {
+                    pantoneHelper: window.PantoneHelper,
+                    normalizePantoneCode: (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode)
+                });
+            }
             if (!pantoneCode || !window.PantoneHelper) {
                 return { background: '#f5f5f5', border: '1px dashed #ccc' };
             }

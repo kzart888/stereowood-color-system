@@ -146,10 +146,11 @@ Split monolith components into reusable modules while keeping runtime stable.
 - [x] Create `docs/refactor/PHASE4_1_INVENTORY.md`.
 
 ### Batch 4.2: Custom Colors Extraction
-- [ ] Extract non-UI logic into focused modules under `frontend/legacy/js/modules/custom-colors/`.
+- [x] Extract non-UI logic into focused modules under `frontend/legacy/js/modules/custom-colors/`.
 - [x] Batch 4.2 checkpoint A: extract shared UI behaviors into `frontend/legacy/js/modules/ui/` and wire `custom-colors`.
-- [ ] Keep compatibility wrappers for global access during migration.
+- [x] Keep compatibility wrappers for global access during migration.
 - [ ] Remove dead branches only after smoke verification.
+- [x] Produce `docs/refactor/PHASE4_2_REVIEW_GATE.md`.
 
 ### Batch 4.3: Artworks Extraction
 - [ ] Extract mapping, formula display helpers, and dialog state logic into modules.
@@ -202,6 +203,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Continue Batch 4.2 checkpoint B: extract custom-colors domain modules under `frontend/legacy/js/modules/custom-colors/`.
-2. Run Batch 4.2 final gate with `node --check frontend/legacy/js/**/*.js` and smoke verification.
-3. Continue with Batch 4.3 artworks API consolidation and fallback cleanup.
+1. Complete Batch 4.2 dead-branch cleanup after targeted browser smoke verification.
+2. Start Batch 4.3 artworks extraction on API orchestration and dialog/list state seams.
+3. Keep running code-review-agent at each batch gate before moving forward.
