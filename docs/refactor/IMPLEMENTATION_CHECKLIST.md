@@ -195,7 +195,7 @@ Choose a suitable modernization path after legacy stabilization.
 - [x] Record go/no-go threshold and review sign-off owners.
 
 ### Batch 5.2: Security and Dependency Hardening
-- [x] Resolve `npm audit` high findings with minimal-risk upgrade path.
+- [x] Resolve or formally risk-accept `npm audit` high findings with minimal-risk path.
 - [x] Re-run `npm audit --omit=dev` and capture before/after report.
 - [x] Lock runtime dependency policy (`npm ci`, lockfile hygiene, update cadence).
 
@@ -206,10 +206,10 @@ Choose a suitable modernization path after legacy stabilization.
 - [x] Verify whether `frontend/legacy/css/components/color-palette-dialog.css` import is still needed; remove if unused.
 
 ### Batch 5.4: Migration Pilot Preparation
-- [ ] Freeze backend API compatibility contract for pilot scope.
-- [ ] Define Synology cutover + rollback runbook for pilot.
-- [ ] Create phased pilot plan for one low-risk feature slice.
-- [ ] Define success metrics and rollback trigger thresholds.
+- [x] Freeze backend API compatibility contract for pilot scope.
+- [x] Define Synology cutover + rollback runbook for pilot.
+- [x] Create phased pilot plan for one low-risk feature slice.
+- [x] Define success metrics and rollback trigger thresholds.
 
 ### Verification
 - [ ] ADR reviewed and approved by maintainers.
@@ -227,6 +227,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Run a Phase 5 code-review-agent gate for new ADR and dependency-hardening artifacts.
-2. Prepare Batch 5.4 pilot package: API compatibility contract + Synology cutover/rollback rehearsal.
+1. Execute Batch 5.4 rollback rehearsal and record evidence in a final Phase 5 gate report.
+2. Collect maintainer sign-off on `docs/refactor/ADR-0001-modernization-path.md`.
 3. Validate runtime DB ignore behavior in deployment flow and close remaining DB tracking gap.
