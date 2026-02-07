@@ -1,4 +1,4 @@
-# Refactor Implementation Checklist (Phase 3+)
+# Refactor Implementation Checklist (Phase 4+)
 
 Last updated: 2026-02-07  
 Baseline:
@@ -6,6 +6,7 @@ Baseline:
 - Phase 1 obsolete cleanup completed in `9bc5c5f`
 - Phase 2 dedup and consolidation completed in `eeaa444`
 - Phase 2 final gate docs completed in `df54b63`
+- Phase 3 follow-up closure completed in `3c0a6e1`
 
 ## Working Rules
 - [ ] Work in small batches (one logical change-set per commit).
@@ -137,12 +138,12 @@ Make backend layering explicit and maintainable: route -> service -> db/query.
 Split monolith components into reusable modules while keeping runtime stable.
 
 ### Batch 4.1: Frontend Seam Inventory
-- [ ] Produce module seam map for:
-  - [ ] `frontend/legacy/js/components/custom-colors.js`
-  - [ ] `frontend/legacy/js/components/artworks.js`
-  - [ ] `frontend/legacy/js/components/mont-marte.js`
-- [ ] Classify extraction candidates: state, API calls, formatters, UI actions.
-- [ ] Create `docs/refactor/PHASE4_1_INVENTORY.md`.
+- [x] Produce module seam map for:
+  - [x] `frontend/legacy/js/components/custom-colors.js`
+  - [x] `frontend/legacy/js/components/artworks.js`
+  - [x] `frontend/legacy/js/components/mont-marte.js`
+- [x] Classify extraction candidates: state, API calls, formatters, UI actions.
+- [x] Create `docs/refactor/PHASE4_1_INVENTORY.md`.
 
 ### Batch 4.2: Custom Colors Extraction
 - [ ] Extract non-UI logic into focused modules under `frontend/legacy/js/modules/custom-colors/`.
@@ -200,6 +201,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Phase 4 Batch 4.1: produce frontend seam inventory for legacy component modules.
-2. Execute Phase 4 Batch 4.5 UTF-8 text restoration for active runtime files.
-3. Prepare Phase 5 architecture decision doc after Phase 4 gate.
+1. Start Batch 4.2 shared module extraction (`ui/list-state`, `ui/dialog-guard`) and custom-colors migration.
+2. Run Batch 4.2 gate with `node --check frontend/legacy/js/**/*.js` and smoke verification.
+3. Continue with Batch 4.3 artworks API consolidation and fallback cleanup.
