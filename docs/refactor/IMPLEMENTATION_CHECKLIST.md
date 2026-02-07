@@ -96,9 +96,9 @@ Make backend layering explicit and maintainable: route -> service -> db/query.
 - [x] Preserve existing endpoint paths and request shapes.
 
 ### Batch 3.4: Query Boundary Cleanup
-- [ ] Reduce direct SQL in route files where service abstraction is expected.
-- [ ] Centralize write operations with transaction safety in service modules.
-- [ ] Document any intentional route-level SQL exceptions.
+- [x] Reduce direct SQL in route files where service abstraction is expected.
+- [x] Centralize write operations with transaction safety in service modules.
+- [x] Document any intentional route-level SQL exceptions.
 
 ### Batch 3.5: Backend Contract Docs and Gate
 - [ ] Update `docs/development/backend-api.md` with normalized contracts and error behavior.
@@ -191,6 +191,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Batch 3.4 by moving `mont-marte-colors` write orchestration into service boundary.
-2. Evaluate introducing db query helpers for category service to prepare full route->service->query layering.
-3. Carry forward medium findings from `docs/refactor/PHASE3_2_REVIEW_GATE.md` into Batch 3.4.
+1. Start Batch 3.5: update backend API contract docs and publish the phase-level gate report.
+2. Decide whether `dictionaries` route should stay as an intentional thin SQL endpoint or move into service/query layering.
+3. Carry forward medium findings from Batch 3.2 (error-code normalization and optimistic lock contract).
