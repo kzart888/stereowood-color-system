@@ -160,8 +160,9 @@ Split monolith components into reusable modules while keeping runtime stable.
 - [x] Produce `docs/refactor/PHASE4_3_REVIEW_GATE.md`.
 
 ### Batch 4.4: Mont-Marte Extraction
-- [ ] Extract dictionary management and form-save workflows into modules.
-- [ ] Keep supplier/purchase-link behavior unchanged.
+- [x] Extract dictionary management and form-save workflows into modules.
+- [x] Keep supplier/purchase-link behavior unchanged.
+- [x] Produce `docs/refactor/PHASE4_4_REVIEW_GATE.md`.
 
 ### Batch 4.5: UTF-8 and Text Cleanup
 - [ ] Restore garbled Chinese text in active runtime files and key docs.
@@ -206,6 +207,6 @@ Choose a suitable modernization path after legacy stabilization.
 - [ ] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Start Batch 4.4 mont-marte extraction for dictionary/form-save seams.
-2. Run Batch 4.4 gate with code-review-agent after extraction.
-3. Preserve supplier/purchase-link behavior and existing response assumptions.
+1. Start Batch 4.5 UTF-8 and text cleanup for active runtime files.
+2. Run `npm run audit:encoding` and targeted UI smoke after text cleanup.
+3. Prepare Batch 4.6 full Phase 4 gate report.

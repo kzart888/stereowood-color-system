@@ -664,6 +664,104 @@ const MontMarteComponent = {
         async refreshDictionaries() {
             await Promise.all([ this.globalData.loadSuppliers(), this.globalData.loadPurchaseLinks() ]);
         },
+        _getDictionaryManager() {
+            return window.MontMarteDictionaryManager || null;
+        },
+        _getSaveWorkflow() {
+            return window.MontMarteSaveWorkflow || null;
+        },
+        _getDictionaryConfig(kind) {
+            const dict = this._getDictionaryManager();
+            const supplierKind = dict ? dict.KIND_SUPPLIER : 'supplier';
+            if (kind === supplierKind) {
+                return {
+                    busyKey: 'supplierBusy',
+                    formKey: 'supplier_id',
+                    refName: 'supplierSelect',
+                    loadFn: () => this.globalData.loadSuppliers(),
+                    optionsGetter: () => this.supplierOptions,
+                    createErrorLog: 'Failed to upsert supplier',
+                    createErrorMsg: '创建供应商失败',
+                    deleteSuccessMsg: '已删除供应商'
+                };
+            }
+            return {
+                busyKey: 'purchaseBusy',
+                formKey: 'purchase_link_id',
+                refName: 'purchaseSelect',
+                loadFn: () => this.globalData.loadPurchaseLinks(),
+                optionsGetter: () => this.purchaseLinkOptions,
+                createErrorLog: 'Failed to upsert purchase link',
+                createErrorMsg: '创建采购地址失败',
+                deleteSuccessMsg: '已删除采购地址'
+            };
+        },
+        async _handleDictionaryUpsert(kind, val) {
+            const dict = this._getDictionaryManager();
+            const config = this._getDictionaryConfig(kind);
+            const supportsCreate = dict && typeof dict.shouldCreateFromSelection === 'function'
+                ? dict.shouldCreateFromSelection(val)
+                : typeof val === 'string';
+            if (!supportsCreate) return;
+            const normalized = dict && typeof dict.normalizeInput === 'function'
+                ? dict.normalizeInput(val)
+                : String(val || '').trim();
+            if (!normalized) {
+                this.form[config.formKey] = null;
+                return;
+            }
+            try {
+                this[config.busyKey] = true;
+                const result = dict && typeof dict.upsertEntry === 'function'
+                    ? await dict.upsertEntry({ kind, value: normalized, baseURL: this.baseURL })
+                    : await (async () => {
+                        const payload = kind === 'supplier' ? { name: normalized } : { url: normalized };
+                        const endpoint = kind === 'supplier' ? '/api/suppliers/upsert' : '/api/purchase-links/upsert';
+                        const { data } = await axios.post(`${this.baseURL}${endpoint}`, payload);
+                        return { id: data && Object.prototype.hasOwnProperty.call(data, 'id') ? data.id : null };
+                    })();
+                await config.loadFn();
+                await this.$nextTick();
+                const options = config.optionsGetter();
+                const found = options.find((option) => option.id === result.id);
+                this.form[config.formKey] = found ? found.id : result.id;
+                this.$nextTick(() => this.$refs[config.refName] && this.$refs[config.refName].blur && this.$refs[config.refName].blur());
+            } catch (error) {
+                console.error(config.createErrorLog, error);
+                msg.error(config.createErrorMsg);
+                this.form[config.formKey] = null;
+            } finally {
+                this[config.busyKey] = false;
+            }
+        },
+        async _handleDictionaryDelete(kind, opt) {
+            if (!opt || !opt.id) return;
+            const dict = this._getDictionaryManager();
+            const config = this._getDictionaryConfig(kind);
+            try {
+                if (dict && typeof dict.deleteEntry === 'function') {
+                    await dict.deleteEntry({ kind, id: opt.id, baseURL: this.baseURL });
+                } else {
+                    const prefix = kind === 'supplier' ? '/api/suppliers/' : '/api/purchase-links/';
+                    await axios.delete(`${this.baseURL}${prefix}${opt.id}`);
+                }
+                msg.success(config.deleteSuccessMsg);
+                if (this.form[config.formKey] === opt.id) this.form[config.formKey] = null;
+                await config.loadFn();
+            } catch (error) {
+                const status = dict && typeof dict.getErrorStatus === 'function'
+                    ? dict.getErrorStatus(error)
+                    : (error && error.response ? error.response.status : null);
+                if (status === 409) {
+                    const warning = dict && typeof dict.getErrorMessage === 'function'
+                        ? dict.getErrorMessage(error, '有引用，无法删除')
+                        : (error && error.response && error.response.data && error.response.data.error) || '有引用，无法删除';
+                    msg.warning(warning);
+                } else {
+                    msg.error('删除失败');
+                }
+            }
+        },
 
         openDialog() {
             this.editing = null;
@@ -738,31 +836,16 @@ const MontMarteComponent = {
                 imageFile: null,
                 imagePreview: null
             };
+            if (this.$refs.formRef) {
+                this.$refs.formRef.clearValidate();
+            }
         },
 
         // 选择器变更：当 val 为字符串时，表示创建
         async onSupplierChange(val) {
-            // 仅当为“新输入的字符串”时触发创建
-            if (typeof val !== 'string') return;
-            const name = val.trim();
-            if (!name) { this.form.supplier_id = null; return; }
-            try {
-                this.supplierBusy = true;
-                const { data } = await axios.post(`${window.location.origin}/api/suppliers/upsert`, { name });
-                // 先刷新选项，再切换为 id，避免出现“数字选项”
-                await this.globalData.loadSuppliers();
-                await this.$nextTick();
-                const found = this.supplierOptions.find(o => o.id === data.id);
-                this.form.supplier_id = found ? found.id : data.id;
-                // 可选：收起下拉，避免视觉闪烁
-                this.$nextTick(() => this.$refs.supplierSelect?.blur?.());
-            } catch (e) {
-                console.error('创建供应商失败', e);
-                msg.error('创建供应商失败');
-                this.form.supplier_id = null;
-            } finally {
-                this.supplierBusy = false;
-            }
+            const dict = this._getDictionaryManager();
+            const kind = dict ? dict.KIND_SUPPLIER : 'supplier';
+            await this._handleDictionaryUpsert(kind, val);
         },
         async confirmSupplier() {
             if (typeof this.form.supplier_id === 'string' && !this.supplierBusy) {
@@ -771,40 +854,15 @@ const MontMarteComponent = {
         },
 
         async deleteSupplierOption(opt) {
-            try {
-                await axios.delete(`${window.location.origin}/api/suppliers/${opt.id}`);
-                msg.success('已删除供应商');
-                // 如果当前选中的是被删项，清空
-                if (this.form.supplier_id === opt.id) this.form.supplier_id = null;
-                await this.globalData.loadSuppliers();
-            } catch (e) {
-                if (e.response && e.response.status === 409) {
-                    msg.warning(e.response.data?.error || '有引用，无法删除');
-                } else {
-                    msg.error('删除失败');
-                }
-            }
+            const dict = this._getDictionaryManager();
+            const kind = dict ? dict.KIND_SUPPLIER : 'supplier';
+            await this._handleDictionaryDelete(kind, opt);
         },
 
         async onPurchaseChange(val) {
-            if (typeof val !== 'string') return;
-            const url = val.trim();
-            if (!url) { this.form.purchase_link_id = null; return; }
-            try {
-                this.purchaseBusy = true;
-                const { data } = await axios.post(`${window.location.origin}/api/purchase-links/upsert`, { url });
-                await this.globalData.loadPurchaseLinks();
-                await this.$nextTick();
-                const found = this.purchaseLinkOptions.find(o => o.id === data.id);
-                this.form.purchase_link_id = found ? found.id : data.id;
-                this.$nextTick(() => this.$refs.purchaseSelect?.blur?.());
-            } catch (e) {
-                console.error('创建采购地址失败', e);
-                msg.error('创建采购地址失败');
-                this.form.purchase_link_id = null;
-            } finally {
-                this.purchaseBusy = false;
-            }
+            const dict = this._getDictionaryManager();
+            const kind = dict ? dict.KIND_PURCHASE_LINK : 'purchase-link';
+            await this._handleDictionaryUpsert(kind, val);
         },
         async confirmPurchase() {
             if (typeof this.form.purchase_link_id === 'string' && !this.purchaseBusy) {
@@ -812,18 +870,9 @@ const MontMarteComponent = {
             }
         },
         async deletePurchaseOption(opt) {
-            try {
-                await axios.delete(`${window.location.origin}/api/purchase-links/${opt.id}`);
-                msg.success('已删除采购地址');
-                if (this.form.purchase_link_id === opt.id) this.form.purchase_link_id = null;
-                await this.globalData.loadPurchaseLinks();
-            } catch (e) {
-                if (e.response && e.response.status === 409) {
-                    msg.warning(e.response.data?.error || '有引用，无法删除');
-                } else {
-                    msg.error('删除失败');
-                }
-            }
+            const dict = this._getDictionaryManager();
+            const kind = dict ? dict.KIND_PURCHASE_LINK : 'purchase-link';
+            await this._handleDictionaryDelete(kind, opt);
         },
 
         onImageChange(file) {
@@ -857,21 +906,29 @@ const MontMarteComponent = {
             }
             this.saving = true;
             try {
-                const fd = new FormData();
-                fd.append('name', this.form.name.trim());
-                fd.append('category', this.form.category || '');
-                if (this.form.supplier_id) fd.append('supplier_id', this.form.supplier_id);
-                if (this.form.purchase_link_id) fd.append('purchase_link_id', this.form.purchase_link_id);
-                if (this.form.imageFile) fd.append('image', this.form.imageFile);
-                if (!this.form.imageFile && this.form.imagePreview && this.editing && this.editing.image_path) {
-                    fd.append('existingImagePath', this.editing.image_path);
-                }
+                const saveWorkflow = this._getSaveWorkflow();
+                const res = saveWorkflow && typeof saveWorkflow.saveColor === 'function'
+                    ? await saveWorkflow.saveColor({ baseURL: this.baseURL, form: this.form, editing: this.editing })
+                    : await (async () => {
+                        const fallback = new FormData();
+                        fallback.append('name', this.form.name.trim());
+                        if (this.form.category_id) fallback.append('category_id', this.form.category_id);
+                        if (this.form.supplier_id) fallback.append('supplier_id', this.form.supplier_id);
+                        if (this.form.purchase_link_id) fallback.append('purchase_link_id', this.form.purchase_link_id);
+                        if (this.form.imageFile) fallback.append('image', this.form.imageFile);
+                        if (!this.form.imageFile && this.form.imagePreview && this.editing && this.editing.image_path) {
+                            fallback.append('existingImagePath', this.editing.image_path);
+                        }
+                        if (this.editing) {
+                            return axios.put(`${this.baseURL}/api/mont-marte-colors/${this.form.id}`, fallback);
+                        }
+                        return axios.post(`${this.baseURL}/api/mont-marte-colors`, fallback);
+                    })();
+
                 if (this.editing) {
-                    const res = await axios.put(`${window.location.origin}/api/mont-marte-colors/${this.form.id}`, fd);
                     const n = res?.data?.updatedReferences || 0;
                     msg.success(n>0 ? `已保存并同步更新 ${n} 处配方引用` : '已保存修改');
                 } else {
-                    await axios.post(`${window.location.origin}/api/mont-marte-colors`, fd);
                     msg.success('已新增颜色原料');
                 }
                 await Promise.all([
@@ -884,7 +941,7 @@ const MontMarteComponent = {
                 msg.error('保存失败');
             } finally { this.saving = false; }
         },
-        
+
         onFormEnter() {
             // 回车即保存
             this.saveColor();
@@ -909,20 +966,6 @@ const MontMarteComponent = {
                 msg.error(errorMessage);
             }
         },
-        
-        resetForm() {
-            this.editingColor = null;
-            this.form = {
-                name: '',
-                imageFile: null,
-                imagePreview: null
-            };
-            if (this.$refs.formRef) {
-                this.$refs.formRef.resetFields();
-            }
-            this._originalFormSnapshot = null;
-            this._unbindEsc();
-        }
     },
     
     watch: {
