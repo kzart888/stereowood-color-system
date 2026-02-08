@@ -12,15 +12,15 @@
 }
 
 html {
-    font-size: 14px;
+    font-size: var(--sw-font-size-md);
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
+    font-family: var(--sw-font-family-base);
+    font-size: var(--sw-font-size-md);
+    line-height: var(--sw-line-height-base);
     color: var(--sw-text-primary);
     background-color: var(--sw-bg-base);
     -webkit-font-smoothing: antialiased;

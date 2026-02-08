@@ -1,0 +1,124 @@
+/**
+ * Shared UI primitives (Phase A6)
+ * 对话框、列表、表单、通知等跨页面基础样式
+ * @module components/primitives
+ */
+
+/* === Panel / Surface === */
+.sw-panel {
+    background: var(--sw-bg-white);
+    border: 1px solid var(--sw-border-light);
+    border-radius: var(--sw-radius-md);
+    box-shadow: var(--sw-shadow-xs);
+}
+
+.sw-panel-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--sw-border-lighter);
+}
+
+.sw-panel-body {
+    padding: 12px;
+}
+
+/* === Section title === */
+.sw-section-title {
+    margin: 0;
+    font-size: var(--sw-font-size-lg);
+    line-height: var(--sw-line-height-tight);
+    color: var(--sw-text-primary);
+    font-weight: 600;
+}
+
+/* === Form primitive === */
+.sw-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px 12px;
+}
+
+.sw-form-grid .sw-form-item {
+    min-width: 0;
+}
+
+.sw-form-help {
+    margin-top: 4px;
+    color: var(--sw-text-tertiary);
+    font-size: var(--sw-font-size-xs);
+}
+
+/* === List primitive === */
+.sw-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sw-list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 6px 8px;
+    border: 1px solid var(--sw-border-lighter);
+    border-radius: var(--sw-radius-sm);
+    background: var(--sw-bg-white);
+    transition: background-color var(--sw-transition-fast), border-color var(--sw-transition-fast);
+}
+
+.sw-list-row:hover {
+    background: var(--sw-bg-hover);
+    border-color: var(--sw-primary-border);
+}
+
+/* === Dialog primitive === */
+.sw-dialog-footer,
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sw-actions-gap);
+}
+
+/* === Empty state primitive === */
+.sw-empty-state {
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--sw-text-secondary);
+}
+
+.sw-empty-state .sw-empty-hint {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--sw-text-tertiary);
+    background: var(--sw-bg-lighter);
+    border: 1px solid var(--sw-border-lighter);
+    border-radius: var(--sw-radius-sm);
+    padding: 4px 8px;
+    font-size: var(--sw-font-size-xs);
+}
+
+/* === Element Plus alignment === */
+.el-form-item__label {
+    font-size: var(--sw-font-size-sm);
+    line-height: var(--sw-line-height-base);
+    color: var(--sw-text-secondary);
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select .el-input__wrapper {
+    border-radius: var(--sw-radius-sm);
+}
+
+.el-card,
+.el-message-box {
+    border-radius: var(--sw-radius-md);
+}
+
+/* Notification primitive */
+.el-message,
+.el-notification {
+    border-radius: var(--sw-radius-md);
+    border: 1px solid var(--sw-border-lighter);
+    box-shadow: var(--sw-shadow-md);
+}

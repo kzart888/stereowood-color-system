@@ -20,11 +20,11 @@
         },
         materialCategories() {
             return [
-                { value: 'acrylic', label: '涓欑儻鑹?' },
-                { value: 'essence', label: '鑹茬簿' },
-                { value: 'water', label: '姘存€ф紗' },
-                { value: 'oil', label: '娌规€ф紗' },
-                { value: 'other', label: '鍏朵粬' }
+                { value: 'acrylic', label: '丙烯色' },
+                { value: 'essence', label: '色精' },
+                { value: 'water', label: '水性漆' },
+                { value: 'oil', label: '油性漆' },
+                { value: 'other', label: '其他' }
             ];
         },
         filteredColors() {
@@ -112,7 +112,7 @@
         async handleCategoriesUpdated() {
             // Reload categories after changes
             await this.loadMontMarteCategories();
-            msg.success('Categories updated');
+            msg.success('分类已更新');
         },
         
         // Pagination methods
@@ -231,7 +231,7 @@
         
         mapCategoryLabel(categoryId) {
             const cat = this.montMarteCategories.find(c => c.id === categoryId);
-            return cat ? cat.name : 'Uncategorized';
+            return cat ? cat.name : '未分类';
         },
         
         async loadMontMarteCategories() {
@@ -241,7 +241,7 @@
                 this.montMarteCategories = await response.json();
             } catch (error) {
                 console.error('Error loading Mont-Marte categories:', error);
-                msg.error('鍔犺浇棰滄枡鍒嗙被澶辫触');
+                msg.error('加载原料分类失败');
             }
         },
         focusRawMaterial(id) {
@@ -269,11 +269,11 @@
             customList.forEach(cc => {
                 const formula = (cc.formula || '').trim();
                 if (!formula) return;
-                // 绮楃矑搴﹀尮閰嶏細鎸夌┖鐧芥媶鍒嗭紝鍚嶇О token 鍚庡彲鑳借窡鏁伴噺
+                // 粗粒度匹配：按空白拆分，名称 token 后可能跟数量
                 const tokens = formula.split(/\s+/);
                 for (let i=0;i<tokens.length;i++) {
                     const t = tokens[i];
-                    // 鑻ヤ笅涓€涓槸鏁板瓧+鍗曚綅锛屽垯褰撳墠 t 瑙嗕负鍘熸枡鍚?
+                    // 若下一个 token 是“数字+单位”，则当前 token 视为原料名
                     const next = tokens[i+1] || '';
                     const amountMatch = next.match(/^([\d.]+)([a-zA-Z\u4e00-\u9fa5%]+)$/);
                     if (amountMatch) {
@@ -281,10 +281,10 @@
                             const code = cc.color_code || cc.code;
                             if (code) set.add(code);
                         }
-                        i++; // 璺宠繃鏁伴噺 token
+                        i++; // 跳过数量 token
                         continue;
                     }
-                    // 鑻?token 鏈韩绛変簬鍘熸枡鍚嶄笖鍚庨潰涓嶆槸鏁伴噺锛屼篃鍏佽璁颁竴娆?
+                    // 若 token 本身等于原料名且后面不是数量，也允许记录
                     if (t === target) {
                         const code = cc.color_code || cc.code;
                         if (code) set.add(code);
@@ -302,7 +302,7 @@
         },
         
         onThumbError(e) {
-            // 鑻ュ姞杞藉け璐ワ紝绉婚櫎鑳屾櫙浠ユ樉绀哄崰浣嶆枃鏈?
+            // 若加载失败，移除背景以显示占位文本
             const el = e.currentTarget;
             if (el) {
                 el.classList.add('no-image');
@@ -330,7 +330,7 @@
                     optionsGetter: () => this.supplierOptions,
                     createErrorLog: 'Failed to upsert supplier',
                     createErrorMsg: 'Failed to create supplier',
-                    deleteSuccessMsg: '宸插垹闄や緵搴斿晢'
+                    deleteSuccessMsg: '已删除供应商'
                 };
             }
             return {
@@ -340,8 +340,8 @@
                 loadFn: () => this.globalData.loadPurchaseLinks(),
                 optionsGetter: () => this.purchaseLinkOptions,
                 createErrorLog: 'Failed to upsert purchase link',
-                createErrorMsg: '鍒涘缓閲囪喘鍦板潃澶辫触',
-                deleteSuccessMsg: '宸插垹闄ら噰璐湴鍧€'
+                createErrorMsg: '创建采购地址失败',
+                deleteSuccessMsg: '已删除采购地址'
             };
         },
         async _handleDictionaryUpsert(kind, val) {
@@ -402,11 +402,11 @@
                     : (error && error.response ? error.response.status : null);
                 if (status === 409) {
                     const warning = dict && typeof dict.getErrorMessage === 'function'
-                        ? dict.getErrorMessage(error, '鏈夊紩鐢紝鏃犳硶鍒犻櫎')
-                        : (error && error.response && error.response.data && error.response.data.error) || '鏈夊紩鐢紝鏃犳硶鍒犻櫎';
+                        ? dict.getErrorMessage(error, '存在引用，无法删除')
+                        : (error && error.response && error.response.data && error.response.data.error) || '存在引用，无法删除';
                     msg.warning(warning);
                 } else {
-                    msg.error('鍒犻櫎澶辫触');
+                    msg.error('删除失败');
                 }
             }
         },
@@ -432,7 +432,7 @@
             this.showDialog = false;
         },
         onOpenDialog() {
-            // 鎵撳紑鏃剁‘淇濆瓧鍏稿凡鍔犺浇
+            // 打开时确保字典已加载
             this.refreshDictionaries();
             this._originalFormSnapshot = JSON.stringify(this._normalizedForm());
             this._bindEsc();
@@ -458,9 +458,9 @@
         async attemptCloseDialog() {
             if (this._isDirty()) {
                 try {
-                    await ElementPlus.ElMessageBox.confirm('Unsaved changes detected. Discard changes?', 'Unsaved Changes', {
-                        confirmButtonText: '涓㈠純淇敼',
-                        cancelButtonText: '缁х画缂栬緫',
+                    await ElementPlus.ElMessageBox.confirm('检测到未保存修改，确定放弃并关闭吗？', '未保存修改', {
+                        confirmButtonText: '放弃修改',
+                        cancelButtonText: '继续编辑',
                         type: 'warning'
                     });
                 } catch(e) { return; }
@@ -491,7 +491,7 @@
             }
         },
 
-        // 閫夋嫨鍣ㄥ彉鏇达細褰?val 涓哄瓧绗︿覆鏃讹紝琛ㄧず鍒涘缓
+        // 选择器变更：当 val 为字符串时，表示创建新条目
         async onSupplierChange(val) {
             const dict = this._getDictionaryManager();
             const kind = dict ? dict.KIND_SUPPLIER : 'supplier';
@@ -576,9 +576,9 @@
 
                 if (this.editing) {
                     const n = res?.data?.updatedReferences || 0;
-                    msg.success(n > 0 ? `Saved and updated ${n} formula references` : 'Changes saved');
+                    msg.success(n > 0 ? `保存成功，已更新 ${n} 条配方引用` : '保存成功');
                 } else {
-                    msg.success('Raw material created');
+                    msg.success('原料已创建');
                 }
                 await Promise.all([
                     this.globalData.loadMontMarteColors(),
@@ -600,33 +600,33 @@
                     return;
                 }
                 console.error('save failed (network/server)', e);
-                msg.error('淇濆瓨澶辫触');
+                msg.error('保存失败');
             } finally {
                 this.saving = false;
             }
         },
 
         onFormEnter() {
-            // 鍥炶溅鍗充繚瀛?
+            // 回车即保存
             this.saveColor();
         },
 
         
         async deleteColor(color) {
             const ok = await this.$helpers.doubleDangerConfirm({
-                firstMessage: `纭畾鍒犻櫎 "${color.name}" 鍚楋紵`,
-                secondMessage: '鍒犻櫎鍚庡皢鏃犳硶鎭㈠锛岀‘璁ゆ渶缁堝垹闄わ紵',
-                secondConfirmText: '姘镐箙鍒犻櫎'
+                firstMessage: `确定删除 "${color.name}" 吗？`,
+                secondMessage: '删除后将无法恢复，确认最终删除吗？',
+                secondConfirmText: '永久删除'
             });
             if (!ok) return;
             try {
                 await api.montMarteColors.delete(color.id);
-                msg.success('鍒犻櫎鎴愬姛');
+                msg.success('删除成功');
                 await this.globalData.loadMontMarteColors();
-                // 鍚屾鍒锋柊鑷厤鑹诧紝閬垮厤寮曠敤娈嬬暀鎻愮ず锛堣嫢鍚庣鍏佽鍒犻櫎鏈紩鐢ㄧ殑锛?
+                // 同步刷新自配色，避免引用残留提示
                 await this.globalData.loadCustomColors();
             } catch (error) {
-                const errorMessage = error?.response?.data?.error || '鍒犻櫎澶辫触';
+                const errorMessage = error?.response?.data?.error || '删除失败';
                 msg.error(errorMessage);
             }
         },

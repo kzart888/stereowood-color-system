@@ -167,6 +167,12 @@ Verification:
 Rollback:
 - incremental opt-in: old styles/components can coexist during migration.
 
+Status:
+- Completed on 2026-02-08.
+- Verification artifacts:
+  - `docs/architecture/decisions/A6-0001-ui-system-unification.md`
+  - `docs/architecture/PHASE_A6_REVIEW_GATE.md`
+
 ### A7: Suitable Tech-Stack Upgrade Decision and Pilot
 Deliverables:
 - Technology suitability matrix and ADR update:

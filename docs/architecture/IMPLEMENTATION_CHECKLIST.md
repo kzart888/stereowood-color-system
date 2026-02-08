@@ -95,17 +95,17 @@ Gate:
 - [x] `docs/architecture/decisions/A5-*.md`
 
 ## Batch A6: UI System Unification
-- [ ] Define design tokens (typography, spacing, color, states).
-- [ ] Align shared UI primitives for dialog/list/form/notification.
-- [ ] Reduce style and interaction divergence across tabs.
-- [ ] Ensure Chinese copy and UTF-8 text remain correct.
-- [ ] Add/update decision record for A6.
+- [x] Define design tokens (typography, spacing, color, states).
+- [x] Align shared UI primitives for dialog/list/form/notification.
+- [x] Reduce style and interaction divergence across tabs.
+- [x] Ensure Chinese copy and UTF-8 text remain correct.
+- [x] Add/update decision record for A6.
 
 Gate:
-- [ ] Visual smoke and interaction smoke for all major tabs.
-- [ ] `npm run audit:encoding`
-- [ ] `npm run phase0:verify`
-- [ ] `docs/architecture/decisions/A6-*.md`
+- [x] Visual smoke and interaction smoke for all major tabs.
+- [x] `npm run audit:encoding`
+- [x] `npm run phase0:verify`
+- [x] `docs/architecture/decisions/A6-*.md`
 
 ## Batch A7: Suitable Tech-Stack Upgrade Decision and Pilot
 - [ ] Update modernization ADR with suitability matrix and constraints.

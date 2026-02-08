@@ -5,6 +5,15 @@
  */
 
 :root {
+    /* === 字体系统 === */
+    --sw-font-family-base: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    --sw-font-size-xs: 12px;
+    --sw-font-size-sm: 13px;
+    --sw-font-size-md: 14px;
+    --sw-font-size-lg: 16px;
+    --sw-line-height-tight: 1.3;
+    --sw-line-height-base: 1.5;
+
     /* === 间距系统 === */
     --sw-gap-xs: 2px;
     --sw-gap-sm: 4px;
@@ -28,15 +37,19 @@
     
     /* === 颜色系统 === */
     --sw-primary: #a9aeb6;              /* 主色调-浅冷灰 */
+    --sw-primary-rgb: 169, 174, 182;    /* 主色 RGB */
     --sw-primary-hover: #747b85;        /* 主色-悬停-中冷灰 */
     --sw-primary-active: #5f656d;       /* 主色-激活-深冷灰 */
+    --sw-primary-dark: #4d535a;         /* 主色-深色文本/强调 */
     --sw-primary-light: rgba(169,174,182,0.08); /* 主色-浅色背景 */
     --sw-primary-border: rgba(169,174,182,0.25); /* 主色-边框 */
     
     --sw-success: #7cb87f;              /* 成功色-柔和绿 */
+    --sw-success-light: rgba(124,184,127,0.14); /* 成功色-浅背景 */
     --sw-warning: #f5b862;              /* 警告色-柔和橙 */
     --sw-danger: #ffa9a9;               /* 危险色-柔和粉红 */
     --sw-info: #8ca4c8;                 /* 信息色-柔和蓝 */
+    --sw-info-light: rgba(140,164,200,0.14); /* 信息色-浅背景 */
     
     /* Element Plus 覆盖 */
     --el-color-danger: #ffa9a9;         /* Element危险色 */
@@ -49,14 +62,20 @@
     
     --sw-text-primary: #2c3e50;         /* 主要文本-深蓝灰 */
     --sw-text-secondary: #5f6d7e;       /* 次要文本-中灰 */
+    --sw-text-tertiary: #7d8a99;        /* 三级文本 */
     --sw-text-muted: #94a3b8;           /* 辅助文本-浅灰 */
     --sw-text-disabled: #cbd5e1;        /* 禁用文本-极浅灰 */
     
+    --sw-border-color: #d6dbe3;         /* 组件边框 */
+    --sw-border-lighter: #eceff3;       /* 更浅边框 */
     --sw-border-light: #e8eaed;         /* 浅边框 */
     --sw-border-base: #d4d8de;          /* 基础边框 */
     --sw-border-dark: #b8bcc5;          /* 深边框 */
     
     --sw-bg-white: #ffffff;             /* 白色背景 */
+    --sw-bg-lighter: #fafbfc;           /* 更浅背景 */
+    --sw-bg-hover: #eef2f6;             /* 悬停背景 */
+    --sw-bg-secondary: #f3f5f7;         /* 次级背景 */
     --sw-bg-light: #f8f9fa;             /* 浅灰背景 */
     --sw-bg-base: #f1f3f5;              /* 基础背景 */
     --sw-bg-gray: #e9ecef;              /* 灰色背景 */
@@ -66,6 +85,7 @@
     --sw-shadow-sm: 0 2px 5px rgba(0,0,0,0.1);
     --sw-shadow-md: 0 4px 10px rgba(0,0,0,0.12);
     --sw-shadow-lg: 0 6px 16px rgba(0,0,0,0.15);
+    --sw-shadow-hover: 0 4px 14px rgba(0,0,0,0.12);
     --sw-shadow-float: 0 6px 20px rgba(169,174,182,0.3);
     
     /* === 动画时长 === */
