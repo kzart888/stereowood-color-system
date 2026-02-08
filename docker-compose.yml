@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   stereowood:
     image: ${DOCKER_IMAGE:-stereowood-color-system:latest}
@@ -14,7 +13,7 @@ services:
     volumes:
       - stereowood-data:/data
       - stereowood-uploads:/app/backend/uploads
-      - stereowood-backups:/app/backups
+      - stereowood-backups:/app/backend/backups
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9099/health"]
       interval: 30s

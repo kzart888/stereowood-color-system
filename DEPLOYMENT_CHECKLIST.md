@@ -1,82 +1,74 @@
 # Deployment Checklist for STEREOWOOD Color System
 
 ## Scope
+- Production deployment on Synology Container Manager (Docker).
+- Keep legacy UI (`frontend/legacy`) as production frontend.
 
-Use this checklist for Docker/Synology production deployment and local environment consistency.
-
-## Runtime Contract (must match code)
-
+## Runtime Contract
 - Backend entry: `backend/server.js`
-- Legacy UI root: `frontend/legacy` served at `/`
+- UI root: `/`
 - API base: `/api`
 - Health endpoint: `/health`
-- Default port: `9099`
-- Docker DB path: `/data/color_management.db`
+- Default app port: `9099`
+- DB file in container: `/data/color_management.db`
 
-## Configuration Model (current)
-
-Pagination mode is no longer controlled by manual source edits.
-
-- Server endpoint: `GET /api/config`
-- Server behavior:
-  - `NODE_ENV=development` -> mode `test`
-  - `NODE_ENV=production` -> mode `production`
-- Frontend behavior:
-  - Uses `window.ConfigHelper.getItemsPerPage(...)`
-  - Reads app config + localStorage preference
-
-Reference: `frontend/legacy/js/utils/config-helper.js`
+## Synology Current Production Profile (from running container)
+- Image: `docker.xuanyuan.run/kzart888/stereowood-color-system:publish-preview`
+- Port mapping: host `9099` -> container `9099`
+- Environment:
+  - `NODE_ENV=production`
+  - `PORT=9099`
+  - `DB_FILE=/data/color_management.db`
+  - `TZ=Asia/Shanghai`
+- Volume mappings:
+  - `/volume1/docker/stereowood-color-system/data:/data:rw`
+  - `/volume1/docker/stereowood-color-system/uploads:/app/backend/uploads:rw`
+  - `/volume1/docker/stereowood-color-system/backups:/app/backend/backups:rw`
 
 ## Pre-Deployment Checklist
+1. Confirm image build uses deterministic install: `npm ci --omit=dev`.
+2. Confirm app healthcheck endpoint is `/health`.
+3. Confirm runtime DB path is exactly `/data/color_management.db`.
+4. Confirm all DB runtime files are ignored by git (`*.db`, `*.db-wal`, `*.db-shm`).
+5. Confirm uploaded assets volume is mounted at `/app/backend/uploads`.
+6. Confirm backups volume is mounted at `/app/backend/backups`.
 
-1. Confirm image build uses lockfile-based install (`npm ci --omit=dev`).
-2. Confirm environment values:
-   - `NODE_ENV=production`
-   - `PORT=9099`
-   - `DB_FILE=/data/color_management.db`
-3. Confirm volume mappings:
-   - `/data`
-   - `/app/backend/uploads`
-4. Confirm healthcheck target:
-   - `http://127.0.0.1:9099/health`
-5. Confirm no runtime DB files are tracked by git.
+## SQLite Data Safety (Critical)
+1. Do not copy only `color_management.db` while container is running.
+2. Backup all three files together:
+   - `color_management.db`
+   - `color_management.db-wal`
+   - `color_management.db-shm`
+3. Prefer rehearsal validation on copied data before production cutover.
 
-## Deployment (Docker)
-
-```bash
-docker build -t stereowood-color-system .
-
-docker run -d \
-  --name stereowood-color-system \
-  -p 9099:9099 \
-  -e NODE_ENV=production \
-  -e PORT=9099 \
-  -e DB_FILE=/data/color_management.db \
-  -v stereowood-data:/data \
-  -v stereowood-uploads:/app/backend/uploads \
-  --restart unless-stopped \
-  stereowood-color-system:latest
-```
+## Deployment Steps (Synology)
+1. Pull candidate image tag to Synology.
+2. Start candidate container on temporary host port (for example `9199`) with the same env and volume mappings.
+3. Verify candidate:
+   - `GET /health` -> `200`
+   - `GET /api/config` -> `200`
+   - `GET /api/custom-colors` -> `200`
+   - `GET /api/artworks` -> `200`
+   - root `/` loads correctly
+4. Stop candidate container.
+5. Cut over production container to candidate image using unchanged env and volumes.
 
 ## Post-Deployment Verification
-
 1. `GET /health` returns `200`.
-2. Root page `/` loads legacy UI.
-3. Tab smoke:
-   - custom-colors
-   - artworks
-   - mont-marte
-   - color-dictionary
-4. Open/close add dialogs on each major tab.
-5. Confirm no new browser console errors.
+2. Root page `/` renders legacy UI.
+3. API smoke:
+   - `/api/custom-colors`
+   - `/api/artworks`
+   - `/api/mont-marte-colors`
+   - `/api/categories`
+4. No new browser console blocking errors.
 
 ## Rollback
-
-1. Redeploy previous known-good image tag.
-2. Keep existing `/data` and uploads volume.
-3. Re-verify `/health` and root UI.
+1. Start previous known-good image tag with identical env and volumes.
+2. Re-verify `/health` and `/`.
+3. Keep existing `/data` and uploads/backups volumes unchanged.
 
 ## Notes
-
-- Do not use old workflow that manually edits `itemsPerPage` in component files.
-- For test-mode pagination, use development config (`NODE_ENV=development`) or explicit app-config settings.
+- Pagination behavior is config-driven via `/api/config` + `ConfigHelper`; no manual source edits.
+- Current DB validation evidence is recorded in:
+  - `docs/refactor/PRODUCTION_DB_VALIDATION_2026-02-08.md`

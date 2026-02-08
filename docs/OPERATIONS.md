@@ -1,128 +1,59 @@
 # STEREOWOOD Color System - Operations Manual
 
-## Quick Start
+## Local Start (Hand Test)
+1. Open terminal in project root.
+2. Run `npm start`.
+3. Open `http://localhost:9099`.
+4. If `9099` is occupied, backend auto-increments to next port. Use the printed port in terminal.
 
-### Start the system
-```bash
-npm start
-```
-
-Default runtime:
-- URL: `http://localhost:9099`
-- Legacy UI root: `/` (served from `frontend/legacy`)
+## Runtime Endpoints
+- Health: `/health`
 - API root: `/api`
-- Healthcheck: `/health`
+- Legacy UI root: `/`
 
-Use another port if needed:
-```bash
-# Linux/macOS
-PORT=9199 npm start
+## Local Database
+- Default local file: `backend/color_management.db`
+- Override with env:
+  - PowerShell: `$env:DB_FILE='backend/color_management.db'; npm start`
 
-# PowerShell
-$env:PORT=9199; npm start
-```
+## Docker / Synology Runtime
+- Production DB path in container: `/data/color_management.db`
+- Production env:
+  - `NODE_ENV=production`
+  - `PORT=9099`
+  - `DB_FILE=/data/color_management.db`
+  - `TZ=Asia/Shanghai`
 
-Database path:
-- Local default: `backend/color_management.db`
-- Docker/Synology: `/data/color_management.db`
-
-## Daily Operations
-
-### Backup / Restore
-```bash
-npm run backup
-npm run restore
-```
-
-### Common tasks
-
-#### Add custom color
-1. Open tab `自配色管理`.
-2. Click `新自配色`.
-3. Fill category, color code, formula, and optional image.
-4. Save.
-
-#### Add artwork scheme
-1. Open tab `作品配色管理`.
-2. Create/select artwork.
-3. Click `新增配色方案`.
-4. Fill scheme name, layer mapping, optional thumbnails.
-5. Save.
-
-#### Add Mont-Marte raw material
-1. Open tab `颜色原料管理`.
-2. Click `新原料`.
-3. Fill name, category, supplier/purchase-link, optional image.
-4. Save.
+## Synology Volume Mapping (Current)
+- `/volume1/docker/stereowood-color-system/data:/data:rw`
+- `/volume1/docker/stereowood-color-system/uploads:/app/backend/uploads:rw`
+- `/volume1/docker/stereowood-color-system/backups:/app/backend/backups:rw`
 
 ## API Smoke Commands
-
 ```bash
 curl http://localhost:9099/health
+curl http://localhost:9099/api/config
 curl http://localhost:9099/api/custom-colors
 curl http://localhost:9099/api/artworks
 curl http://localhost:9099/api/mont-marte-colors
 curl http://localhost:9099/api/categories
 ```
 
-## Docker / Synology
+## SQLite Backup Rule (Important)
+When service is running with WAL mode, back up all three files together:
+- `color_management.db`
+- `color_management.db-wal`
+- `color_management.db-shm`
 
-### Build
+Do not back up only `color_management.db` from a live container.
+
+## Backup / Restore Scripts
 ```bash
-docker build -t stereowood-color-system .
+npm run backup
+npm run restore
 ```
-
-### Run
-```bash
-docker run -d \
-  --name stereowood \
-  -p 9099:9099 \
-  -e NODE_ENV=production \
-  -e DB_FILE=/data/color_management.db \
-  -v ~/stereowood-data:/data \
-  -v ~/stereowood-uploads:/app/backend/uploads \
-  --restart unless-stopped \
-  stereowood-color-system:latest
-```
-
-### Verify
-```bash
-docker ps
-docker logs stereowood
-curl http://localhost:9099/health
-```
-
-### Rollback (Docker)
-1. Redeploy last known-good image tag.
-2. Keep existing `/data` volume.
-3. Verify `/health` and root UI `/`.
 
 ## Troubleshooting
-
-### Server cannot start
-1. Check if port `9099` is occupied.
-2. Use another port temporarily.
-3. Reinstall dependencies if needed: `npm install`.
-4. Confirm local DB file exists (or allow auto-create on start).
-
-### Upload issues
-1. Confirm `backend/uploads/` exists and writable.
-2. Confirm file type is valid (`jpg/jpeg/png/gif/webp`).
-
-### Reset local database (danger)
-```bash
-# Windows
-Remove-Item backend\color_management.db
-
-# Linux/macOS
-rm backend/color_management.db
-
-npm start
-```
-
-## Current Runtime Notes
-- Version: `0.9.8`
-- Default port: `9099`
-- Legacy-first production stack (`frontend/legacy` + Node/Express + SQLite)
-- No authentication (internal trusted network only)
-- Deletes are permanent (no soft delete)
+1. If server fails to start, check whether port `9099` is already in use.
+2. If UI loads but data fails, check `DB_FILE` and mounted `/data` path.
+3. If images fail, check write access to `/app/backend/uploads`.

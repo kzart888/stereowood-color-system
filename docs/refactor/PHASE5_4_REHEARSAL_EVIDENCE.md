@@ -74,4 +74,15 @@
 
 ### Interpretation
 - Docker-based rehearsal flow passes on local Windows host.
-- Synology host cutover/rollback rehearsal is still required for final Phase 5 closure.
+
+---
+
+## Update: Synology Rehearsal Confirmation
+
+- Date: 2026-02-08
+- Operator: user-confirmed
+- Environment: Synology Container Manager
+- Status: rehearsal worked fine
+
+### Interpretation
+- Synology-side rehearsal requirement is satisfied for Phase 5 closure.

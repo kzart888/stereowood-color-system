@@ -14,9 +14,9 @@ ENV TZ=Asia/Shanghai \
     DB_FILE=/data/color_management.db
 WORKDIR /app
 
-# Create data and uploads volumes
-RUN mkdir -p /data /app/backend/uploads /app/frontend/legacy
-VOLUME ["/data", "/app/backend/uploads"]
+# Create data, upload, and backup volumes
+RUN mkdir -p /data /app/backend/uploads /app/backend/backups /app/frontend/legacy
+VOLUME ["/data", "/app/backend/uploads", "/app/backend/backups"]
 
 # Copy installed node_modules from base stage
 COPY --from=base /app/node_modules ./node_modules

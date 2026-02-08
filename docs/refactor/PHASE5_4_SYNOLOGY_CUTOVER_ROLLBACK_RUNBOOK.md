@@ -1,7 +1,7 @@
 # Phase 5.4 Synology Cutover and Rollback Runbook
 
 - Date: 2026-02-07
-- Status: Draft for rehearsal
+- Status: Rehearsed and ready for production cutover execution
 - Deployment model: Docker image push/pull, Synology as runtime host
 
 ## Variables
@@ -10,12 +10,15 @@
 - `PREV_TAG=<last-known-good-tag>`
 - `PORT=9099`
 - `DB_FILE=/data/color_management.db`
+- `TZ=Asia/Shanghai`
+- `SYNOLOGY_DATA_ROOT=/volume1/docker/stereowood-color-system`
 
 ## Preconditions
 1. Candidate image was built with `npm ci --omit=dev`.
 2. `npm run phase0:verify` passed on candidate commit.
 3. DB backup exists before cutover.
 4. Previous image tag is retained in registry (rollback target).
+5. SQLite backup includes `color_management.db`, `color_management.db-wal`, and `color_management.db-shm`.
 
 ## Rehearsal Procedure (No Production Cutover)
 1. Pull candidate image on Synology.
@@ -28,13 +31,20 @@
 4. Stop and remove temporary container.
 5. Record rehearsal evidence (timestamp, image tag, smoke result, operator).
 
+### Synology volume mapping reference
+- `${SYNOLOGY_DATA_ROOT}/data:/data:rw`
+- `${SYNOLOGY_DATA_ROOT}/uploads:/app/backend/uploads:rw`
+- `${SYNOLOGY_DATA_ROOT}/backups:/app/backend/backups:rw`
+
 ## Cutover Procedure
 1. Pull candidate image tag on Synology.
 2. Stop existing production container.
 3. Start new container with:
    - same DB volume (`/data`)
    - same uploads volume (`/app/backend/uploads`)
+   - same backups volume (`/app/backend/backups`)
    - same port mapping (`9099:9099`)
+   - same timezone (`TZ=Asia/Shanghai`)
 4. Run immediate post-cutover checks:
    - `GET /health` returns `200`
    - root `/` loads

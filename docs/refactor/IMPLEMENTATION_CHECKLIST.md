@@ -212,21 +212,21 @@ Choose a suitable modernization path after legacy stabilization.
 - [x] Define success metrics and rollback trigger thresholds.
 
 ### Verification
-- [ ] ADR reviewed and approved by maintainers.
+- [x] ADR reviewed and approved by maintainers.
 - [x] `npm audit --omit=dev` high findings reduced or formally risk-accepted.
 - [x] `npm run phase0:verify` passes after each risky batch.
-- [ ] Pilot slice plan validated by smoke and rollback rehearsal. (local interim rehearsal done; Synology Docker rehearsal pending)
-- [ ] Code-review-agent gate report for Phase 5 plan and closure exists.
+- [x] Pilot slice plan validated by smoke and rollback rehearsal.
+- [x] Code-review-agent gate report for Phase 5 plan and closure exists.
 
 ### Exit Gate
-- [ ] Approved migration RFC with timeline and risk controls.
+- [x] Approved migration RFC with timeline and risk controls.
 
 ## Cross-Phase Security and Operations
 - [x] Track `npm audit` findings and prioritize production-impacting issues.
 - [x] Keep deterministic Docker builds (`npm ci --omit=dev` + lockfile in git).
-- [ ] Ensure runtime DB files remain untracked.
+- [x] Ensure runtime DB files remain untracked.
 
 ## Current Next Actions
-1. Execute Synology Docker temporary-port rehearsal and append evidence to `docs/refactor/PHASE5_4_REHEARSAL_EVIDENCE.md`.
-2. Collect maintainer sign-off on `docs/refactor/ADR-0001-modernization-path.md`.
-3. Validate runtime DB ignore behavior in deployment flow and close remaining DB tracking gap.
+1. Merge `stabilize-legacy` into `main` after final gate artifacts are committed.
+2. Create architecture-upgrade branch from `main` for deep modular refactor planning.
+3. Start architecture planning with `refactor-planner` using Phase 5 outputs as baseline.

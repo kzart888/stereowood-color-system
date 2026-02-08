@@ -1,6 +1,6 @@
 # ADR-0001: Modernization Path After Legacy Stabilization
 
-- Status: Draft
+- Status: Approved
 - Date: 2026-02-07
 - Scope: Frontend modernization path while keeping current backend stable
 
@@ -42,6 +42,11 @@
 - Backend owner: backend maintainer.
 - Frontend owner: frontend maintainer.
 - Release/operations owner: deployment maintainer for Synology.
+
+## Sign-Off Record
+- Approved by maintainer: `kzart`
+- Approval date: 2026-02-08
+- Decision: Proceed with Option 3 (parallel pilot migration) and architecture-upgrade branch planning.
 
 ## Consequences
 - Legacy remains production UI during migration period.
