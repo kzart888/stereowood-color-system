@@ -32,7 +32,7 @@ This document outlines the testing verification and code cleanup tasks for compl
 
 ### 2.1 Remove Debug Code
 
-#### File: `frontend/js/components/custom-colors.js`
+#### File: `frontend/legacy/js/components/custom-colors.js`
 Remove console.error statements at:
 - Line 1028: `console.error('Failed to fetch image:', error);`
 - Line 1069: `console.error('Error extracting color:', error);`
@@ -43,12 +43,12 @@ Remove console.error statements at:
 
 ### 2.2 Remove Obsolete Category Handling
 
-#### File: `frontend/js/components/custom-colors.js`
+#### File: `frontend/legacy/js/components/custom-colors.js`
 - [ ] Remove obsolete comment at line 701: `// Removed otCategoryId - OT is now treated like any other category`
 - [ ] Clean up references to removed OT category handling
 - [ ] Simplify ES category special handling if possible
 
-#### File: `frontend/js/components/category-manager.js`
+#### File: `frontend/legacy/js/components/category-manager.js`
 Remove all system category related code:
 - [ ] Lines 241-244: `systemCategoryCodes()` computed property
 - [ ] Lines 685-687: `isSystemCategory()` method
@@ -129,9 +129,9 @@ Evaluate if special handling is still needed for:
 
 | File | Changes | Lines to Remove |
 |------|---------|-----------------|
-| `frontend/js/components/custom-colors.js` | Remove console.error, obsolete comments | ~10 lines |
-| `frontend/js/components/category-manager.js` | Remove systemCategory code | ~30-40 lines |
-| `frontend/js/components/mont-marte.js` | Check for cleanup | TBD |
+| `frontend/legacy/js/components/custom-colors.js` | Remove console.error, obsolete comments | ~10 lines |
+| `frontend/legacy/js/components/category-manager.js` | Remove systemCategory code | ~30-40 lines |
+| `frontend/legacy/js/components/mont-marte.js` | Check for cleanup | TBD |
 | `docs/CATEGORY_MANAGEMENT_UI.md` | Mark Phase 9 complete | Update only |
 
 ## Expected Outcome

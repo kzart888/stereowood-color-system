@@ -8,8 +8,7 @@
     }
 
     if (!converter) {
-        console.error('ColorConverter utility is required for ColorDictionaryMatcherView');
-        return;
+        console.warn('ColorConverter utility is unavailable, matcher will run with RGB/HEX/HSL conversions only');
     }
 
     const clamp = (value, min, max) => {
@@ -28,18 +27,59 @@
             return null;
         }
         const prefixed = str.startsWith('#') ? str : `#${str}`;
-        if (converter.isValidHex && converter.isValidHex(prefixed)) {
+        if (converter && converter.isValidHex && converter.isValidHex(prefixed)) {
             return prefixed.startsWith('#') ? prefixed.toUpperCase() : `#${prefixed.toUpperCase()}`;
         }
         return /^#?[0-9A-Fa-f]{6}$/.test(prefixed) ? (prefixed.startsWith('#') ? prefixed.toUpperCase() : `#${prefixed.toUpperCase()}`) : null;
     };
 
+    // Unified conversion adapter:
+    // prefer canonical globals from colorConversion.js, fallback to ColorConverter facade.
+    const conversion = {
+        rgbToHex(r, g, b) {
+            if (typeof window.rgbToHex === 'function') {
+                return window.rgbToHex(r, g, b);
+            }
+            if (converter && typeof converter.rgbToHex === 'function') {
+                return converter.rgbToHex(r, g, b);
+            }
+            return null;
+        },
+        hexToRgb(hex) {
+            if (typeof window.hexToRgb === 'function') {
+                return window.hexToRgb(hex);
+            }
+            if (converter && typeof converter.hexToRgb === 'function') {
+                return converter.hexToRgb(hex);
+            }
+            return null;
+        },
+        rgbToHsl(r, g, b) {
+            if (typeof window.rgbToHsl === 'function') {
+                return window.rgbToHsl(r, g, b);
+            }
+            return null;
+        },
+        hslToRgb(h, s, l) {
+            if (typeof window.hslToRgb === 'function') {
+                return window.hslToRgb(h, s, l);
+            }
+            return null;
+        },
+        rgbToLab(r, g, b) {
+            if (typeof window.rgbToLab === 'function') {
+                return window.rgbToLab(r, g, b);
+            }
+            return null;
+        }
+    };
+
     const buildTargetColor = (rgb, hex, hsl) => {
         const { r, g, b } = rgb;
-        const targetHex = normalizeHex(hex) || (converter.rgbToHex ? converter.rgbToHex(r, g, b) : null);
+        const targetHex = normalizeHex(hex) || conversion.rgbToHex(r, g, b);
         const targetHsl = hsl && isFiniteNumber(hsl.h) && isFiniteNumber(hsl.s) && isFiniteNumber(hsl.l)
             ? { h: clamp(Math.round(hsl.h), 0, 360), s: clamp(Math.round(hsl.s), 0, 100), l: clamp(Math.round(hsl.l), 0, 100) }
-            : (typeof rgbToHsl === 'function' ? rgbToHsl(r, g, b) : null);
+            : conversion.rgbToHsl(r, g, b);
 
         const target = {
             id: '__matcher_target__',
@@ -52,8 +92,9 @@
             hsl: targetHsl || null
         };
 
-        if (typeof rgbToLab === 'function') {
-            target.lab = rgbToLab(r, g, b);
+        const lab = conversion.rgbToLab(r, g, b);
+        if (lab) {
+            target.lab = lab;
         }
 
         return target;
@@ -390,9 +431,9 @@
                 if (hex) {
                     return hex;
                 }
-                if (this.hasValidRgb && converter.rgbToHex) {
+                if (this.hasValidRgb) {
                     const { r, g, b } = this.activeRgb;
-                    return converter.rgbToHex(r, g, b);
+                    return conversion.rgbToHex(r, g, b);
                 }
                 return '#------';
             }
@@ -459,13 +500,17 @@
                     this.conversionMessage = '请补全 CMYK 数值';
                     return;
                 }
-                if (converter.isValidCMYK && !converter.isValidCMYK(c, m, y, k)) {
-                    this.conversionMessage = 'CMYK 数值范围应在 0-100';
+                if (converter && converter.isValidCMYK && !converter.isValidCMYK(c, m, y, k)) {
+                    this.conversionMessage = 'CMYK values must be in range 0-100';
                     return;
                 }
-                const rgb = converter.cmykToRgb(c, m, y, k);
+                const rgb = (converter && typeof converter.cmykToRgb === 'function')
+                    ? converter.cmykToRgb(c, m, y, k)
+                    : null;
                 if (!rgb) {
-                    this.conversionMessage = '无法将该 CMYK 转换为 RGB';
+                    this.conversionMessage = (converter && typeof converter.cmykToRgb === 'function')
+                        ? 'Unable to convert this CMYK value to RGB'
+                        : 'Missing CMYK conversion function';
                     return;
                 }
                 this.applyRgb(rgb, 'cmyk');
@@ -483,11 +528,7 @@
                     this.conversionMessage = 'HEX 格式应为 #RRGGBB';
                     return;
                 }
-                if (!converter.hexToRgb) {
-                    this.conversionMessage = '缺少 HEX 转换函数';
-                    return;
-                }
-                const rgb = converter.hexToRgb(normalized);
+                const rgb = conversion.hexToRgb(normalized);
                 if (!rgb) {
                     this.conversionMessage = '无法解析该 HEX 色值';
                     return;
@@ -517,13 +558,11 @@
                 const clampedH = clamp(h, 0, 360);
                 const clampedS = clamp(s, 0, 100);
                 const clampedL = clamp(l, 0, 100);
-                if (typeof hslToRgb !== 'function') {
-                    this.conversionMessage = '缺少 HSL 转换函数';
-                    return;
-                }
-                const rgb = hslToRgb(clampedH, clampedS, clampedL);
+                const rgb = conversion.hslToRgb(clampedH, clampedS, clampedL);
                 if (!rgb) {
-                    this.conversionMessage = '无法将该 HSL 转换为 RGB';
+                    this.conversionMessage = (typeof window.hslToRgb === 'function')
+                        ? '无法将该 HSL 转换为 RGB'
+                        : '缺少 HSL 转换函数';
                     return;
                 }
                 this.applyRgb(rgb, 'hsl', { h: clampedH, s: clampedS, l: clampedL });
@@ -558,9 +597,11 @@
                 this.activeRgb = sanitized;
                 this.conversionMessage = '';
 
-                const hex = converter.rgbToHex ? converter.rgbToHex(sanitized.r, sanitized.g, sanitized.b) : null;
-                const cmyk = converter.rgbToCmyk ? converter.rgbToCmyk(sanitized.r, sanitized.g, sanitized.b) : null;
-                const hsl = providedHsl || (typeof rgbToHsl === 'function' ? rgbToHsl(sanitized.r, sanitized.g, sanitized.b) : null);
+                const hex = conversion.rgbToHex(sanitized.r, sanitized.g, sanitized.b);
+                const cmyk = (converter && typeof converter.rgbToCmyk === 'function')
+                    ? converter.rgbToCmyk(sanitized.r, sanitized.g, sanitized.b)
+                    : null;
+                const hsl = providedHsl || conversion.rgbToHsl(sanitized.r, sanitized.g, sanitized.b);
 
                 this.suspendInputs(() => {
                     this.inputRgb = { ...sanitized };
@@ -594,7 +635,7 @@
                     this.matches = [];
                     return;
                 }
-                const hex = converter.rgbToHex ? converter.rgbToHex(this.activeRgb.r, this.activeRgb.g, this.activeRgb.b) : null;
+                const hex = conversion.rgbToHex(this.activeRgb.r, this.activeRgb.g, this.activeRgb.b);
                 const target = buildTargetColor(this.activeRgb, hex, this.inputHsl);
 
                 const pool = Array.isArray(this.colors) ? this.colors : [];
@@ -644,8 +685,8 @@
                     rgb = { r: enriched.rgb_r, g: enriched.rgb_g, b: enriched.rgb_b };
                 } else if (enriched.hex || enriched.hex_color) {
                     const candidateHex = normalizeHex(enriched.hex || enriched.hex_color);
-                    if (candidateHex && converter.hexToRgb) {
-                        rgb = converter.hexToRgb(candidateHex);
+                    if (candidateHex) {
+                        rgb = conversion.hexToRgb(candidateHex);
                     }
                 }
 

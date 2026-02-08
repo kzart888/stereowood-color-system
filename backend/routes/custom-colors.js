@@ -1,243 +1,293 @@
-/* =========================================================
-   Module: backend/routes/custom-colors.js
-   Responsibility: CRUD routes for Custom Colors and their history
-   Imports/Relations: Uses ColorService for business logic; multer for image upload
-   Origin: Extracted from backend/server.js (2025-08), refactored with Service layer
-   Contract: Mount under /api
-   Notes: Returns errors as { error: message }
-   Related: artworks routes (scheme_layers references custom_colors)
-   ========================================================= */
-
-const express = require('express');
-const router = express.Router();
-const ColorService = require('../services/ColorService');
+﻿const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const parseOptionalInt = (value) => {
-  if (value === undefined || value === null || value === '') return null;
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? null : parsed;
-};
+const fs = require('fs');
+const ColorService = require('../services/ColorService');
 
-const parseOptionalFloat = (value) => {
-  if (value === undefined || value === null || value === '') return null;
-  const parsed = parseFloat(value);
-  return Number.isNaN(parsed) ? null : parsed;
-};
+const router = express.Router();
 
-const normalizeHexInput = (value) => {
-  if (value === undefined || value === null) return null;
-  const trimmed = String(value).trim();
-  return trimmed === '' ? null : trimmed;
-};
-
-// Multer config (same as server.js)
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) { 
-    cb(null, path.join(__dirname, '..', 'uploads')); 
+  destination(req, file, cb) {
+    cb(null, path.join(__dirname, '..', 'uploads'));
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-  }
+  filename(req, file, cb) {
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`);
+  },
 });
 const upload = multer({ storage });
 
-// GET /api/custom-colors
+function sendError(res, status, error, extraFields) {
+  if (extraFields) {
+    return res.status(status).json({ error, ...extraFields });
+  }
+  return res.status(status).json({ error });
+}
+
+function parsePositiveId(value) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
+}
+
+function parseOptionalInt(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function parseOptionalFloat(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function normalizeHexInput(value) {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+function normalizeStringOrNull(value) {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+function parseCategoryId(value) {
+  if (value === undefined) {
+    return { defined: false };
+  }
+  if (value === null || value === '' || value === 'other') {
+    return { defined: true, value: null };
+  }
+
+  const parsed = parsePositiveId(value);
+  if (!parsed) {
+    return { error: 'category_id must be a positive integer or null.' };
+  }
+
+  return { defined: true, value: parsed };
+}
+
+function parseVersion(value) {
+  if (value === undefined || value === null || value === '') {
+    return { value: null };
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    return { error: 'version must be a non-negative integer.' };
+  }
+
+  return { value: parsed };
+}
+
+function parseBooleanFlag(value) {
+  if (value === true || value === false) return value;
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true';
+}
+
+function mapColorServiceError(res, error, fallbackStatus = 500) {
+  if (error && error.code === 'VERSION_CONFLICT') {
+    return sendError(res, 409, error.message, {
+      code: 'VERSION_CONFLICT',
+      expectedVersion: error.expectedVersion,
+      actualVersion: error.actualVersion,
+      latestData: error.latestData,
+    });
+  }
+
+  if (error && error.code === 'NOT_FOUND') {
+    return sendError(res, 404, error.message);
+  }
+
+  if (
+    error &&
+    ['VALIDATION_ERROR', 'DUPLICATE_COLOR_CODE', 'COLOR_IN_USE', 'MERGE_INVALID'].includes(error.code)
+  ) {
+    return sendError(res, 400, error.message);
+  }
+
+  return sendError(res, fallbackStatus, error && error.message ? error.message : 'Internal server error');
+}
+
+function toColorPayload(body) {
+  return {
+    formula: body.formula,
+    applicable_layers: body.applicable_layers,
+    rgb_r: parseOptionalInt(body.rgb_r),
+    rgb_g: parseOptionalInt(body.rgb_g),
+    rgb_b: parseOptionalInt(body.rgb_b),
+    cmyk_c: parseOptionalFloat(body.cmyk_c),
+    cmyk_m: parseOptionalFloat(body.cmyk_m),
+    cmyk_y: parseOptionalFloat(body.cmyk_y),
+    cmyk_k: parseOptionalFloat(body.cmyk_k),
+    hex_color: normalizeHexInput(body.hex_color),
+    pantone_coated: normalizeStringOrNull(body.pantone_coated),
+    pantone_uncoated: normalizeStringOrNull(body.pantone_uncoated),
+    pure_rgb_r: parseOptionalInt(body.pure_rgb_r),
+    pure_rgb_g: parseOptionalInt(body.pure_rgb_g),
+    pure_rgb_b: parseOptionalInt(body.pure_rgb_b),
+    pure_hex_color: normalizeHexInput(body.pure_hex_color),
+  };
+}
+
 router.get('/custom-colors', async (req, res) => {
   try {
     const colors = await ColorService.getAllColors();
-    res.json(colors);
+    return res.json(colors);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return mapColorServiceError(res, error, 500);
   }
 });
 
-// POST /api/custom-colors
 router.post('/custom-colors', upload.single('image'), async (req, res) => {
   try {
-    const { 
-      category_id, color_code, formula, applicable_layers,
-      rgb_r, rgb_g, rgb_b,
-      cmyk_c, cmyk_m, cmyk_y, cmyk_k,
-      hex_color, pantone_coated, pantone_uncoated,
-      pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color
-    } = req.body;
-    let imagePath = null;
+    const colorCode = normalizeStringOrNull(req.body.color_code);
+    if (!colorCode) {
+      return sendError(res, 400, 'color_code is required.');
+    }
 
-    // 处理图片上传（保存原图）
-    if (req.file) {
-      imagePath = req.file.filename;
+    const categoryResult = parseCategoryId(req.body.category_id);
+    if (categoryResult.error) {
+      return sendError(res, 400, categoryResult.error);
     }
 
     const colorData = {
-      category_id,
-      color_code,
-      image_path: imagePath,
-      formula,
-      applicable_layers,
-      // New color fields - convert to proper types
-      rgb_r: parseOptionalInt(rgb_r),
-      rgb_g: parseOptionalInt(rgb_g),
-      rgb_b: parseOptionalInt(rgb_b),
-      cmyk_c: parseOptionalFloat(cmyk_c),
-      cmyk_m: parseOptionalFloat(cmyk_m),
-      cmyk_y: parseOptionalFloat(cmyk_y),
-      cmyk_k: parseOptionalFloat(cmyk_k),
-      hex_color: normalizeHexInput(hex_color),
-      pantone_coated: pantone_coated || null,
-      pantone_uncoated: pantone_uncoated || null,
-      pure_rgb_r: parseOptionalInt(pure_rgb_r),
-      pure_rgb_g: parseOptionalInt(pure_rgb_g),
-      pure_rgb_b: parseOptionalInt(pure_rgb_b),
-      pure_hex_color: normalizeHexInput(pure_hex_color)
+      ...toColorPayload(req.body),
+      category_id: categoryResult.defined ? categoryResult.value : null,
+      color_code: colorCode,
+      image_path: req.file ? req.file.filename : null,
     };
 
     const result = await ColorService.createColor(colorData);
-    res.json(result);
+    return res.json(result);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    return mapColorServiceError(res, error, 500);
   }
 });
 
-// GET /api/custom-colors/:id/history
 router.get('/custom-colors/:id/history', async (req, res) => {
   try {
-    const colorId = req.params.id;
+    const colorId = parsePositiveId(req.params.id);
+    if (!colorId) {
+      return sendError(res, 400, 'Invalid custom color id.');
+    }
+
     const history = await ColorService.getColorHistory(colorId);
-    res.json(history);
+    return res.json(history);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return mapColorServiceError(res, error, 500);
   }
 });
 
-// DELETE /api/custom-colors/:id
 router.delete('/custom-colors/:id', async (req, res) => {
   try {
-    const colorId = req.params.id;
-    const result = await ColorService.deleteColor(colorId);
-    res.json(result);
-  } catch (error) {
-    if (error.message === '颜色不存在') {
-      res.status(404).json({ error: error.message });
-    } else if (error.message.includes('配色方案使用')) {
-      res.status(400).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: error.message });
+    const colorId = parsePositiveId(req.params.id);
+    if (!colorId) {
+      return sendError(res, 400, 'Invalid custom color id.');
     }
+
+    const result = await ColorService.deleteColor(colorId);
+    return res.json(result);
+  } catch (error) {
+    return mapColorServiceError(res, error, 500);
   }
 });
 
-// PUT /api/custom-colors/:id
 router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
   try {
-    const colorId = req.params.id;
-    const { 
-      category_id, color_code, formula, applicable_layers, existingImagePath, version,
-      rgb_r, rgb_g, rgb_b,
-      cmyk_c, cmyk_m, cmyk_y, cmyk_k,
-      hex_color, pantone_coated, pantone_uncoated,
-      pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color, clear_pure_color
-    } = req.body;
-    const expectedVersion = version ? parseInt(version) : null;
-    
-    // 处理图片：只有在有新上传或明确提供existingImagePath时才更新
-    let imagePath;
-    let shouldUpdateImage = false;
-    
-    if (req.file) {
-      // 有新上传的图片
-      imagePath = req.file.filename;
-      shouldUpdateImage = true;
+    const colorId = parsePositiveId(req.params.id);
+    if (!colorId) {
+      return sendError(res, 400, 'Invalid custom color id.');
+    }
 
-      // 删除旧图片（如果存在）
-      if (existingImagePath) {
-        const fs = require('fs');
-        const oldImagePath = path.join(__dirname, '..', 'uploads', existingImagePath);
-        fs.unlink(oldImagePath, (err) => {
-        });
-      }
-    } else if (existingImagePath !== undefined) {
-      // 明确提供了existingImagePath（包括null，表示要清除图片）
-      imagePath = existingImagePath;
-      shouldUpdateImage = true;
+    const versionResult = parseVersion(req.body.version);
+    if (versionResult.error) {
+      return sendError(res, 400, versionResult.error);
+    }
+
+    const categoryResult = parseCategoryId(req.body.category_id);
+    if (categoryResult.error) {
+      return sendError(res, 400, categoryResult.error);
     }
 
     const colorData = {};
 
-    if (category_id !== undefined) {
-      colorData.category_id = category_id === 'other' ? null : category_id;
-    }
-    if (color_code !== undefined) {
-      colorData.color_code = color_code;
-    }
-    if (formula !== undefined) {
-      colorData.formula = formula;
-    }
-    if (applicable_layers !== undefined) {
-      colorData.applicable_layers = applicable_layers;
+    if (categoryResult.defined) {
+      colorData.category_id = categoryResult.value;
     }
 
-    if (rgb_r !== undefined) colorData.rgb_r = parseOptionalInt(rgb_r);
-    if (rgb_g !== undefined) colorData.rgb_g = parseOptionalInt(rgb_g);
-    if (rgb_b !== undefined) colorData.rgb_b = parseOptionalInt(rgb_b);
-
-    if (cmyk_c !== undefined) colorData.cmyk_c = parseOptionalFloat(cmyk_c);
-    if (cmyk_m !== undefined) colorData.cmyk_m = parseOptionalFloat(cmyk_m);
-    if (cmyk_y !== undefined) colorData.cmyk_y = parseOptionalFloat(cmyk_y);
-    if (cmyk_k !== undefined) colorData.cmyk_k = parseOptionalFloat(cmyk_k);
-
-    if (hex_color !== undefined) colorData.hex_color = normalizeHexInput(hex_color);
-    if (pantone_coated !== undefined) colorData.pantone_coated = pantone_coated ? pantone_coated : null;
-    if (pantone_uncoated !== undefined) colorData.pantone_uncoated = pantone_uncoated ? pantone_uncoated : null;
-
-    if (pure_rgb_r !== undefined) colorData.pure_rgb_r = parseOptionalInt(pure_rgb_r);
-    if (pure_rgb_g !== undefined) colorData.pure_rgb_g = parseOptionalInt(pure_rgb_g);
-    if (pure_rgb_b !== undefined) colorData.pure_rgb_b = parseOptionalInt(pure_rgb_b);
-    if (pure_hex_color !== undefined) colorData.pure_hex_color = normalizeHexInput(pure_hex_color);
-
-    if (clear_pure_color !== undefined) {
-      const flag = clear_pure_color;
-      colorData.clear_pure_color = flag === '1' || flag === 'true' || flag === 'TRUE' || flag === 'True';
+    if (req.body.color_code !== undefined) {
+      const nextCode = normalizeStringOrNull(req.body.color_code);
+      if (!nextCode) {
+        return sendError(res, 400, 'color_code cannot be empty when provided.');
+      }
+      colorData.color_code = nextCode;
     }
 
-    if (shouldUpdateImage) {
-      colorData.image_path = imagePath;
+    if (req.body.formula !== undefined) {
+      colorData.formula = req.body.formula;
+    }
+    if (req.body.applicable_layers !== undefined) {
+      colorData.applicable_layers = req.body.applicable_layers;
     }
 
-    const result = await ColorService.updateColor(colorId, colorData, expectedVersion);
-    // 返回更新后的完整颜色信息
-    const updatedColor = await ColorService.getColorById(colorId);
-    res.json(updatedColor);
+    const typedFields = toColorPayload(req.body);
+    Object.keys(typedFields).forEach((field) => {
+      if (req.body[field] !== undefined) {
+        colorData[field] = typedFields[field];
+      }
+    });
+
+    if (req.body.clear_pure_color !== undefined) {
+      colorData.clear_pure_color = parseBooleanFlag(req.body.clear_pure_color);
+    }
+
+    if (req.file) {
+      colorData.image_path = req.file.filename;
+
+      const previousImage = normalizeStringOrNull(req.body.existingImagePath);
+      if (previousImage && previousImage !== req.file.filename) {
+        const oldImagePath = path.join(__dirname, '..', 'uploads', path.basename(previousImage));
+        fs.unlink(oldImagePath, () => {});
+      }
+    } else if (req.body.existingImagePath !== undefined) {
+      colorData.image_path = normalizeStringOrNull(req.body.existingImagePath);
+    }
+
+    const updatedColor = await ColorService.updateColor(colorId, colorData, versionResult.value);
+    return res.json(updatedColor);
   } catch (error) {
-    if (error.code === 'VERSION_CONFLICT') {
-      res.status(409).json({ 
-        error: error.message, 
-        code: 'VERSION_CONFLICT',
-        expectedVersion: error.expectedVersion,
-        actualVersion: error.actualVersion,
-        latestData: error.latestData
-      });
-    } else if (error.message === '自配颜色不存在') {
-      res.status(404).json({ error: error.message });
-    } else {
-      res.status(400).json({ error: error.message });
-    }
+    return mapColorServiceError(res, error, 500);
   }
 });
 
-// POST /api/custom-colors/force-merge - 强制合并重复颜色
 router.post('/custom-colors/force-merge', async (req, res) => {
   try {
-    const { keepId, removeIds, signature } = req.body;
-    
-    if (!keepId || !Array.isArray(removeIds) || !removeIds.length) {
-      return res.status(400).json({ error: '合并参数不完整' });
+    const keepId = parsePositiveId(req.body.keepId);
+    if (!Array.isArray(req.body.removeIds)) {
+      return sendError(res, 400, 'Invalid merge payload. keepId and removeIds are required.');
     }
 
-    const result = await ColorService.forceMerge({ keepId, removeIds, signature });
-    res.json(result);
+    const parsedRemoveIds = req.body.removeIds.map((id) => parsePositiveId(id));
+    const hasInvalidRemoveId = parsedRemoveIds.some((id) => !id);
+    const removeIds = parsedRemoveIds.filter(Boolean);
+
+    if (!keepId || hasInvalidRemoveId || removeIds.length === 0) {
+      return sendError(res, 400, 'Invalid merge payload. keepId and removeIds are required.');
+    }
+
+    const result = await ColorService.forceMerge({
+      keepId,
+      removeIds,
+      signature: req.body.signature,
+    });
+
+    return res.json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return mapColorServiceError(res, error, 500);
   }
 });
 

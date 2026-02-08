@@ -1,19 +1,50 @@
 // Color Converter Utility Module
-// Provides RGB/CMYK/HEX conversion and image color extraction
+// Provides RGB/CMYK/HEX conversion and image color extraction.
+// Deprecated compatibility note:
+// RGB/HEX primitive conversions are delegated to colorConversion.js when available.
+// Keep this facade for legacy callers until Phase 4 boundary cleanup is completed.
 // Version: 0.8.4
 
 (function(window) {
     'use strict';
     
     const ColorConverter = {
+        // Resolve canonical conversion function at call time.
+        // This keeps compatibility with script order where color-converter loads
+        // before colorConversion globals are attached.
+        getCanonicalConversion(name) {
+            const fn = window && window[name];
+            if (typeof fn === 'function') {
+                return fn;
+            }
+            return null;
+        },
+
+        // Keep facade contract strict for invalid input:
+        // return null instead of coercing malformed hex.
+        normalizeHex6(hex) {
+            const normalized = String(hex || '').trim().replace(/^#/, '');
+            if (!/^[0-9A-Fa-f]{6}$/.test(normalized)) {
+                return null;
+            }
+            return normalized.toUpperCase();
+        },
+
         // RGB to HEX conversion
         rgbToHex(r, g, b) {
             // Validate input
             if (!this.isValidRGB(r, g, b)) {
                 return null;
             }
-            
-            return '#' + [r, g, b].map(x => {
+
+            // Prefer canonical primitive when available.
+            const canonical = this.getCanonicalConversion('rgbToHex');
+            if (canonical && canonical !== this.rgbToHex) {
+                const value = canonical(r, g, b);
+                return this.formatHex(value);
+            }
+
+            return '#' + [r, g, b].map((x) => {
                 const hex = x.toString(16);
                 return hex.length === 1 ? '0' + hex : hex;
             }).join('').toUpperCase();
@@ -21,18 +52,31 @@
         
         // HEX to RGB conversion
         hexToRgb(hex) {
-            // Remove # if present
-            hex = hex.replace('#', '');
-            
-            // Validate hex string
-            if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
+            const normalized = this.normalizeHex6(hex);
+            if (!normalized) {
                 return null;
+            }
+
+            // Prefer canonical primitive when available.
+            const canonical = this.getCanonicalConversion('hexToRgb');
+            if (canonical && canonical !== this.hexToRgb) {
+                const converted = canonical(`#${normalized}`);
+                if (!converted) {
+                    return null;
+                }
+                const r = Number(converted.r);
+                const g = Number(converted.g);
+                const b = Number(converted.b);
+                if (!this.isValidRGB(r, g, b)) {
+                    return null;
+                }
+                return { r, g, b };
             }
             
             return {
-                r: parseInt(hex.substr(0, 2), 16),
-                g: parseInt(hex.substr(2, 2), 16),
-                b: parseInt(hex.substr(4, 2), 16)
+                r: parseInt(normalized.substr(0, 2), 16),
+                g: parseInt(normalized.substr(2, 2), 16),
+                b: parseInt(normalized.substr(4, 2), 16)
             };
         },
         

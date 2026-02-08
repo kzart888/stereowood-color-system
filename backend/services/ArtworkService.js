@@ -82,7 +82,7 @@ class ArtworkService {
             return await artworkQueries.getArtworkById(artworkId);
         } catch (error) {
             if (error.message.includes('UNIQUE')) {
-                throw new Error('作品编码已存在');
+                throw new Error('Artwork code already exists.');
             }
             throw new Error(`创建作品失败: ${error.message}`);
         }
@@ -94,14 +94,21 @@ class ArtworkService {
     async deleteArtwork(id) {
         try {
             const schemes = await artworkQueries.getArtworkSchemes(id);
-            
-            // 删除所有配色方案的缩略图
+
+            const filesToDelete = new Set();
             for (const scheme of schemes) {
                 if (scheme.thumbnail_path) {
-                    await this.deleteUploadedImage(scheme.thumbnail_path);
+                    filesToDelete.add(scheme.thumbnail_path);
+                }
+                if (scheme.initial_thumbnail_path) {
+                    filesToDelete.add(scheme.initial_thumbnail_path);
                 }
             }
-            
+
+            for (const filePath of filesToDelete) {
+                await this.deleteUploadedImage(filePath);
+            }
+
             const changes = await artworkQueries.deleteArtwork(id);
             return { success: changes > 0, deletedId: id };
         } catch (error) {
@@ -200,8 +207,7 @@ class ArtworkService {
     async deleteScheme(schemeId) {
         try {
             // 获取方案信息以删除缩略图
-            const schemes = await artworkQueries.getArtworkSchemes(null);
-            const scheme = schemes.find(s => s.id === schemeId);
+            const scheme = await artworkQueries.getSchemeById(schemeId);
             
             if (scheme) {
                 // 删除主缩略图
@@ -237,3 +243,4 @@ class ArtworkService {
 }
 
 module.exports = new ArtworkService();
+

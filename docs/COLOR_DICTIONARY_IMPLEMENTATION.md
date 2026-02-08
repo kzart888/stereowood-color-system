@@ -22,7 +22,7 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
 - **Requirement**: Extract dialog as standalone page at same level as 自配色管理/作品配色管理/颜色原料管理
 - **Status**: ✅ Partially Complete
 - **Implementation**: 
-  - Created `ColorDictionaryComponent` in `frontend/js/components/color-dictionary.js`
+  - Created `ColorDictionaryComponent` in `frontend/legacy/js/components/color-dictionary.js`
   - Added navigation button with Collection icon
   - Registered in app.js and index.html
 
@@ -134,24 +134,24 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
 
 #### Tasks Completed:
 1. **Created ColorDictionaryComponent**
-   - File: `frontend/js/components/color-dictionary.js`
+   - File: `frontend/legacy/js/components/color-dictionary.js`
    - Basic template with three view modes
    - Data loading from API
    - Component registration
 
 2. **Added Navigation Button**
-   - Modified: `frontend/js/components/app-header-bar.js`
+   - Modified: `frontend/legacy/js/components/app-header-bar.js`
    - Position: Between 自配色管理 and 作品配色管理
    - Icon: Collection
    - Label: 自配色字典
 
 3. **Page Container Setup**
-   - Modified: `frontend/index.html`
+   - Modified: `frontend/legacy/index.html`
    - Added: `<color-dictionary-component>` container
    - Script inclusion order maintained
 
 4. **Component Registration**
-   - Modified: `frontend/js/app.js`
+   - Modified: `frontend/legacy/js/app.js`
    - Added to valid tabs array
    - Component registration added
 
@@ -194,8 +194,8 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
    ```
 
 **Files to Modify**:
-- `frontend/js/components/color-dictionary.js`
-- `frontend/js/components/custom-colors.js` (remove old methods)
+- `frontend/legacy/js/components/color-dictionary.js`
+- `frontend/legacy/js/components/custom-colors.js` (remove old methods)
 
 ---
 
@@ -255,7 +255,7 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
    ```
 
 **Files to Create/Modify**:
-- `frontend/js/components/color-dictionary.js` (SimplifiedListView component)
+- `frontend/legacy/js/components/color-dictionary.js` (SimplifiedListView component)
 - Remove code from `color-palette-dialog.js`
 
 ---
@@ -300,7 +300,7 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
    ```
 
 **Files to Modify**:
-- `frontend/js/components/color-dictionary.js`
+- `frontend/legacy/js/components/color-dictionary.js`
 - `frontend/css/components/color-dictionary.css`
 
 ---
@@ -343,7 +343,7 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
    ```
 
 **Files to Modify**:
-- `frontend/js/components/color-dictionary.js`
+- `frontend/legacy/js/components/color-dictionary.js`
 - `frontend/css/components/color-dictionary.css`
 
 ---
@@ -387,7 +387,7 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
    ```
 
 **Files to Modify**:
-- `frontend/js/components/color-dictionary.js`
+- `frontend/legacy/js/components/color-dictionary.js`
 - `frontend/css/components/color-dictionary.css`
 
 ---
@@ -457,11 +457,11 @@ Transform the existing color palette dialog (自配色列表) into a standalone 
    ```
 
 **Files to Modify**:
-- `frontend/js/components/custom-colors.js`
-- `frontend/js/components/artworks.js`
-- `frontend/js/components/mont-marte.js`
-- `frontend/js/components/color-dictionary.js`
-- Create: `frontend/js/components/help-dialog.js`
+- `frontend/legacy/js/components/custom-colors.js`
+- `frontend/legacy/js/components/artworks.js`
+- `frontend/legacy/js/components/mont-marte.js`
+- `frontend/legacy/js/components/color-dictionary.js`
+- Create: `frontend/legacy/js/components/help-dialog.js`
 
 ---
 

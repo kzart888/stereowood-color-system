@@ -7,7 +7,10 @@
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "backup": "node scripts/backup.js",
-    "restore": "node scripts/restore.js"
+    "restore": "node scripts/restore.js",
+    "smoke:phase0": "node scripts/phase0-smoke.js",
+    "audit:encoding": "node scripts/encoding-audit.js",
+    "phase0:verify": "npm run audit:encoding && npm run smoke:phase0"
   },
   "keywords": [
     "color-management",
@@ -18,11 +21,10 @@
   "author": "STEREOWOOD Team",
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.20.2",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
-    "express": "^4.18.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",

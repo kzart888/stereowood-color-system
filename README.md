@@ -4,10 +4,10 @@ Simple color management system for factory production (3-5 users).
 
 ## What It Does
 
-- **自配颜色管理** - Manage custom color formulas with duplicate detection
-- **作品配色管理** - Map artwork layers to colors with multiple schemes
-- **原料管理** - Track Mont-Marte base colors and suppliers
-- **配方计算器** - Calculate formula ratios and quantities
+- **Custom Colors** - Manage custom color formulas with duplicate detection
+- **Artwork Schemes** - Map artwork layers to colors with multiple schemes
+- **Raw Materials** - Track Mont-Marte base colors and suppliers
+- **Formula Calculator** - Calculate formula ratios and quantities
 
 ## Quick Start
 
@@ -18,6 +18,8 @@ Simple color management system for factory production (3-5 users).
 npm install
 
 # If you are on Node >= 20 and sqlite3 native binding fails:
+# ensure npm lifecycle scripts are enabled, then rebuild sqlite3
+npm config set ignore-scripts false
 npm rebuild sqlite3
 
 # Start the API server (http://localhost:9099 by default)
@@ -30,16 +32,21 @@ PORT=9199 npm start
 fuser -k 9099/tcp
 ```
 
-### Vue 3 Admin (Vite + Pinia)
+### Legacy Admin UI (Production)
 
-```bash
-cd frontend/apps/stereowood-admin
-npm install           # first time only
-npm run dev -- --host 127.0.0.1 --port 0
+The legacy UI is served by the backend at the root URL:
+
+```
+http://localhost:9099/
 ```
 
-Vite will print the local dev URL (usually http://127.0.0.1:5173).  
-The dev server is pre-configured to proxy `/api` and `/uploads` to the backend.
+The Vue 3 app is archived under `archives/phase1-vue3-2026-02-06/` and is not part
+of the current production flow.
+
+Healthcheck endpoint:
+```
+http://localhost:9099/health
+```
 
 ## Documentation
 
@@ -54,7 +61,7 @@ The dev server is pre-configured to proxy `/api` and `/uploads` to the backend.
 
 ## Version
 
-Current: v0.8.2 (2025-01-03)
+Current: v0.9.8
 
 ## License
 

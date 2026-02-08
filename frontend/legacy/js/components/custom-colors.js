@@ -37,7 +37,7 @@ const CustomColorsComponent = {
                 
                 <!-- Grid Container for Cards -->
                 <div class="color-cards-grid">
-                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :data-color-id="color.id" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id)">
+                    <div v-for="color in paginatedColors" :key="color.id + '-' + refreshKey" class="artwork-bar" :ref="setColorItemRef(color)" :data-color-id="color.id" :class="{'highlight-pulse': highlightCode === color.color_code, 'selected': selectedColorId === color.id}" @click="toggleColorSelection(color.id, $event)">
                     <div class="artwork-header" style="display:flex; padding:8px; align-items:center; justify-content:space-between;">
                         <div style="display:flex; align-items:center;">
                             <div class="artwork-title" style="width:88px; flex-shrink:0;">
@@ -471,6 +471,8 @@ const CustomColorsComponent = {
             editingColor: null,
             saving: false,
             _colorItemRefs: new Map(),
+            _listState: null,
+            _dialogGuard: null,
             
             // Pagination
             currentPage: 1,
@@ -666,22 +668,6 @@ const CustomColorsComponent = {
             return this.orderedCategoriesWithOther.map(c=>c);
         },
         
-        // Computed properties for duplicate checking
-        canDeleteAny() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            for(const g of this.duplicateGroups){
-                const keepId = this.duplicateSelections[g.signature];
-                if(!keepId) continue;
-                if(g.records.some(r=> r.id!==keepId && !this.isColorReferenced(r))) return true;
-            }
-            return false;
-        },
-        
-        canForceMerge() {
-            if(!this.duplicateGroups || !this.duplicateGroups.length) return false;
-            return this.duplicateGroups.some(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
-        },
-        
         esCategoryId() {
             const es = this.categories.find(c=>c.code==='ES');
             return es ? es.id : null;
@@ -830,41 +816,41 @@ const CustomColorsComponent = {
             // Reload categories and colors after changes
             await this.globalData.loadCategories();
             await this.globalData.loadCustomColors();
-            this.$message.success('分类已更新');
+            this.getMsg().success('分类已更新');
         },
         
         // Pagination methods
         goToPage(page) {
+            if (this._listState && typeof this._listState.goToPage === 'function') {
+                this._listState.goToPage(page);
+                return;
+            }
             if (page === '...') return;
             if (page < 1 || page > this.totalPages) return;
-            
             this.currentPage = page;
-            
-            // Scroll to top of content area
             this.$nextTick(() => {
                 const container = this.$el.querySelector('.color-cards-grid');
                 if (container) {
                     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             });
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-colors-page', page);
-            } catch(e) {}
+            try { localStorage.setItem('sw-colors-page', page); } catch(e) {}
         },
         
         onItemsPerPageChange() {
-            // Reset to first page when changing items per page
+            if (this._listState && typeof this._listState.onItemsPerPageChange === 'function') {
+                this._listState.onItemsPerPageChange();
+                return;
+            }
             this.currentPage = 1;
-            
-            // Save preference
-            try {
-                localStorage.setItem('sw-colors-items-per-page', this.itemsPerPage);
-            } catch(e) {}
+            try { localStorage.setItem('sw-colors-items-per-page', this.itemsPerPage); } catch(e) {}
         },
         
         restorePaginationState() {
+            if (this._listState && typeof this._listState.restorePaginationState === 'function') {
+                this._listState.restorePaginationState();
+                return;
+            }
             try {
                 const savedPage = localStorage.getItem('sw-colors-page');
                 const savedItems = localStorage.getItem('sw-colors-items-per-page');
@@ -884,6 +870,10 @@ const CustomColorsComponent = {
         
         // Update pagination based on app config
         updatePaginationFromConfig() {
+            if (this._listState && typeof this._listState.updatePaginationFromConfig === 'function') {
+                this._listState.updatePaginationFromConfig();
+                return;
+            }
             if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
                 const config = this.globalData.appConfig.value;
                 
@@ -904,23 +894,30 @@ const CustomColorsComponent = {
         },
         
         // Card selection methods
-        toggleColorSelection(colorId) {
-            // Prevent propagation to avoid conflicts with other handlers
-            event.stopPropagation();
-            
-            // Toggle selection
-            if (this.selectedColorId === colorId) {
-                this.selectedColorId = null;
-            } else {
-                this.selectedColorId = colorId;
+        toggleColorSelection(colorId, event) {
+            if (this._listState && typeof this._listState.toggleSelection === 'function') {
+                this._listState.toggleSelection(colorId, event || window.event);
+                return;
             }
+            if (event && typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+            this.selectedColorId = this.selectedColorId === colorId ? null : colorId;
         },
         
         clearSelection() {
+            if (this._listState && typeof this._listState.clearSelection === 'function') {
+                this._listState.clearSelection();
+                return;
+            }
             this.selectedColorId = null;
         },
         
         handleGlobalClick(event) {
+            if (this._listState && typeof this._listState.handleGlobalClick === 'function') {
+                this._listState.handleGlobalClick(event);
+                return;
+            }
             // Clear selection if clicking outside the cards
             if (!event.target.closest('.artwork-bar')) {
                 this.clearSelection();
@@ -928,6 +925,10 @@ const CustomColorsComponent = {
         },
         
         handleEscKey(event) {
+            if (this._listState && typeof this._listState.handleEscKey === 'function') {
+                this._listState.handleEscKey(event);
+                return;
+            }
             // Only clear selection if ESC is pressed and no input is focused
             if (event.key === 'Escape') {
                 // Check if any input, textarea, or select is focused
@@ -949,7 +950,13 @@ const CustomColorsComponent = {
         
         // Helper to get message service
         getMsg() {
-            return ElementPlus.ElMessage;
+            if (window.msg) return window.msg;
+            return {
+                success: (text) => ElementPlus.ElMessage.success(text),
+                error: (text) => ElementPlus.ElMessage.error(text),
+                warning: (text) => ElementPlus.ElMessage.warning(text),
+                info: (text) => ElementPlus.ElMessage.info(text)
+            };
         },
         
         setColorItemRef(color) {
@@ -1003,6 +1010,15 @@ const CustomColorsComponent = {
         
 
         resolveColorSwatch(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.resolveColorSwatch === 'function') {
+                return window.CustomColorsDomainUtils.resolveColorSwatch(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             if (!color || !window.CustomColorSwatch) {
                 return null;
             }
@@ -1023,6 +1039,15 @@ const CustomColorsComponent = {
         },
 
         getSwatchStyle(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getSwatchStyle === 'function') {
+                return window.CustomColorsDomainUtils.getSwatchStyle(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             const swatch = this.resolveColorSwatch(color, options);
             if (!swatch) return {};
             if (swatch.type === 'image') {
@@ -1032,25 +1057,73 @@ const CustomColorsComponent = {
         },
 
         swatchIsImage(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchIsImage === 'function') {
+                return window.CustomColorsDomainUtils.swatchIsImage(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             const swatch = this.resolveColorSwatch(color, options);
             return !!(swatch && swatch.type === 'image' && swatch.imageUrl);
         },
 
         swatchIsEmpty(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchIsEmpty === 'function') {
+                return window.CustomColorsDomainUtils.swatchIsEmpty(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             const swatch = this.resolveColorSwatch(color, options);
             return !swatch || swatch.type === 'empty';
         },
 
         swatchThumbnailClass(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchThumbnailClass === 'function') {
+                return window.CustomColorsDomainUtils.swatchThumbnailClass(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             return { 'no-image': this.swatchIsEmpty(color, options) };
         },
 
         getSwatchImage(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getSwatchImage === 'function') {
+                return window.CustomColorsDomainUtils.getSwatchImage(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
             const swatch = this.resolveColorSwatch(color, options);
             return swatch && swatch.type === 'image' ? swatch.imageUrl : null;
         },
 
         previewColorSwatch(event, color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.previewColorSwatch === 'function') {
+                const handled = window.CustomColorsDomainUtils.previewColorSwatch(event, color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined,
+                    thumbPreview: this.$thumbPreview,
+                    pureColorUtils: window.PureColorUtils
+                });
+                if (handled) return;
+            }
             const swatch = this.resolveColorSwatch(color, options);
             if (!swatch || !this.$thumbPreview) {
                 return;
@@ -1067,6 +1140,11 @@ const CustomColorsComponent = {
         },
 
         normalizePantoneCode(value) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.normalizePantoneCode === 'function') {
+                return window.CustomColorsDomainUtils.normalizePantoneCode(value, {
+                    normalizePantoneCode: (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode)
+                });
+            }
             const helperFn = (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode);
             if (typeof helperFn === 'function') {
                 return helperFn(value);
@@ -1120,6 +1198,12 @@ const CustomColorsComponent = {
         
         // Standardize hex for downstream modules
         normalizeHexValue(hex) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.normalizeHexValue === 'function') {
+                return window.CustomColorsDomainUtils.normalizeHexValue(hex, {
+                    customColorSwatch: window.CustomColorSwatch,
+                    colorConverter: window.ColorConverter
+                });
+            }
             if (!hex) return null;
             const swatch = window.CustomColorSwatch;
             if (swatch && typeof swatch.normalizeHex === 'function') {
@@ -1135,6 +1219,13 @@ const CustomColorsComponent = {
         
         // Hydrate dialog state from backend pure-color fields
         buildPureColorStateFromExisting(color) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.buildPureColorStateFromExisting === 'function') {
+                return window.CustomColorsDomainUtils.buildPureColorStateFromExisting(color, {
+                    customColorSwatch: window.CustomColorSwatch,
+                    colorConverter: window.ColorConverter,
+                    pureColorUtils: window.PureColorUtils
+                });
+            }
             if (!color) return null;
             const hex = this.normalizeHexValue(color.pure_hex_color);
             if (!hex) return null;
@@ -1616,7 +1707,11 @@ const CustomColorsComponent = {
             if (this.$refs.formRef) {
                 this.$refs.formRef.resetFields();
             }
-            this._originalColorFormSnapshot = null;
+            if (this._dialogGuard && typeof this._dialogGuard.clearSnapshot === 'function') {
+                this._dialogGuard.clearSnapshot();
+            } else {
+                this._originalColorFormSnapshot = null;
+            }
             this._unbindEsc();
         },
         
@@ -1624,8 +1719,13 @@ const CustomColorsComponent = {
         // Other methods remain the same...
         onOpenColorDialog() {
             this.initForm();
-            this._originalColorFormSnapshot = JSON.stringify(this._normalizedColorForm());
-            this._bindEscForDialog();
+            if (this._dialogGuard && typeof this._dialogGuard.setSnapshot === 'function') {
+                this._dialogGuard.setSnapshot(this._normalizedColorForm());
+                this._dialogGuard.bindEsc(() => this.attemptCloseAddDialog());
+            } else {
+                this._originalColorFormSnapshot = JSON.stringify(this._normalizedColorForm());
+                this._bindEscForDialog();
+            }
         },
         
         _normalizedColorForm() {
@@ -1638,6 +1738,9 @@ const CustomColorsComponent = {
         },
         
         _isColorFormDirty() {
+            if (this._dialogGuard && typeof this._dialogGuard.isDirty === 'function') {
+                return this._dialogGuard.isDirty(this._normalizedColorForm());
+            }
             if (!this._originalColorFormSnapshot) return false;
             return JSON.stringify(this._normalizedColorForm()) !== this._originalColorFormSnapshot;
         },
@@ -1656,6 +1759,10 @@ const CustomColorsComponent = {
         },
         
         _bindEscForDialog() {
+            if (this._dialogGuard && typeof this._dialogGuard.bindEsc === 'function') {
+                this._dialogGuard.bindEsc(() => this.attemptCloseAddDialog());
+                return;
+            }
             this._unbindEsc();
             this._escHandler = (e) => {
                 if (e.key === 'Escape') {
@@ -1667,6 +1774,10 @@ const CustomColorsComponent = {
         },
         
         _unbindEsc() {
+            if (this._dialogGuard && typeof this._dialogGuard.unbindEsc === 'function') {
+                this._dialogGuard.unbindEsc();
+                return;
+            }
             if (this._escHandler) {
                 document.removeEventListener('keydown', this._escHandler);
                 this._escHandler = null;
@@ -1834,6 +1945,11 @@ const CustomColorsComponent = {
         
         // Helper method to get CMYK color as RGB string
         getCMYKColor(c, m, y, k) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getCMYKColor === 'function') {
+                return window.CustomColorsDomainUtils.getCMYKColor(c, m, y, k, {
+                    colorConverter: window.ColorConverter
+                });
+            }
             if (window.ColorConverter) {
                 const rgb = window.ColorConverter.cmykToRgb(c, m, y, k);
                 return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
@@ -1843,6 +1959,12 @@ const CustomColorsComponent = {
         
         // Helper method to get Pantone swatch style
         getPantoneSwatchStyle(pantoneCode) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getPantoneSwatchStyle === 'function') {
+                return window.CustomColorsDomainUtils.getPantoneSwatchStyle(pantoneCode, {
+                    pantoneHelper: window.PantoneHelper,
+                    normalizePantoneCode: (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode)
+                });
+            }
             if (!pantoneCode || !window.PantoneHelper) {
                 return { background: '#f5f5f5', border: '1px dashed #ccc' };
             }
@@ -1905,19 +2027,21 @@ const CustomColorsComponent = {
         // Keep all duplicates
         keepAllDuplicates(){
             this.showDuplicateDialog=false;
-            ElementPlus.ElMessage.info('已保留全部重复记录');
+            const notifier = this.getMsg();
+            notifier.info('已保留全部重复记录');
         },
         
         // Perform duplicate deletion - original from v0.5.6
         async performDuplicateDeletion(){
             if(this.deletionPending) return;
+            const notifier = this.getMsg();
             const toDelete=[];
             this.duplicateGroups.forEach(g=>{
                 const keepId = this.duplicateSelections[g.signature];
                 if(!keepId) return;
                 g.records.forEach(r=>{ if(r.id!==keepId && !this.isColorReferenced(r)) toDelete.push(r); });
             });
-            if(!toDelete.length){ ElementPlus.ElMessage.info('没有可删除的记录'); return; }
+            if(!toDelete.length){ notifier.info('没有可删除的记录'); return; }
             try { await ElementPlus.ElMessageBox.confirm(`将删除 ${toDelete.length} 条记录，确认继续？`, '删除确认', { type:'warning', confirmButtonText:'确认删除', cancelButtonText:'取消' }); } catch(e){ return; }
             this.deletionPending=true;
             let ok=0, fail=0;
@@ -1928,7 +2052,7 @@ const CustomColorsComponent = {
             this.deletionPending=false;
             await this.globalData.loadCustomColors();
             await this.globalData.loadArtworks();
-            ElementPlus.ElMessage.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
+            notifier.success(`删除完成：成功 ${ok} 条，失败 ${fail} 条`);
             // 重新检测
             this.runDuplicateCheck();
         },
@@ -1936,37 +2060,39 @@ const CustomColorsComponent = {
         // Confirm force merge - original from v0.5.6
         async confirmForceMerge(){
             if(this.mergingPending || this.deletionPending) return;
+            const notifier = this.getMsg();
             const candidates = this.duplicateGroups.filter(g=> g.records.length>1 && this.duplicateSelections[g.signature]);
-            if(!candidates.length){ ElementPlus.ElMessage.info('请选择要保留的记录'); return; }
+            if(!candidates.length){ notifier.info('请选择要保留的记录'); return; }
             const g = candidates[0];
             const keepId = this.duplicateSelections[g.signature];
-            if(!keepId){ ElementPlus.ElMessage.info('请先选择要保留的记录'); return; }
+            if(!keepId){ notifier.info('请先选择要保留的记录'); return; }
             const removeIds = g.records.filter(r=> r.id!==keepId).map(r=> r.id);
-            if(!removeIds.length){ ElementPlus.ElMessage.info('该组没有其它记录'); return; }
+            if(!removeIds.length){ notifier.info('该组没有其它记录'); return; }
             let referenced=0; g.records.forEach(r=>{ if(r.id!==keepId && this.isColorReferenced(r)) referenced++; });
-            const msg = `将合并该组：保留 1 条，删除 ${removeIds.length} 条；其中 ${referenced} 条被引用，其引用将更新到保留记录。确认继续？`;
-            try { await ElementPlus.ElMessageBox.confirm(msg, '强制合并确认', { type:'warning', confirmButtonText:'执行合并', cancelButtonText:'取消' }); } catch(e){ return; }
+            const confirmText = `将合并该组：保留 1 条，删除 ${removeIds.length} 条；其中 ${referenced} 条被引用，其引用将更新到保留记录。确认继续？`;
+            try { await ElementPlus.ElMessageBox.confirm(confirmText, '强制合并确认', { type:'warning', confirmButtonText:'执行合并', cancelButtonText:'取消' }); } catch(e){ return; }
             this.executeForceMerge({ keepId, removeIds, signature: g.signature });
         },
         
         // Execute force merge - original from v0.5.6
         async executeForceMerge(payload){
             if(this.mergingPending) return;
+            const notifier = this.getMsg();
             this.mergingPending = true;
             try {
                 const resp = await api.customColors.forceMerge(payload);
                 const updated = resp?.updatedLayers ?? resp?.data?.updatedLayers ?? 0;
                 const deleted = resp?.deleted ?? resp?.data?.deleted ?? payload.removeIds.length;
-                ElementPlus.ElMessage.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
+                notifier.success(`强制合并完成：更新引用 ${updated} 个，删除 ${deleted} 条`);
                 await this.globalData.loadCustomColors();
                 await this.globalData.loadArtworks();
                 this.runDuplicateCheck();
                 if(!this.duplicateGroups.length){ this.showDuplicateDialog=false; }
             } catch(err){
                 const raw = err?.response?.data?.error || '';
-                if(raw){ ElementPlus.ElMessage.error('合并失败: '+raw); }
-                else if(err?.request){ ElementPlus.ElMessage.error('网络错误，合并失败'); }
-                else { ElementPlus.ElMessage.error('合并失败'); }
+                if(raw){ notifier.error('合并失败: '+raw); }
+                else if(err?.request){ notifier.error('网络错误，合并失败'); }
+                else { notifier.error('合并失败'); }
             } finally {
                 this.mergingPending = false;
             }
@@ -2197,20 +2323,47 @@ const CustomColorsComponent = {
     
     // Restore pagination state on mount
     mounted() {
+        if (window.LegacyListState && typeof window.LegacyListState.create === 'function') {
+            this._listState = window.LegacyListState.create({
+                vm: this,
+                selectedKey: 'selectedColorId',
+                pageKey: 'sw-colors-page',
+                itemsKey: 'sw-colors-items-per-page',
+                listSelector: '.color-cards-grid',
+                configSection: 'custom-colors'
+            });
+        }
+        if (window.LegacyDialogGuard && typeof window.LegacyDialogGuard.create === 'function') {
+            this._dialogGuard = window.LegacyDialogGuard.create({
+                vm: this,
+                snapshotKey: '_originalColorFormSnapshot',
+                escHandlerKey: '_escHandler'
+            });
+        }
+
         // Update items per page based on app config
         this.updatePaginationFromConfig();
         
         this.restorePaginationState();
         
-        // Add global event listeners for selection
-        document.addEventListener('click', this.handleGlobalClick);
-        document.addEventListener('keydown', this.handleEscKey);
+        if (this._listState && typeof this._listState.bindGlobalEvents === 'function') {
+            this._listState.bindGlobalEvents();
+        } else {
+            // Add global event listeners for selection
+            document.addEventListener('click', this.handleGlobalClick);
+            document.addEventListener('keydown', this.handleEscKey);
+        }
     },
     
     beforeUnmount() {
-        // Clean up event listeners
-        document.removeEventListener('click', this.handleGlobalClick);
-        document.removeEventListener('keydown', this.handleEscKey);
+        if (this._listState && typeof this._listState.unbindGlobalEvents === 'function') {
+            this._listState.unbindGlobalEvents();
+        } else {
+            // Clean up event listeners
+            document.removeEventListener('click', this.handleGlobalClick);
+            document.removeEventListener('keydown', this.handleEscKey);
+        }
+        this._unbindEsc();
     }
 };
 

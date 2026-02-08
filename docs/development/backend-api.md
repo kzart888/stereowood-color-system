@@ -1,92 +1,138 @@
 # Backend API Overview
 
-_Last updated: 2025-10-05_
+Last updated: 2026-02-07
 
-This document summarises the current Express/SQLite REST endpoints served from `backend/routes`. All routes are mounted under `/api` (see `backend/routes/index.js`). Authentication is not required yet; every request is trusted.
+This document describes the current Express + SQLite contract served by `backend/server.js`.
 
-Common behaviours:
+## Runtime Contract
+- API base path: `/api`
+- Health endpoint: `/health`
+- System config endpoint: `/api/config`
+- Legacy UI static root: `/` served from `frontend/legacy`
+- Upload static root: `/uploads` served from `backend/uploads`
 
-- Successful responses return JSON objects or arrays.
-- Errors are reported as `4xx/5xx` with `{ "error": "<message>" }`.
-- File uploads use `multipart/form-data` and store files in `backend/uploads/`.
+## Common Behavior
+- Success responses return JSON objects or arrays.
+- Error responses return JSON with shape `{ "error": "<message>" }`.
+- API routes do not currently require authentication.
+- File upload endpoints expect `multipart/form-data`.
 
-## Custom Colours
+## Endpoint Groups
 
-Path prefix: `/custom-colors` (`backend/routes/custom-colors.js`). Uses `ColorService` for DB access and handles image uploads.
+### Custom Colors
+Source: `backend/routes/custom-colors.js` -> `backend/services/ColorService.js` -> `backend/db/queries/colors.js`
 
-| Method & Path | Purpose | Notes |
-| ------------- | ------- | ----- |
-| `GET /custom-colors` | List all custom colours. | Returns array with colour metadata, image paths, formula, etc. |
-| `POST /custom-colors` | Create a custom colour. | `multipart/form-data` payload; image field `image`. Body fields include `category_id`, `color_code`, `formula`, `applicable_layers`, colour model components (`rgb_*`, `cmyk_*`, `hex_color`, `pure_rgb_*`, `pure_hex_color`), and Pantone columns (`pantone_coated`, `pantone_uncoated`). Optional values are normalised server-side. |
-| `GET /custom-colors/:id/history` | Fetch change history. | Returns array of audit entries (structure determined by `ColorService`). |
-| `PUT /custom-colors/:id` | Update an existing colour. | `multipart/form-data`; image field `image`. Include `existingImagePath` if retaining the current image or `null` to clear. Supports partial updates for numeric channels and Pantone codes. Optional `version` enforces optimistic concurrency in `ColorService`. Flag `clear_pure_color` (`"true"/"1"`) clears pure colour metadata. |
-| `DELETE /custom-colors/:id` | Remove a colour. | Returns 404 if the colour is missing, 400 if referenced by schemes, otherwise deletion metadata. |
+- `GET /api/custom-colors`
+- `POST /api/custom-colors`
+- `GET /api/custom-colors/:id/history`
+- `PUT /api/custom-colors/:id`
+- `DELETE /api/custom-colors/:id`
+- `POST /api/custom-colors/force-merge`
 
-## Colour Categories
+Key request details:
+- `POST` and `PUT` accept upload field `image`.
+- `POST` requires `color_code`.
+- `category_id` accepts positive integer or null-like (`""`, `null`, `other`).
+- Numeric color fields are normalized server-side (`rgb_*`, `cmyk_*`, `pure_rgb_*`).
+- `clear_pure_color` accepts `true/false` style values and clears pure color metadata when true.
+- `PUT` accepts optional `version` for optimistic locking.
 
-Path prefix: `/categories` (`backend/routes/categories.js`). Interacts with the `color_categories` table directly.
+Error mapping behavior:
+- Service uses stable error codes:
+  - `VALIDATION_ERROR` -> `400`
+  - `DUPLICATE_COLOR_CODE` -> `400`
+  - `COLOR_IN_USE` -> `400`
+  - `MERGE_INVALID` -> `400`
+  - `NOT_FOUND` -> `404`
+  - `VERSION_CONFLICT` -> `409` (includes `expectedVersion`, `actualVersion`, `latestData`)
+- Route maps status by error code, not by message substrings.
 
-| Method & Path | Purpose | Notes |
-| ------------- | ------- | ----- |
-| `GET /categories` | List categories with colour counts. | Orders by `display_order`, then `id`. |
-| `POST /categories` | Create category. | Body `{ code?, name, display_order? }`. Generates a code from the name if omitted. |
-| `PUT /categories/reorder` | Batch update display order. | Body is an array of `{ id, display_order }`. Uses a transaction; returns partial failure details if any updates fail. |
-| `PUT /categories/:id` | Update category name/code. | Body `{ name, code? }`. Upper-cases `code` if provided. |
-| `DELETE /categories/:id` | Delete category. | Rejects removal if custom colours still reference the category. |
+### Artworks and Schemes
+Source: `backend/routes/artworks.js` -> `backend/services/ArtworkService.js` -> `backend/db/queries/artworks.js`
 
-## Mont Marte Raw Materials
+- `GET /api/artworks`
+- `POST /api/artworks`
+- `DELETE /api/artworks/:id`
+- `POST /api/artworks/:artworkId/schemes`
+- `PUT /api/artworks/:artworkId/schemes/:schemeId`
+- `DELETE /api/artworks/:artworkId/schemes/:schemeId`
 
-### Categories
+Key request details:
+- Scheme create/update use upload fields:
+  - `thumbnail`
+  - `initialThumbnail`
+- Scheme create/update require `name`.
+- `layers` accepts array JSON or JSON-stringified array.
 
-Path prefix: `/mont-marte-categories` (`backend/routes/mont-marte-categories.js`).
+### Color Categories
+Source: `backend/routes/categories.js` -> `backend/routes/helpers/category-route-factory.js` -> `backend/services/CategoryService.js`
 
-Endpoints mirror the colour categories API, but respond with `material_count` instead of `color_count`. Codes default to the first two letters of the name (or `MC`).
+- `GET /api/categories`
+- `POST /api/categories`
+- `PUT /api/categories/reorder`
+- `PUT /api/categories/:id`
+- `DELETE /api/categories/:id`
 
-### Materials (Colours)
+Key request details:
+- `POST` requires `name`; `code` optional.
+- `display_order` optional and defaults to `999`.
+- `reorder` accepts array of `{ id, display_order }`.
 
-Path prefix: `/mont-marte-colors` (`backend/routes/mont-marte-colors.js`).
+### Mont-Marte Categories
+Source: `backend/routes/mont-marte-categories.js` -> `backend/routes/helpers/category-route-factory.js` -> `backend/services/CategoryService.js`
 
-| Method & Path | Purpose | Notes |
-| ------------- | ------- | ----- |
-| `GET /mont-marte-colors` | List raw materials. | Returns supplier, purchase link, and category metadata. |
-| `POST /mont-marte-colors` | Create material. | `multipart/form-data`. Body fields: `name`, `category` (legacy string), `category_id` (preferred), `supplier_id`, `purchase_link_id`. Upload image using `image`. |
-| `PUT /mont-marte-colors/:id` | Update material. | `multipart/form-data`. Accepts `existingImagePath` to retain image. Cascades name changes into custom colour formulas via `cascadeRenameInFormulas`. |
-| `DELETE /mont-marte-colors/:id` | Delete material. | Only allowed if not referenced by other tables. Deletes stored image when present. |
+- `GET /api/mont-marte-categories`
+- `POST /api/mont-marte-categories`
+- `PUT /api/mont-marte-categories/reorder`
+- `PUT /api/mont-marte-categories/:id`
+- `DELETE /api/mont-marte-categories/:id`
 
-## Dictionaries (Suppliers & Purchase Links)
+Notes:
+- Same contract style as `/api/categories`.
+- List responses expose `material_count` instead of `color_count`.
 
-Path prefix: `/suppliers`, `/purchase-links` (`backend/routes/dictionaries.js`).
+### Mont-Marte Colors
+Source: `backend/routes/mont-marte-colors.js` -> `backend/services/MontMarteColorService.js` -> `backend/db/queries/mont-marte-colors.js`
 
-| Method & Path | Purpose | Notes |
-| ------------- | ------- | ----- |
-| `GET /suppliers` | List suppliers. | Sorted alphabetically. |
-| `POST /suppliers/upsert` | Ensure supplier exists. | Body `{ name }`. Returns existing record if found (case-insensitive). |
-| `DELETE /suppliers/:id` | Delete supplier. | Fails with `409` if referenced by `mont_marte_colors`. |
-| `GET /purchase-links` | List purchase links. | Sorted alphabetically. |
-| `POST /purchase-links/upsert` | Ensure link exists. | Body `{ url }`. Case-insensitive duplicate check. |
+- `GET /api/mont-marte-colors`
+- `POST /api/mont-marte-colors`
+- `PUT /api/mont-marte-colors/:id`
+- `DELETE /api/mont-marte-colors/:id`
 
-## Artworks & Schemes
+Key request details:
+- `POST` and `PUT` accept upload field `image`.
+- `POST` requires `name` and either `category` or `category_id`.
+- `PUT` requires `name`, but `category/category_id` may be omitted and existing values are preserved.
+- `PUT` returns additional fields:
+  - `updatedReferences` (formula cascade count)
 
-Path prefix: `/artworks` (`backend/routes/artworks.js`). Uses `ArtworkService` for business logic and manages scheme thumbnails via `multer`.
+Consistency behavior:
+- Rename update and formula cascade run in one transaction boundary.
+- If cascade fails, the update is rolled back and API returns an error.
 
-| Method & Path | Purpose | Notes |
-| ------------- | ------- | ----- |
-| `GET /artworks` | List artworks and schemes. | Returns enriched data from `ArtworkService.getAllArtworks()`. |
-| `POST /artworks` | Create artwork. | Body `{ code, name }`. Duplicate codes throw a 400 with a descriptive message. |
-| `DELETE /artworks/:id` | Remove artwork. | Returns deletion status. |
-| `POST /artworks/:artworkId/schemes` | Create scheme. | `multipart/form-data`. Upload fields: `thumbnail`, `initialThumbnail`. Body contains `name` and `layers` (JSON or stringified JSON array). |
-| `PUT /artworks/:artworkId/schemes/:schemeId` | Update scheme. | Same upload fields as create. Include `existingThumbnailPath` and/or `existingInitialThumbnailPath` to retain files. |
-| `DELETE /artworks/:artworkId/schemes/:schemeId` | Delete scheme. | Removes scheme and associated images. |
+### Dictionaries
+Source: `backend/routes/dictionaries.js` -> `backend/services/DictionaryService.js` -> `backend/db/queries/dictionaries.js`
 
-## Supporting Behaviour
+- `GET /api/suppliers`
+- `POST /api/suppliers/upsert`
+- `DELETE /api/suppliers/:id`
+- `GET /api/purchase-links`
+- `POST /api/purchase-links/upsert`
 
-- **Uploads**: all image uploads land in `backend/uploads/`. Update routes remove superseded files.
-- **Services**: `ColorService` and `ArtworkService` enforce extra invariants (optimistic locking, formula cascade updates, etc.). When designing frontend calls, check their method signatures for optional fields (`backend/services/*.js`).
-- **Formula utilities**: duplicate detection and ingredient cascade updates rely on the new TypeScript ports; ensure frontend data stays in sync with hashes/tokens exposed via `src/features/formula/*`.
+Notes:
+- Route handlers are thin; validation and conflict checks are in service/query layers.
 
-## Next Steps for the Vue 3 Migration
+## Error Behavior Notes
+- Validation issues generally return `400`.
+- Missing records generally return `404`.
+- Dictionary delete conflict (`supplier` in use) returns `409`.
+- Unhandled failures return `500`.
 
-1. Author `docs/development/backend-api.md` (this document) – keep it updated as endpoints evolve.
-2. While building Pinia stores and API clients, refer to the tables above to shape request/response types.
-3. Verify upload handling in the new codebase (Element Plus forms must send `multipart/form-data` with matching field names).
-4. Capture any new endpoints introduced during the migration back in this document to keep the backend contract visible to the team.
+## Upload Notes
+- Uploaded files are persisted under `backend/uploads`.
+- Update/delete flows attempt best-effort cleanup for replaced/orphaned files.
+
+## Formula Rename Behavior
+- Renaming a mont-marte color may cascade into custom color formulas.
+- Cascade logic lives in `backend/services/formula.js`.
+- Cascade is executed inside the mont-marte update transaction boundary.

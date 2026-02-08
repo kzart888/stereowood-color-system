@@ -1,8 +1,6 @@
 /**
- * 作品路由模块
- * 职责：处理 /api/artworks/* 相关的HTTP请求
- * 依赖：ArtworkService, multer
- * @module routes/artworks
+ * Artwork routes
+ * Responsibility: /api/artworks endpoints
  */
 
 const express = require('express');
@@ -11,171 +9,175 @@ const multer = require('multer');
 const path = require('path');
 const ArtworkService = require('../services/ArtworkService');
 
-// 文件上传配置
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '..', 'uploads'))
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
-    }
+  destination(req, file, cb) {
+    cb(null, path.join(__dirname, '..', 'uploads'));
+  },
+  filename(req, file, cb) {
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`);
+  },
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
-/**
- * GET /api/artworks
- * 获取所有作品及其配色方案
- */
+function sendError(res, status, error) {
+  return res.status(status).json({ error });
+}
+
+function parseLayersInput(layers) {
+  if (!layers) {
+    return [];
+  }
+
+  try {
+    return typeof layers === 'string' ? JSON.parse(layers) : layers;
+  } catch (error) {
+    const parseError = new Error('Invalid layers payload. Expected valid JSON array.');
+    parseError.statusCode = 400;
+    throw parseError;
+  }
+}
+
+async function cleanupUploadedFiles(files) {
+  if (files?.thumbnail?.[0]) {
+    await ArtworkService.deleteUploadedImage(files.thumbnail[0].filename);
+  }
+  if (files?.initialThumbnail?.[0]) {
+    await ArtworkService.deleteUploadedImage(files.initialThumbnail[0].filename);
+  }
+}
+
+// GET /api/artworks
 router.get('/artworks', async (req, res) => {
-    try {
-        const artworks = await ArtworkService.getAllArtworks();
-        res.json(artworks);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const artworks = await ArtworkService.getAllArtworks();
+    res.json(artworks);
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
 });
 
-/**
- * POST /api/artworks
- * 创建新作品
- */
+// POST /api/artworks
 router.post('/artworks', async (req, res) => {
-    try {
-        const { code, name } = req.body;
-        const newArtwork = await ArtworkService.createArtwork({ code, name });
-        res.json(newArtwork);
-    } catch (error) {
-        if (error.message.includes('已存在')) {
-            res.status(400).json({ error: error.message });
-        } else {
-            res.status(500).json({ error: error.message });
-        }
+  try {
+    const code = typeof req.body.code === 'string' ? req.body.code.trim() : '';
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+
+    if (!code || !name) {
+      return sendError(res, 400, 'Artwork code and name are required.');
     }
+
+    const newArtwork = await ArtworkService.createArtwork({ code, name });
+    return res.json(newArtwork);
+  } catch (error) {
+    if (error.message.includes('already exists') || error.message.includes('宸插瓨鍦')) {
+      return sendError(res, 400, error.message);
+    }
+    return sendError(res, 500, error.message);
+  }
 });
 
-/**
- * DELETE /api/artworks/:id
- * 删除作品
- */
+// DELETE /api/artworks/:id
 router.delete('/artworks/:id', async (req, res) => {
-    try {
-        const result = await ArtworkService.deleteArtwork(req.params.id);
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const result = await ArtworkService.deleteArtwork(req.params.id);
+    res.json(result);
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
 });
 
-/**
- * POST /api/artworks/:artworkId/schemes
- * 为作品创建配色方案
- */
-router.post('/artworks/:artworkId/schemes', upload.fields([
+// POST /api/artworks/:artworkId/schemes
+router.post(
+  '/artworks/:artworkId/schemes',
+  upload.fields([
     { name: 'thumbnail', maxCount: 1 },
-    { name: 'initialThumbnail', maxCount: 1 }
-]), async (req, res) => {
+    { name: 'initialThumbnail', maxCount: 1 },
+  ]),
+  async (req, res) => {
     try {
-        const { artworkId } = req.params;
-        // Frontend sends 'name' not 'scheme_name'
-        const { name, layers } = req.body;
-        const thumbnail_path = req.files?.thumbnail?.[0]?.filename || null;
-        const initial_thumbnail_path = req.files?.initialThumbnail?.[0]?.filename || null;
-        
-        // 解析layers（前端可能传递JSON字符串）
-        let parsedLayers = [];
-        if (layers) {
-            try {
-                parsedLayers = typeof layers === 'string' ? JSON.parse(layers) : layers;
-            } catch (e) {
-                throw new Error('层信息格式错误');
-            }
-        }
-        
-        const newScheme = await ArtworkService.createScheme({
-            artwork_id: artworkId,
-            scheme_name: name,  // Map 'name' to 'scheme_name'
-            thumbnail_path,
-            initial_thumbnail_path,
-            layers: parsedLayers
-        });
-        
-        res.json(newScheme);
-    } catch (error) {
-        // 如果创建失败，删除已上传的文件
-        if (req.files?.thumbnail?.[0]) {
-            await ArtworkService.deleteUploadedImage(req.files.thumbnail[0].filename);
-        }
-        if (req.files?.initialThumbnail?.[0]) {
-            await ArtworkService.deleteUploadedImage(req.files.initialThumbnail[0].filename);
-        }
-        res.status(500).json({ error: error.message });
-    }
-});
+      const { artworkId } = req.params;
+      const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
 
-/**
- * PUT /api/artworks/:artworkId/schemes/:schemeId
- * 更新配色方案
- */
-router.put('/artworks/:artworkId/schemes/:schemeId', upload.fields([
+      if (!name) {
+        return sendError(res, 400, 'Scheme name is required.');
+      }
+
+      const layers = parseLayersInput(req.body.layers);
+      const thumbnail_path = req.files?.thumbnail?.[0]?.filename || null;
+      const initial_thumbnail_path = req.files?.initialThumbnail?.[0]?.filename || null;
+
+      const newScheme = await ArtworkService.createScheme({
+        artwork_id: artworkId,
+        scheme_name: name,
+        thumbnail_path,
+        initial_thumbnail_path,
+        layers,
+      });
+
+      return res.json(newScheme);
+    } catch (error) {
+      await cleanupUploadedFiles(req.files);
+      return sendError(res, error.statusCode || 500, error.message);
+    }
+  }
+);
+
+// PUT /api/artworks/:artworkId/schemes/:schemeId
+router.put(
+  '/artworks/:artworkId/schemes/:schemeId',
+  upload.fields([
     { name: 'thumbnail', maxCount: 1 },
-    { name: 'initialThumbnail', maxCount: 1 }
-]), async (req, res) => {
+    { name: 'initialThumbnail', maxCount: 1 },
+  ]),
+  async (req, res) => {
     try {
-        const { schemeId } = req.params;
-        // Frontend sends 'name' not 'scheme_name'
-        const { name, layers, existingThumbnailPath, existingInitialThumbnailPath } = req.body;
-        const newThumbnailPath = req.files?.thumbnail?.[0]?.filename || existingThumbnailPath;
-        const newInitialThumbnailPath = req.files?.initialThumbnail?.[0]?.filename || existingInitialThumbnailPath;
-        
-        // 解析layers
-        let parsedLayers = [];
-        if (layers) {
-            try {
-                parsedLayers = typeof layers === 'string' ? JSON.parse(layers) : layers;
-            } catch (e) {
-                throw new Error('层信息格式错误');
-            }
-        }
-        
-        await ArtworkService.updateScheme(schemeId, {
-            scheme_name: name,  // Map 'name' to 'scheme_name'
-            thumbnail_path: newThumbnailPath,
-            initial_thumbnail_path: newInitialThumbnailPath,
-            layers: parsedLayers
-        });
-        
-        // 如果上传了新图片且有旧图片，删除旧图片
-        if (req.files?.thumbnail?.[0] && existingThumbnailPath && existingThumbnailPath !== newThumbnailPath) {
-            await ArtworkService.deleteUploadedImage(existingThumbnailPath);
-        }
-        if (req.files?.initialThumbnail?.[0] && existingInitialThumbnailPath && existingInitialThumbnailPath !== newInitialThumbnailPath) {
-            await ArtworkService.deleteUploadedImage(existingInitialThumbnailPath);
-        }
-        
-        res.json({ success: true });
-    } catch (error) {
-        // 如果更新失败，删除新上传的文件
-        if (req.files?.thumbnail?.[0]) {
-            await ArtworkService.deleteUploadedImage(req.files.thumbnail[0].filename);
-        }
-        if (req.files?.initialThumbnail?.[0]) {
-            await ArtworkService.deleteUploadedImage(req.files.initialThumbnail[0].filename);
-        }
-        res.status(500).json({ error: error.message });
-    }
-});
+      const { schemeId } = req.params;
+      const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
 
-/**
- * DELETE /api/artworks/:artworkId/schemes/:schemeId
- * 删除配色方案
- */
+      if (!name) {
+        return sendError(res, 400, 'Scheme name is required.');
+      }
+
+      const layers = parseLayersInput(req.body.layers);
+      const existingThumbnailPath = req.body.existingThumbnailPath;
+      const existingInitialThumbnailPath = req.body.existingInitialThumbnailPath;
+      const newThumbnailPath = req.files?.thumbnail?.[0]?.filename || existingThumbnailPath;
+      const newInitialThumbnailPath = req.files?.initialThumbnail?.[0]?.filename || existingInitialThumbnailPath;
+
+      await ArtworkService.updateScheme(schemeId, {
+        scheme_name: name,
+        thumbnail_path: newThumbnailPath,
+        initial_thumbnail_path: newInitialThumbnailPath,
+        layers,
+      });
+
+      if (req.files?.thumbnail?.[0] && existingThumbnailPath && existingThumbnailPath !== newThumbnailPath) {
+        await ArtworkService.deleteUploadedImage(existingThumbnailPath);
+      }
+      if (
+        req.files?.initialThumbnail?.[0] &&
+        existingInitialThumbnailPath &&
+        existingInitialThumbnailPath !== newInitialThumbnailPath
+      ) {
+        await ArtworkService.deleteUploadedImage(existingInitialThumbnailPath);
+      }
+
+      return res.json({ success: true });
+    } catch (error) {
+      await cleanupUploadedFiles(req.files);
+      return sendError(res, error.statusCode || 500, error.message);
+    }
+  }
+);
+
+// DELETE /api/artworks/:artworkId/schemes/:schemeId
 router.delete('/artworks/:artworkId/schemes/:schemeId', async (req, res) => {
-    try {
-        const result = await ArtworkService.deleteScheme(req.params.schemeId);
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const result = await ArtworkService.deleteScheme(req.params.schemeId);
+    res.json(result);
+  } catch (error) {
+    sendError(res, 500, error.message);
+  }
 });
 
 module.exports = router;
