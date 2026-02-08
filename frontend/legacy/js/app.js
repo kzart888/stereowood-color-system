@@ -1,6 +1,36 @@
 // 主应用入口文件
 // 负责：1.创建Vue应用实例 2.注册组件 3.管理全局数据 4.初始化数据加载
 const { createApp } = Vue;
+const runtimeBridge = window.runtimeBridge || {};
+
+function getApiGateway() {
+    const baseURL = window.location.origin;
+    const directGateway = window.apiGateway || runtimeBridge.apiGateway || null;
+    if (directGateway) {
+        return {
+            config: {
+                get: () => directGateway.config.get(baseURL)
+            },
+            categories: {
+                getAll: () => directGateway.categories.getAll(baseURL)
+            },
+            customColors: {
+                getAll: (options = {}) => directGateway.customColors.getAll(baseURL, options)
+            },
+            artworks: {
+                getAll: () => directGateway.artworks.getAll(baseURL)
+            },
+            montMarteColors: {
+                getAll: () => directGateway.montMarteColors.getAll(baseURL)
+            },
+            dictionaries: {
+                listSuppliers: () => directGateway.dictionaries.listSuppliers(baseURL),
+                listPurchaseLinks: () => directGateway.dictionaries.listPurchaseLinks(baseURL)
+            }
+        };
+    }
+    return window.api || {};
+}
 
 const app = createApp({
     data() {
@@ -190,34 +220,43 @@ const app = createApp({
         },
         async loadAppConfig() {
             try {
-                const response = await fetch(`${this.baseURL}/api/config`);
-                if (!response.ok) throw new Error('Failed to fetch config');
-                this.appConfig = await response.json();
+                const gateway = getApiGateway();
+                if (!gateway.config || typeof gateway.config.get !== 'function') {
+                    throw new Error('config gateway is unavailable');
+                }
+                const response = await gateway.config.get();
+                this.appConfig = response.data || this.appConfig;
             } catch (error) {
                 console.warn('Failed to load app config, using defaults:', error);
             }
         },
         async loadCategories() {
             try { 
-                const res = await api.categories.getAll(); 
+                const gateway = getApiGateway();
+                const res = await gateway.categories.getAll(); 
                 this.categories = res.data;
                 // Broadcast category update for other components
-                window.dispatchEvent(new CustomEvent('categories-updated', { 
-                    detail: this.categories 
-                }));
+                if (runtimeBridge.dispatch) {
+                    runtimeBridge.dispatch('categories-updated', this.categories);
+                } else {
+                    window.dispatchEvent(new CustomEvent('categories-updated', { detail: this.categories }));
+                }
             } catch(e){ }
         },
         async loadCustomColors(bypassCache = false) {
             try {
-                const res = await api.customColors.getAll({ bypassCache });
+                const gateway = getApiGateway();
+                const res = await gateway.customColors.getAll({ bypassCache });
                 const list = Array.isArray(res.data) ? res.data : [];
                 const hydrated = list.map((item) => this.hydrateCustomColor(item));
                 this.customColors = hydrated;
-                if (window.FormulaMatcher && typeof window.FormulaMatcher.buildIndex === 'function') {
-                    window.FormulaMatcher.buildIndex(hydrated);
+                const formulaMatcher = runtimeBridge.formulaMatcher;
+                if (formulaMatcher && typeof formulaMatcher.buildIndex === 'function') {
+                    formulaMatcher.buildIndex(hydrated);
                 }
-                if (window.IngredientSuggester && typeof window.IngredientSuggester.buildIndex === 'function') {
-                    window.IngredientSuggester.buildIndex({
+                const ingredientSuggester = runtimeBridge.ingredientSuggester;
+                if (ingredientSuggester && typeof ingredientSuggester.buildIndex === 'function') {
+                    ingredientSuggester.buildIndex({
                         customColors: hydrated,
                         rawMaterials: this.montMarteColors || [],
                         manualSeeds: []
@@ -229,17 +268,19 @@ const app = createApp({
                 } else {
                     this._buildColorFormulaIndex();
                 }
-                window.dispatchEvent(new CustomEvent('colors-updated', { 
-                    detail: this.customColors 
-                }));
+                if (runtimeBridge.dispatch) {
+                    runtimeBridge.dispatch('colors-updated', this.customColors);
+                } else {
+                    window.dispatchEvent(new CustomEvent('colors-updated', { detail: this.customColors }));
+                }
             } catch(e){ }
         },
         async loadArtworks() {
-            try { const res = await api.artworks.getAll(); this.artworks = res.data; const artworksIdx=[]; const schemesIdx=[]; this.artworks.forEach(a=>{ const name=a.name||a.title||''; const code=a.code||a.no||''; artworksIdx.push({id:a.id,name,code}); if(Array.isArray(a.schemes)) a.schemes.forEach(s=> schemesIdx.push({id:s.id, artworkId:a.id, artworkName:name, artworkCode:code, name:s.name||''})); }); this.registerDataset('artworks', artworksIdx); this.registerDataset('schemes', schemesIdx); } catch(e){ }
+            try { const gateway = getApiGateway(); const res = await gateway.artworks.getAll(); this.artworks = res.data; const artworksIdx=[]; const schemesIdx=[]; this.artworks.forEach(a=>{ const name=a.name||a.title||''; const code=a.code||a.no||''; artworksIdx.push({id:a.id,name,code}); if(Array.isArray(a.schemes)) a.schemes.forEach(s=> schemesIdx.push({id:s.id, artworkId:a.id, artworkName:name, artworkCode:code, name:s.name||''})); }); this.registerDataset('artworks', artworksIdx); this.registerDataset('schemes', schemesIdx); } catch(e){ }
         },
-        async loadMontMarteColors() { try { const res = await api.montMarteColors.getAll(); this.montMarteColors = res.data; this.registerDataset('rawMaterials', this.montMarteColors.map(m=>({id:m.id, name:m.name}))); if (window.IngredientSuggester && typeof window.IngredientSuggester.buildIndex === 'function') { window.IngredientSuggester.buildIndex({ customColors: this.customColors || [], rawMaterials: this.montMarteColors || [], manualSeeds: [] }); } } catch(e){ } },
-        async loadSuppliers() { try { const r = await axios.get(`${this.baseURL}/api/suppliers`); this.suppliers = r.data||[]; } catch(e){} },
-        async loadPurchaseLinks() { try { const r = await axios.get(`${this.baseURL}/api/purchase-links`); this.purchaseLinks = r.data||[]; } catch(e){} },
+        async loadMontMarteColors() { try { const gateway = getApiGateway(); const res = await gateway.montMarteColors.getAll(); this.montMarteColors = res.data; this.registerDataset('rawMaterials', this.montMarteColors.map(m=>({id:m.id, name:m.name}))); const ingredientSuggester = runtimeBridge.ingredientSuggester; if (ingredientSuggester && typeof ingredientSuggester.buildIndex === 'function') { ingredientSuggester.buildIndex({ customColors: this.customColors || [], rawMaterials: this.montMarteColors || [], manualSeeds: [] }); } } catch(e){ } },
+        async loadSuppliers() { try { const gateway = getApiGateway(); if (gateway.dictionaries && typeof gateway.dictionaries.listSuppliers === 'function') { const r = await gateway.dictionaries.listSuppliers(); this.suppliers = r.data||[]; } } catch(e){} },
+        async loadPurchaseLinks() { try { const gateway = getApiGateway(); if (gateway.dictionaries && typeof gateway.dictionaries.listPurchaseLinks === 'function') { const r = await gateway.dictionaries.listPurchaseLinks(); this.purchaseLinks = r.data||[]; } } catch(e){} },
         setArtworksViewMode(mode){ if(mode!==this.artworksViewMode && (mode==='byLayer'||mode==='byColor')) { this.artworksViewMode=mode; const comp=this.$refs.artworksRef; if(comp) comp.viewMode=mode; } },
         setSortMode(section, mode){ if(!(mode==='time'||mode==='name')) return; if(section==='customColors') this.customColorsSortMode=mode; else if(section==='artworks') this.artworksSortMode=mode; else if(section==='montMarte') this.montMarteSortMode=mode; },
         focusCustomColor(code){ 
@@ -271,8 +312,9 @@ const app = createApp({
             if (!path) {
                 return '';
             }
-            if (window.helpers && typeof window.helpers.buildUploadURL === 'function') {
-                return window.helpers.buildUploadURL(sourceBase, path);
+            const helpers = runtimeBridge.helpers;
+            if (helpers && typeof helpers.buildUploadURL === 'function') {
+                return helpers.buildUploadURL(sourceBase, path);
             }
             const cleaned = String(path).replace(/^\/+/, '');
             const withPrefix = cleaned.startsWith('uploads/') ? cleaned : `uploads/${cleaned}`;
@@ -308,13 +350,14 @@ const app = createApp({
             } else {
                 color.hasPureColor = !!color.pure_hex_color;
             }
-            if (window.helpers && typeof window.helpers.normalizePantoneCode === 'function') {
+            const helpers = runtimeBridge.helpers;
+            if (helpers && typeof helpers.normalizePantoneCode === 'function') {
                 if (color.pantone_coated) {
-                    const normalizedCoated = window.helpers.normalizePantoneCode(color.pantone_coated);
+                    const normalizedCoated = helpers.normalizePantoneCode(color.pantone_coated);
                     color.pantone_coated = normalizedCoated || color.pantone_coated;
                 }
                 if (color.pantone_uncoated) {
-                    const normalizedUncoated = window.helpers.normalizePantoneCode(color.pantone_uncoated);
+                    const normalizedUncoated = helpers.normalizePantoneCode(color.pantone_uncoated);
                     color.pantone_uncoated = normalizedUncoated || color.pantone_uncoated;
                 }
             }
@@ -396,25 +439,25 @@ if (typeof FormulaCalculatorOverlay !== 'undefined') {
 // === Provide services to components (both provide and global properties for full compatibility) ===
 
 // API service
-app.provide('$api', window.api || {});
+app.provide('$api', getApiGateway() || {});
 
 // Helpers service
-if (window.helpers) {
-    app.provide('$helpers', window.helpers);
-    app.config.globalProperties.$helpers = window.helpers;
+if (runtimeBridge.helpers) {
+    app.provide('$helpers', runtimeBridge.helpers);
+    app.config.globalProperties.$helpers = runtimeBridge.helpers;
 }
 
 // Thumbnail preview service
-if (window.thumbPreview) {
-    app.provide('$thumbPreview', window.thumbPreview);
-    app.config.globalProperties.$thumbPreview = window.thumbPreview;
+if (runtimeBridge.thumbPreview) {
+    app.provide('$thumbPreview', runtimeBridge.thumbPreview);
+    app.config.globalProperties.$thumbPreview = runtimeBridge.thumbPreview;
 }
 
 // Calculator service
-if (window.$formulaCalc) {
+if (runtimeBridge.calculator) {
     const calcService = {
-        open: (code, formula, triggerEl) => window.$formulaCalc.open(code, formula, triggerEl, app),
-        close: () => window.$formulaCalc.close()
+        open: (code, formula, triggerEl) => runtimeBridge.calculator.open(code, formula, triggerEl, app),
+        close: () => runtimeBridge.calculator.close()
     };
     app.provide('$calc', calcService);
     app.config.globalProperties.$calc = calcService;

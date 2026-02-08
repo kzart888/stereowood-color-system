@@ -1,5 +1,9 @@
 // Category Manager Component
 // Reusable component for managing categories in both custom colors and Mont-Marte materials
+function getRuntimeBridge() {
+    return window.runtimeBridge || {};
+}
+
 const CategoryManagerComponent = {
     name: 'CategoryManager',
     template: `
@@ -302,6 +306,19 @@ const CategoryManagerComponent = {
     },
 
     methods: {
+        getCategoryGateway() {
+            const bridge = getRuntimeBridge();
+            const apiGateway = window.apiGateway || bridge.apiGateway || window.api || null;
+            if (!apiGateway) {
+                return null;
+            }
+            const gateway = this.categoryType === 'colors' ? apiGateway.categories : apiGateway.montMarteCategories;
+            if (gateway && typeof gateway.remove !== 'function' && typeof gateway.delete === 'function') {
+                return Object.assign({}, gateway, { remove: gateway.delete });
+            }
+            return gateway;
+        },
+
         // Validation methods
         validateCategoryName(name) {
             const trimmedName = name.trim();
@@ -477,9 +494,12 @@ const CategoryManagerComponent = {
         async loadCategories() {
             this.loading = true;
             try {
-                const response = await fetch(this.apiEndpoint);
-                if (!response.ok) throw new Error('Failed to load categories');
-                const data = await response.json();
+                const gateway = this.getCategoryGateway();
+                if (!gateway || typeof gateway.getAll !== 'function') {
+                    throw new Error('Category gateway unavailable');
+                }
+                const response = await gateway.getAll(window.location.origin);
+                const data = response.data || [];
                 this.sortableCategories = data.sort((a, b) => 
                     (a.display_order || 999) - (b.display_order || 999)
                 );
@@ -520,17 +540,11 @@ const CategoryManagerComponent = {
                     payload.code = code;
                 }
                 
-                const response = await fetch(this.apiEndpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to add category');
+                const gateway = this.getCategoryGateway();
+                if (!gateway || typeof gateway.create !== 'function') {
+                    throw new Error('Category gateway unavailable');
                 }
+                await gateway.create(window.location.origin, payload);
 
                 this.$message.success('分类添加成功');
                 this.newCategoryName = '';
@@ -588,20 +602,14 @@ const CategoryManagerComponent = {
 
             this.saving = true;
             try {
-                const response = await fetch(`${this.apiEndpoint}/${row.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name: newName,
-                        code: newCode
-                    })
-                });
-
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to update category');
+                const gateway = this.getCategoryGateway();
+                if (!gateway || typeof gateway.update !== 'function') {
+                    throw new Error('Category gateway unavailable');
                 }
+                await gateway.update(window.location.origin, row.id, {
+                    name: newName,
+                    code: newCode
+                });
 
                 this.$message.success('分类更新成功');
                 this.cancelEdit();
@@ -648,15 +656,11 @@ const CategoryManagerComponent = {
                     }
                 );
 
-                const response = await fetch(`${this.apiEndpoint}/${row.id}`, {
-                    method: 'DELETE'
-                });
-
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to delete category');
+                const gateway = this.getCategoryGateway();
+                if (!gateway || typeof gateway.remove !== 'function') {
+                    throw new Error('Category gateway unavailable');
                 }
+                await gateway.remove(window.location.origin, row.id);
 
                 this.$message({
                     message: `分类"${row.name}"已成功删除`,
@@ -774,17 +778,11 @@ const CategoryManagerComponent = {
 
         async saveReorder(updates) {
             try {
-                const response = await fetch(`${this.apiEndpoint}/reorder`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updates)
-                });
-
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to reorder categories');
+                const gateway = this.getCategoryGateway();
+                if (!gateway || typeof gateway.reorder !== 'function') {
+                    throw new Error('Category gateway unavailable');
                 }
+                await gateway.reorder(window.location.origin, updates);
 
                 this.$message.success('分类顺序已更新');
                 this.$emit('updated');

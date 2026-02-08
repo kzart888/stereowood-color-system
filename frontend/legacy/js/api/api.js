@@ -1,105 +1,68 @@
-// API配置和封装
-// 该文件定义所有与后端通信的API接口
-// 被 app.js 和各组件文件调用
-
-// 后端服务器地址配置
-const API_BASE_URL = window.location.origin + '/api';
-
-// Real-time data fetching for small team deployment
-// No caching for immediate UI updates
-
-// API接口封装对象
-const api = {
-    // 颜色分类相关API
-    categories: {
-        // 获取所有分类
-        getAll: () => axios.get(`${API_BASE_URL}/categories`),
-        
-        // 创建新分类
-        create: (data) => axios.post(`${API_BASE_URL}/categories`, data),
-        
-        // 更新分类
-        update: (id, data) => axios.put(`${API_BASE_URL}/categories/${id}`, data),
-        
-        // 删除分类
-        delete: (id) => axios.delete(`${API_BASE_URL}/categories/${id}`)
-    },
-    
-    // 自配颜色相关API
-    customColors: {
-        // 获取所有自配颜色
-        getAll: (options = {}) => {
-            const { bypassCache, params, ...config } = options || {};
-            const requestConfig = { ...config };
-            const mergedParams = Object.assign({}, params || {});
-            if (bypassCache) {
-                mergedParams._ = Date.now();
-            }
-            if (Object.keys(mergedParams).length > 0) {
-                requestConfig.params = mergedParams;
-            }
-            return axios.get(`${API_BASE_URL}/custom-colors`, requestConfig);
-        },
-        
-        // 创建新颜色（带图片上传）
-        create: (formData) => {
-            return axios.post(`${API_BASE_URL}/custom-colors`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-        },
-        
-        // 更新颜色（带图片上传）
-        update: (id, formData) => axios.put(`${API_BASE_URL}/custom-colors/${id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        }),
-        
-        // 删除颜色
-        delete: (id) => axios.delete(`${API_BASE_URL}/custom-colors/${id}`),
-        
-        // 获取颜色历史记录
-    getHistory: (id) => axios.get(`${API_BASE_URL}/custom-colors/${id}/history`),
-    // 强制合并重复配方（更新引用后删除）
-    forceMerge: (payload) => axios.post(`${API_BASE_URL}/custom-colors/force-merge`, payload)
-    },
-    
-    // 作品相关API
-    artworks: {
-        // 获取所有作品
-        getAll: () => axios.get(`${API_BASE_URL}/artworks`),
-        
-        // 获取单个作品详情
-        get: (id) => axios.get(`${API_BASE_URL}/artworks/${id}`),
-        
-        // 创建新作品
-        create: (data) => axios.post(`${API_BASE_URL}/artworks`, data),
-        
-        // 更新作品
-        update: (id, data) => axios.put(`${API_BASE_URL}/artworks/${id}`, data),
-        
-        // 删除作品
-        delete: (id) => axios.delete(`${API_BASE_URL}/artworks/${id}`)
-    },
-    
-    // 蒙马特颜色（颜色原料库）相关API
-    montMarteColors: {
-        // 获取所有颜色原料
-        getAll: () => axios.get(`${API_BASE_URL}/mont-marte-colors`),
-        
-        // 创建新颜色原料（带图片上传）
-        create: (formData) => axios.post(`${API_BASE_URL}/mont-marte-colors`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        }),
-        
-        // 更新颜色原料（带图片上传）
-        update: (id, formData) => axios.put(`${API_BASE_URL}/mont-marte-colors/${id}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        }),
-        
-        // 删除颜色原料
-        delete: (id) => axios.delete(`${API_BASE_URL}/mont-marte-colors/${id}`)
+(function (window) {
+  function getGateway() {
+    if (window.apiGateway) {
+      return window.apiGateway;
     }
-};
+    throw new Error('apiGateway is required before api.js');
+  }
 
-// 导出给其他文件使用
-// 在浏览器环境中，这会创建一个全局变量 api
-window.api = api;
+  function getBaseURL() {
+    return String(window.location.origin || '').replace(/\/$/, '');
+  }
+
+  const compatApi = {
+    categories: {
+      getAll: () => getGateway().categories.getAll(getBaseURL()),
+      create: (data) => getGateway().categories.create(getBaseURL(), data),
+      update: (id, data) => getGateway().categories.update(getBaseURL(), id, data),
+      delete: (id) => getGateway().categories.remove(getBaseURL(), id),
+      reorder: (updates) => getGateway().categories.reorder(getBaseURL(), updates),
+    },
+    montMarteCategories: {
+      getAll: () => getGateway().montMarteCategories.getAll(getBaseURL()),
+      create: (data) => getGateway().montMarteCategories.create(getBaseURL(), data),
+      update: (id, data) => getGateway().montMarteCategories.update(getBaseURL(), id, data),
+      delete: (id) => getGateway().montMarteCategories.remove(getBaseURL(), id),
+      reorder: (updates) => getGateway().montMarteCategories.reorder(getBaseURL(), updates),
+    },
+    customColors: {
+      getAll: (options = {}) => getGateway().customColors.getAll(getBaseURL(), options),
+      create: (formData) => getGateway().customColors.create(getBaseURL(), formData),
+      update: (id, formData) => getGateway().customColors.update(getBaseURL(), id, formData),
+      delete: (id) => getGateway().customColors.remove(getBaseURL(), id),
+      getHistory: (id) => getGateway().customColors.getHistory(getBaseURL(), id),
+      forceMerge: (payload) => getGateway().customColors.forceMerge(getBaseURL(), payload),
+    },
+    artworks: {
+      getAll: () => getGateway().artworks.getAll(getBaseURL()),
+      get: (id) => getGateway().artworks.get(getBaseURL(), id),
+      create: (data) => getGateway().artworks.create(getBaseURL(), data),
+      update: (id, data) => getGateway().artworks.update(getBaseURL(), id, data),
+      delete: (id) => getGateway().artworks.remove(getBaseURL(), id),
+      addScheme: (artworkId, formData) => getGateway().artworks.addScheme(getBaseURL(), artworkId, formData),
+      updateScheme: (artworkId, schemeId, formData) =>
+        getGateway().artworks.updateScheme(getBaseURL(), artworkId, schemeId, formData),
+      deleteScheme: (artworkId, schemeId) =>
+        getGateway().artworks.deleteScheme(getBaseURL(), artworkId, schemeId),
+    },
+    montMarteColors: {
+      getAll: () => getGateway().montMarteColors.getAll(getBaseURL()),
+      create: (formData) => getGateway().montMarteColors.create(getBaseURL(), formData),
+      update: (id, formData) => getGateway().montMarteColors.update(getBaseURL(), id, formData),
+      delete: (id) => getGateway().montMarteColors.remove(getBaseURL(), id),
+    },
+    dictionaries: {
+      listSuppliers: () => getGateway().dictionaries.listSuppliers(getBaseURL()),
+      upsertSupplier: (name) => getGateway().dictionaries.upsertSupplier(getBaseURL(), name),
+      deleteSupplier: (id) => getGateway().dictionaries.deleteSupplier(getBaseURL(), id),
+      listPurchaseLinks: () => getGateway().dictionaries.listPurchaseLinks(getBaseURL()),
+      upsertPurchaseLink: (url) => getGateway().dictionaries.upsertPurchaseLink(getBaseURL(), url),
+    },
+    config: {
+      get: () => getGateway().config.get(getBaseURL()),
+    },
+  };
+
+  window.api = compatApi;
+  window.legacyApi = compatApi;
+})(window);

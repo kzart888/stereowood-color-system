@@ -15,6 +15,15 @@
 
 const ColorDictionaryService = window.ColorDictionaryService;
 
+function getRuntimeBridge() {
+    return window.runtimeBridge || {};
+}
+
+function getApiGateway() {
+    const bridge = getRuntimeBridge();
+    return window.apiGateway || bridge.apiGateway || window.api || null;
+}
+
 if (!ColorDictionaryService) {
     console.error('ColorDictionaryService is not available.');
 }
@@ -450,9 +459,12 @@ const ColorDictionaryComponent = {
     methods: {
         async loadCategories() {
             try {
-                const response = await fetch('/api/categories');
-                const data = await response.json();
-                this.categories = data || [];
+                const gateway = getApiGateway();
+                if (!gateway || !gateway.categories || typeof gateway.categories.getAll !== 'function') {
+                    throw new Error('categories gateway unavailable');
+                }
+                const response = await gateway.categories.getAll(window.location.origin);
+                this.categories = response.data || [];
             } catch (error) {
                 console.error('Failed to load categories:', error);
                 this.categories = [];
@@ -462,9 +474,12 @@ const ColorDictionaryComponent = {
         async loadColors() {
             this.loading = true;
             try {
-                const response = await fetch('/api/custom-colors');
-                const data = await response.json();
-                this.colors = data || [];
+                const gateway = getApiGateway();
+                if (!gateway || !gateway.customColors || typeof gateway.customColors.getAll !== 'function') {
+                    throw new Error('custom-colors gateway unavailable');
+                }
+                const response = await gateway.customColors.getAll(window.location.origin, {});
+                this.colors = response.data || [];
                 this.enrichColors();
             } catch (error) {
                 console.error('Failed to load colors:', error);
@@ -573,13 +588,19 @@ const ColorDictionaryComponent = {
         
         syncCategories() {
             // Listen for category updates from custom colors page
-            window.addEventListener('categories-updated', (event) => {
+            this._categoriesUpdatedHandler = (event) => {
                 this.categories = event.detail || [];
                 // Re-enrich colors when categories change
                 if (this.colors.length > 0) {
                     this.enrichColors();
                 }
-            });
+            };
+            const bridge = getRuntimeBridge();
+            if (bridge.on) {
+                bridge.on('categories-updated', this._categoriesUpdatedHandler);
+            } else {
+                window.addEventListener('categories-updated', this._categoriesUpdatedHandler);
+            }
             
             // Also sync with global data if available
             if (this.$root && this.$root.categories) {
@@ -598,10 +619,16 @@ const ColorDictionaryComponent = {
         
         syncColors() {
             // Listen for color updates
-            window.addEventListener('colors-updated', (event) => {
+            this._colorsUpdatedHandler = (event) => {
                 this.colors = event.detail || [];
                 this.enrichColors();
-            });
+            };
+            const bridge = getRuntimeBridge();
+            if (bridge.on) {
+                bridge.on('colors-updated', this._colorsUpdatedHandler);
+            } else {
+                window.addEventListener('colors-updated', this._colorsUpdatedHandler);
+            }
             
             // Also sync with global data if available
             if (this.$root && this.$root.customColors) {
@@ -791,6 +818,22 @@ const ColorDictionaryComponent = {
             }
             if (this.handleClickOutside) {
                 this.$el.removeEventListener('click', this.handleClickOutside);
+            }
+            if (this._categoriesUpdatedHandler) {
+                const bridge = getRuntimeBridge();
+                if (bridge.off) {
+                    bridge.off('categories-updated', this._categoriesUpdatedHandler);
+                } else {
+                    window.removeEventListener('categories-updated', this._categoriesUpdatedHandler);
+                }
+            }
+            if (this._colorsUpdatedHandler) {
+                const bridge = getRuntimeBridge();
+                if (bridge.off) {
+                    bridge.off('colors-updated', this._colorsUpdatedHandler);
+                } else {
+                    window.removeEventListener('colors-updated', this._colorsUpdatedHandler);
+                }
             }
         }
     },

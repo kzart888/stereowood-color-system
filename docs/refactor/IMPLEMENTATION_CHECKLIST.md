@@ -226,7 +226,8 @@ Choose a suitable modernization path after legacy stabilization.
 - [x] Keep deterministic Docker builds (`npm ci --omit=dev` + lockfile in git).
 - [x] Ensure runtime DB files remain untracked.
 
-## Current Next Actions
-1. Merge `stabilize-legacy` into `main` after final gate artifacts are committed.
-2. Create architecture-upgrade branch from `main` for deep modular refactor planning.
-3. Start architecture planning with `refactor-planner` using Phase 5 outputs as baseline.
+## Current Next Actions (Architecture Replan)
+1. Confirm batch sequencing and scope in `docs/architecture/PHASE_A_BLUEPRINT.md`.
+2. Execute checklist items from `docs/architecture/IMPLEMENTATION_CHECKLIST.md` starting at A3.
+3. Keep dependency boundaries aligned with `docs/architecture/MODULE_MAP.md`.
+4. Run `code-review-agent` gate after each batch and full gate at A8.
