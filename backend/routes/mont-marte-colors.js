@@ -8,7 +8,8 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const MontMarteColorService = require('../services/MontMarteColorService');
+const MontMarteColorService = require('../domains/materials/service');
+const { extractAuditContext } = require('./helpers/request-audit-context');
 
 const router = express.Router();
 
@@ -48,7 +49,11 @@ router.get('/mont-marte-colors', async (req, res) => {
 // POST /api/mont-marte-colors
 router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
   try {
-    const created = await MontMarteColorService.createColor(req.body, req.file ? req.file.filename : null);
+    const created = await MontMarteColorService.createColor(
+      req.body,
+      req.file ? req.file.filename : null,
+      extractAuditContext(req)
+    );
     return res.json(created);
   } catch (error) {
     return mapServiceError(res, error);
@@ -61,7 +66,8 @@ router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) =>
     const updated = await MontMarteColorService.updateColor(
       req.params.id,
       req.body,
-      req.file ? req.file.filename : null
+      req.file ? req.file.filename : null,
+      extractAuditContext(req)
     );
     return res.json(updated);
   } catch (error) {
@@ -72,7 +78,7 @@ router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) =>
 // DELETE /api/mont-marte-colors/:id
 router.delete('/mont-marte-colors/:id', async (req, res) => {
   try {
-    const deleted = await MontMarteColorService.deleteColor(req.params.id);
+    const deleted = await MontMarteColorService.deleteColor(req.params.id, extractAuditContext(req));
     return res.json(deleted);
   } catch (error) {
     return mapServiceError(res, error);

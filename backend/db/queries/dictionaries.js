@@ -35,6 +35,10 @@ function findSupplierByName(name) {
   return dbGet('SELECT id, name FROM suppliers WHERE LOWER(name) = LOWER(?)', [name]);
 }
 
+function findSupplierById(id) {
+  return dbGet('SELECT id, name FROM suppliers WHERE id = ?', [id]);
+}
+
 async function createSupplier(name) {
   const result = await dbRun('INSERT INTO suppliers(name) VALUES (?)', [name]);
   return { id: result.lastID, name };
@@ -56,6 +60,10 @@ function findPurchaseLinkByUrl(url) {
   return dbGet('SELECT id, url FROM purchase_links WHERE LOWER(url) = LOWER(?)', [url]);
 }
 
+function findPurchaseLinkById(id) {
+  return dbGet('SELECT id, url FROM purchase_links WHERE id = ?', [id]);
+}
+
 async function createPurchaseLink(url) {
   const result = await dbRun('INSERT INTO purchase_links(url) VALUES (?)', [url]);
   return { id: result.lastID, url };
@@ -64,10 +72,12 @@ async function createPurchaseLink(url) {
 module.exports = {
   listSuppliers,
   findSupplierByName,
+  findSupplierById,
   createSupplier,
   countSupplierReferences,
   deleteSupplier,
   listPurchaseLinks,
   findPurchaseLinkByUrl,
+  findPurchaseLinkById,
   createPurchaseLink,
 };

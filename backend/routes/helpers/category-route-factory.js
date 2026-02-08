@@ -1,5 +1,6 @@
 const express = require('express');
-const CategoryService = require('../../services/CategoryService');
+const CategoryService = require('../../domains/categories/service');
+const { extractAuditContext } = require('./request-audit-context');
 const {
   parseRequiredName,
   buildCategoryCode,
@@ -58,7 +59,7 @@ function createCategoryRouter(options) {
         code: categoryCode,
         name: normalizedName,
         display_order: order,
-      });
+      }, extractAuditContext(req));
 
       return res.json(created);
     } catch (error) {
@@ -79,7 +80,7 @@ function createCategoryRouter(options) {
     }
 
     try {
-      await CategoryService.reorder(options.serviceType, updates);
+      await CategoryService.reorder(options.serviceType, updates, extractAuditContext(req));
       return res.json({ success: true, message: `Updated ${updates.length} categories.` });
     } catch (error) {
       return mapCategoryServiceError(res, error, options);
@@ -110,7 +111,7 @@ function createCategoryRouter(options) {
       const updated = await CategoryService.update(options.serviceType, id, {
         name: normalizedName,
         code,
-      });
+      }, extractAuditContext(req));
 
       if (!updated) {
         return sendError(res, 404, 'Category not found.');
@@ -130,7 +131,7 @@ function createCategoryRouter(options) {
     }
 
     try {
-      await CategoryService.remove(options.serviceType, id);
+      await CategoryService.remove(options.serviceType, id, extractAuditContext(req));
       return res.json({ success: true, message: 'Category deleted.' });
     } catch (error) {
       return mapCategoryServiceError(res, error, options);

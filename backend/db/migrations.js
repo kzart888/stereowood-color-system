@@ -1,17 +1,17 @@
-/* =========================================================
-   模块：db/migrations.js
-   职责：数据库表初始化与后续迁移。
-   引用：server.js 在启动时调用 initDatabase() 与 runMigrations()。
-   来源：
-   - initDatabase(): 迁移自 server.js 中 “创建数据库表结构” 八张表（1..8）
-   - runMigrations(): 迁移自 server.js 底部的“启动迁移”（suppliers / purchase_links 字典表 + mont_marte_colors 列扩展）
-   依赖：db/index.js 导出的 db 连接
-   约定：不修改 URL，不改变现有路由行为。仅负责 DDL。
+﻿/* =========================================================
+   妯″潡锛歞b/migrations.js
+   鑱岃矗锛氭暟鎹簱琛ㄥ垵濮嬪寲涓庡悗缁縼绉汇€?
+   寮曠敤锛歴erver.js 鍦ㄥ惎鍔ㄦ椂璋冪敤 initDatabase() 涓?runMigrations()銆?
+   鏉ユ簮锛?
+   - initDatabase(): 杩佺Щ鑷?server.js 涓?鈥滃垱寤烘暟鎹簱琛ㄧ粨鏋勨€?鍏紶琛紙1..8锛?
+   - runMigrations(): 杩佺Щ鑷?server.js 搴曢儴鐨勨€滃惎鍔ㄨ縼绉烩€濓紙suppliers / purchase_links 瀛楀吀琛?+ mont_marte_colors 鍒楁墿灞曪級
+   渚濊禆锛歞b/index.js 瀵煎嚭鐨?db 杩炴帴
+   绾﹀畾锛氫笉淇敼 URL锛屼笉鏀瑰彉鐜版湁璺敱琛屼负銆備粎璐熻矗 DDL銆?
    ========================================================= */
 
 const { db } = require('./index');
 
-// 工具：检查列是否存在（用于增列迁移）
+// 宸ュ叿锛氭鏌ュ垪鏄惁瀛樺湪锛堢敤浜庡鍒楄縼绉伙級
 function columnExists(table, column) {
   return new Promise((resolve, reject) => {
     db.all(`PRAGMA table_info(${table})`, (err, rows) => {
@@ -21,7 +21,7 @@ function columnExists(table, column) {
   });
 }
 
-// 工具：安全执行 SQL（用于 CREATE/ALTER）
+// 宸ュ叿锛氬畨鍏ㄦ墽琛?SQL锛堢敤浜?CREATE/ALTER锛?
 function runSafe(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
@@ -31,9 +31,22 @@ function runSafe(sql, params = []) {
   });
 }
 
-// 初始化核心表（与原 server.js 保持一致）
+function tableExists(table) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`,
+      [table],
+      (err, row) => {
+        if (err) return reject(err);
+        resolve(Boolean(row));
+      }
+    );
+  });
+}
+
+// 鍒濆鍖栨牳蹇冭〃锛堜笌鍘?server.js 淇濇寔涓€鑷达級
 async function initDatabase() {
-  // 顺序与原实现保持一致，便于对照
+  // 椤哄簭涓庡師瀹炵幇淇濇寔涓€鑷达紝渚夸簬瀵圭収
   db.run(`CREATE TABLE IF NOT EXISTS color_categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT UNIQUE NOT NULL,
@@ -118,11 +131,11 @@ async function initDatabase() {
     FOREIGN KEY (scheme_id) REFERENCES color_schemes (id)
   )`);
 
-  // 初始化所有默认分类（使用英文代码）
-  // 注意：这些将在 runMigrations 中进一步完善
+  // 鍒濆鍖栨墍鏈夐粯璁ゅ垎绫伙紙浣跨敤鑻辨枃浠ｇ爜锛?
+  // 娉ㄦ剰锛氳繖浜涘皢鍦?runMigrations 涓繘涓€姝ュ畬鍠?
 }
 
-// 后续迁移：创建字典表与原表增列（保持与原 server.js 一致）
+// 鍚庣画杩佺Щ锛氬垱寤哄瓧鍏歌〃涓庡師琛ㄥ鍒楋紙淇濇寔涓庡師 server.js 涓€鑷达級
 async function runMigrations() {
   try {
     await runSafe(`
@@ -157,13 +170,13 @@ async function runMigrations() {
       await runSafe(`ALTER TABLE mont_marte_colors ADD COLUMN category TEXT NULL`);
     }
 
-    // 迁移：添加 initial_thumbnail_path 到 color_schemes 表
+    // 杩佺Щ锛氭坊鍔?initial_thumbnail_path 鍒?color_schemes 琛?
     if (!(await columnExists('color_schemes', 'initial_thumbnail_path'))) {
       await runSafe(`ALTER TABLE color_schemes ADD COLUMN initial_thumbnail_path TEXT NULL`);
     }
 
-    // 迁移：custom_colors_history 去除对 custom_colors 的外键约束，避免删除父记录时受阻
-    // 检测是否存在外键引用
+    // 杩佺Щ锛歝ustom_colors_history 鍘婚櫎瀵?custom_colors 鐨勫閿害鏉燂紝閬垮厤鍒犻櫎鐖惰褰曟椂鍙楅樆
+    // 妫€娴嬫槸鍚﹀瓨鍦ㄥ閿紩鐢?
     const hasHistoryFK = await new Promise((resolve) => {
       db.all(`PRAGMA foreign_key_list(custom_colors_history)`, (err, rows) => {
         if (err) { return resolve(false); }
@@ -203,7 +216,7 @@ async function runMigrations() {
       });
     }
 
-    // 并发控制优化：添加版本字段到关键表
+    // 骞跺彂鎺у埗浼樺寲锛氭坊鍔犵増鏈瓧娈靛埌鍏抽敭琛?
     if (!(await columnExists('custom_colors', 'version'))) {
       await runSafe(`ALTER TABLE custom_colors ADD COLUMN version INTEGER DEFAULT 1`);
     }
@@ -383,7 +396,7 @@ async function runMigrations() {
     `);
     
     // 7. DISABLED: Auto-categorization based on prefix
-    // This was causing issues with custom category codes like "BW" for "黑白灰色系"
+    // This was causing issues with custom category codes like "BW" for "榛戠櫧鐏拌壊绯?
     // Users should have full control over their categorization
     // Commenting out to prevent automatic recategorization
     /*
@@ -441,10 +454,93 @@ async function runMigrations() {
     if (!(await columnExists('custom_colors_history', 'pure_hex_color'))) {
       await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN pure_hex_color TEXT`);
     }
+    // ==================================================================
+    // Phase A3: History and audit foundation (additive)
+    // ==================================================================
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS audit_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER,
+        action TEXT NOT NULL,
+        actor_id TEXT,
+        actor_name TEXT,
+        request_id TEXT,
+        source TEXT DEFAULT 'api',
+        ip_address TEXT,
+        user_agent TEXT,
+        status TEXT DEFAULT 'ok',
+        error_message TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS entity_change_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        audit_event_id INTEGER,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        before_data TEXT,
+        after_data TEXT,
+        change_summary TEXT,
+        actor_id TEXT,
+        actor_name TEXT,
+        request_id TEXT,
+        source TEXT DEFAULT 'api',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (audit_event_id) REFERENCES audit_events (id)
+      )
+    `);
+
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_audit_events_entity ON audit_events(entity_type, entity_id, id DESC)`);
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_audit_events_request ON audit_events(request_id)`);
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_entity_change_events_entity ON entity_change_events(entity_type, entity_id, id DESC)`);
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_entity_change_events_audit ON entity_change_events(audit_event_id)`);
+
+    if (await tableExists('custom_colors_history')) {
+      if (!(await columnExists('custom_colors_history', 'change_action'))) {
+        await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN change_action TEXT DEFAULT 'UPDATE'`);
+      }
+      if (!(await columnExists('custom_colors_history', 'actor_id'))) {
+        await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN actor_id TEXT`);
+      }
+      if (!(await columnExists('custom_colors_history', 'actor_name'))) {
+        await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN actor_name TEXT`);
+      }
+      if (!(await columnExists('custom_colors_history', 'request_id'))) {
+        await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN request_id TEXT`);
+      }
+      if (!(await columnExists('custom_colors_history', 'source'))) {
+        await runSafe(`ALTER TABLE custom_colors_history ADD COLUMN source TEXT DEFAULT 'api'`);
+      }
+    }
+
+    if (await tableExists('color_schemes_history')) {
+      if (!(await columnExists('color_schemes_history', 'change_action'))) {
+        await runSafe(`ALTER TABLE color_schemes_history ADD COLUMN change_action TEXT DEFAULT 'UPDATE'`);
+      }
+      if (!(await columnExists('color_schemes_history', 'actor_id'))) {
+        await runSafe(`ALTER TABLE color_schemes_history ADD COLUMN actor_id TEXT`);
+      }
+      if (!(await columnExists('color_schemes_history', 'actor_name'))) {
+        await runSafe(`ALTER TABLE color_schemes_history ADD COLUMN actor_name TEXT`);
+      }
+      if (!(await columnExists('color_schemes_history', 'request_id'))) {
+        await runSafe(`ALTER TABLE color_schemes_history ADD COLUMN request_id TEXT`);
+      }
+      if (!(await columnExists('color_schemes_history', 'source'))) {
+        await runSafe(`ALTER TABLE color_schemes_history ADD COLUMN source TEXT DEFAULT 'api'`);
+      }
+    }
 
   } catch (e) {
-    console.error('数据库迁移失败:', e);
+    console.error('鏁版嵁搴撹縼绉诲け璐?', e);
   }
 }
 
 module.exports = { initDatabase, runMigrations };
+
+
+

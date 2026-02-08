@@ -3,6 +3,7 @@ const path = require('path');
 const { db } = require('../db/index');
 const montMarteColorQueries = require('../db/queries/mont-marte-colors');
 const { cascadeRenameInFormulasNoTransaction } = require('./formula');
+const AuditService = require('../domains/audit/service');
 
 function createError(message, statusCode, code, extraFields = {}) {
   const error = new Error(message);
@@ -121,7 +122,7 @@ class MontMarteColorService {
     return montMarteColorQueries.getAllColors();
   }
 
-  async createColor(body, fileName) {
+  async createColor(body, fileName, context = {}) {
     const normalized = normalizeWriteInput(body, { requireCategory: true });
 
     let colorId;
@@ -134,10 +135,20 @@ class MontMarteColorService {
       mapDbWriteError(error);
     }
 
-    return montMarteColorQueries.getColorById(colorId);
+    const created = await montMarteColorQueries.getColorById(colorId);
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'mont_marte_color',
+      entityId: colorId,
+      action: 'create',
+      before: null,
+      after: created,
+      summary: 'Created Mont-Marte color.',
+      context,
+    });
+    return created;
   }
 
-  async updateColor(idValue, body, fileName) {
+  async updateColor(idValue, body, fileName, context = {}) {
     const id = parsePositiveId(idValue);
     if (!id) {
       throw createError('Invalid color id.', 400, 'VALIDATION_ERROR');
@@ -189,10 +200,19 @@ class MontMarteColorService {
     }
 
     const updated = await montMarteColorQueries.getColorById(id);
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'mont_marte_color',
+      entityId: id,
+      action: 'update',
+      before: existing,
+      after: { ...updated, updatedReferences },
+      summary: 'Updated Mont-Marte color.',
+      context,
+    });
     return { ...updated, updatedReferences };
   }
 
-  async deleteColor(idValue) {
+  async deleteColor(idValue, context = {}) {
     const id = parsePositiveId(idValue);
     if (!id) {
       throw createError('Invalid color id.', 400, 'VALIDATION_ERROR');
@@ -215,6 +235,16 @@ class MontMarteColorService {
     if (existing.image_path) {
       await safeDeleteUpload(existing.image_path);
     }
+
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'mont_marte_color',
+      entityId: id,
+      action: 'delete',
+      before: existing,
+      after: null,
+      summary: 'Deleted Mont-Marte color.',
+      context,
+    });
 
     return { success: true, message: 'Color deleted successfully.' };
   }

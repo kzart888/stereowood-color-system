@@ -1,7 +1,8 @@
-﻿const path = require('path');
+const path = require('path');
 const fs = require('fs').promises;
 const { db } = require('../db/index');
 const colorQueries = require('../db/queries/colors');
+const AuditService = require('../domains/audit/service');
 
 const COLOR_ERROR = {
   VALIDATION: 'VALIDATION_ERROR',
@@ -168,7 +169,7 @@ class ColorService {
     return color;
   }
 
-  async createColor(colorData) {
+  async createColor(colorData, context = {}) {
     if (!colorData || !colorData.color_code) {
       throw createColorError(COLOR_ERROR.VALIDATION, 'color_code is required.');
     }
@@ -183,7 +184,17 @@ class ColorService {
 
     try {
       const colorId = await colorQueries.createColor(colorData);
-      return await this.getColorById(colorId);
+      const created = await this.getColorById(colorId);
+      await AuditService.recordEntityChangeSafe({
+        entityType: 'custom_color',
+        entityId: colorId,
+        action: 'create',
+        before: null,
+        after: created,
+        summary: 'Created custom color.',
+        context,
+      });
+      return created;
     } catch (error) {
       if (isConstraintError(error)) {
         throw createColorError(COLOR_ERROR.DUPLICATE, 'Color code already exists.');
@@ -192,7 +203,7 @@ class ColorService {
     }
   }
 
-  async updateColor(id, colorData, expectedVersion = null) {
+  async updateColor(id, colorData, expectedVersion = null, context = {}) {
     this.validateColorData(colorData);
     this.normalizePureColorPayload(colorData);
 
@@ -229,10 +240,6 @@ class ColorService {
       (colorData.applicable_layers !== undefined &&
         colorData.applicable_layers !== existing.applicable_layers);
 
-    if (shouldArchive) {
-      await colorQueries.archiveColorHistory(id, existing);
-    }
-
     let changes;
     try {
       changes = await colorQueries.updateColor(id, colorData, expectedVersion);
@@ -256,10 +263,34 @@ class ColorService {
       return existing;
     }
 
-    return this.getColorById(id);
+    if (shouldArchive) {
+      try {
+        await colorQueries.archiveColorHistory(id, existing, {
+          changeAction: 'UPDATE',
+          actorId: context.actorId,
+          actorName: context.actorName,
+          requestId: context.requestId,
+          source: context.source,
+        });
+      } catch (error) {
+        console.warn('Custom color history archive failed (update):', error.message);
+      }
+    }
+
+    const updated = await this.getColorById(id);
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'custom_color',
+      entityId: id,
+      action: 'update',
+      before: existing,
+      after: updated,
+      summary: 'Updated custom color.',
+      context,
+    });
+    return updated;
   }
 
-  async deleteColor(id) {
+  async deleteColor(id, context = {}) {
     const color = await colorQueries.getColorById(id);
     if (!color) {
       throw createColorError(COLOR_ERROR.NOT_FOUND, 'Custom color not found.');
@@ -279,6 +310,29 @@ class ColorService {
       if (changes === 0) {
         throw createColorError(COLOR_ERROR.NOT_FOUND, 'Custom color not found.');
       }
+
+      try {
+        await colorQueries.archiveColorHistory(id, color, {
+          changeAction: 'DELETE',
+          actorId: context.actorId,
+          actorName: context.actorName,
+          requestId: context.requestId,
+          source: context.source,
+        });
+      } catch (error) {
+        console.warn('Custom color history archive failed (delete):', error.message);
+      }
+
+      await AuditService.recordEntityChangeSafe({
+        entityType: 'custom_color',
+        entityId: id,
+        action: 'delete',
+        before: color,
+        after: null,
+        summary: 'Deleted custom color.',
+        context,
+      });
+
       return { success: true, deletedId: id };
     } catch (error) {
       if (error.code === COLOR_ERROR.NOT_FOUND) {
@@ -311,7 +365,7 @@ class ColorService {
     }
   }
 
-  async forceMerge({ keepId, removeIds, signature }) {
+  async forceMerge({ keepId, removeIds, signature }, context = {}) {
     if (!keepId || !Array.isArray(removeIds) || removeIds.length === 0) {
       throw createColorError(COLOR_ERROR.MERGE_INVALID, 'Invalid merge payload.');
     }
@@ -348,8 +402,9 @@ class ColorService {
           INSERT INTO custom_colors_history
           (custom_color_id, color_code, image_path, formula, applicable_layers,
            rgb_r, rgb_g, rgb_b, cmyk_c, cmyk_m, cmyk_y, cmyk_k,
-           hex_color, pantone_coated, pantone_uncoated)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           hex_color, pantone_coated, pantone_uncoated,
+           change_action, actor_id, actor_name, request_id, source)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             row.id,
@@ -367,6 +422,11 @@ class ColorService {
             row.hex_color,
             row.pantone_coated,
             row.pantone_uncoated,
+            'MERGE_REMOVE',
+            context.actorId || null,
+            context.actorName || null,
+            context.requestId || null,
+            context.source || 'api',
           ]
         );
       }
@@ -385,6 +445,22 @@ class ColorService {
       );
 
       await dbRun('COMMIT');
+
+      await AuditService.recordEntityChangeSafe({
+        entityType: 'custom_color',
+        entityId: keepId,
+        action: 'merge',
+        before: {
+          keep: keepRow,
+          removed: removeRows,
+        },
+        after: {
+          keepId,
+          removedIds: removeIds,
+        },
+        summary: 'Merged duplicate custom colors.',
+        context,
+      });
 
       return {
         success: true,
@@ -407,3 +483,12 @@ class ColorService {
 }
 
 module.exports = new ColorService();
+
+
+
+
+
+
+
+
+

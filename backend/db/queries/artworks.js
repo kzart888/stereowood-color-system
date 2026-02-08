@@ -141,6 +141,96 @@ function getSchemeById(schemeId) {
     });
 }
 
+function getSchemeWithLayers(schemeId) {
+    return new Promise((resolve, reject) => {
+        db.all(
+            `
+            SELECT
+                cs.id,
+                cs.artwork_id,
+                cs.scheme_name,
+                cs.thumbnail_path,
+                cs.initial_thumbnail_path,
+                cs.version,
+                sl.layer_number,
+                sl.custom_color_id,
+                sl.manual_formula,
+                cc.color_code
+            FROM color_schemes cs
+            LEFT JOIN scheme_layers sl ON sl.scheme_id = cs.id
+            LEFT JOIN custom_colors cc ON cc.id = sl.custom_color_id
+            WHERE cs.id = ?
+            ORDER BY sl.layer_number ASC
+            `,
+            [schemeId],
+            (err, rows) => {
+                if (err) return reject(err);
+                if (!rows || rows.length === 0) return resolve(null);
+
+                const head = rows[0];
+                const layers = rows
+                    .filter((row) => row.layer_number !== null && row.layer_number !== undefined)
+                    .map((row) => ({
+                        layer_number: row.layer_number,
+                        custom_color_id: row.custom_color_id ?? null,
+                        color_code: row.color_code ?? null,
+                        manual_formula: row.manual_formula ?? null,
+                    }));
+
+                resolve({
+                    id: head.id,
+                    artwork_id: head.artwork_id,
+                    scheme_name: head.scheme_name,
+                    thumbnail_path: head.thumbnail_path,
+                    initial_thumbnail_path: head.initial_thumbnail_path,
+                    version: head.version ?? null,
+                    layers,
+                });
+            }
+        );
+    });
+}
+
+function archiveSchemeHistory(schemeData, metadata = {}) {
+    if (!schemeData || !schemeData.id) {
+        return Promise.resolve(null);
+    }
+
+    const layersData = JSON.stringify(schemeData.layers || []);
+    return new Promise((resolve, reject) => {
+        db.run(
+            `
+            INSERT INTO color_schemes_history (
+                scheme_id,
+                scheme_name,
+                thumbnail_path,
+                layers_data,
+                change_action,
+                actor_id,
+                actor_name,
+                request_id,
+                source
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+                schemeData.id,
+                schemeData.scheme_name,
+                schemeData.thumbnail_path,
+                layersData,
+                metadata.changeAction || 'UPDATE',
+                metadata.actorId || null,
+                metadata.actorName || null,
+                metadata.requestId || null,
+                metadata.source || 'api',
+            ],
+            function onArchive(err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+            }
+        );
+    });
+}
+
 /**
  * 创建配色方案
  * @param {Object} schemeData - 方案数据
@@ -302,6 +392,8 @@ module.exports = {
     deleteArtwork,
     getArtworkSchemes,
     getSchemeById,
+    getSchemeWithLayers,
+    archiveSchemeHistory,
     createScheme,
     updateScheme,
     deleteScheme

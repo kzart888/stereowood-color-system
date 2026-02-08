@@ -2,7 +2,8 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const ColorService = require('../services/ColorService');
+const ColorService = require('../domains/custom-colors/service');
+const { extractAuditContext } = require('./helpers/request-audit-context');
 
 const router = express.Router();
 
@@ -161,7 +162,7 @@ router.post('/custom-colors', upload.single('image'), async (req, res) => {
       image_path: req.file ? req.file.filename : null,
     };
 
-    const result = await ColorService.createColor(colorData);
+    const result = await ColorService.createColor(colorData, extractAuditContext(req));
     return res.json(result);
   } catch (error) {
     return mapColorServiceError(res, error, 500);
@@ -189,7 +190,7 @@ router.delete('/custom-colors/:id', async (req, res) => {
       return sendError(res, 400, 'Invalid custom color id.');
     }
 
-    const result = await ColorService.deleteColor(colorId);
+    const result = await ColorService.deleteColor(colorId, extractAuditContext(req));
     return res.json(result);
   } catch (error) {
     return mapColorServiceError(res, error, 500);
@@ -257,7 +258,12 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
       colorData.image_path = normalizeStringOrNull(req.body.existingImagePath);
     }
 
-    const updatedColor = await ColorService.updateColor(colorId, colorData, versionResult.value);
+    const updatedColor = await ColorService.updateColor(
+      colorId,
+      colorData,
+      versionResult.value,
+      extractAuditContext(req)
+    );
     return res.json(updatedColor);
   } catch (error) {
     return mapColorServiceError(res, error, 500);
@@ -279,11 +285,14 @@ router.post('/custom-colors/force-merge', async (req, res) => {
       return sendError(res, 400, 'Invalid merge payload. keepId and removeIds are required.');
     }
 
-    const result = await ColorService.forceMerge({
-      keepId,
-      removeIds,
-      signature: req.body.signature,
-    });
+    const result = await ColorService.forceMerge(
+      {
+        keepId,
+        removeIds,
+        signature: req.body.signature,
+      },
+      extractAuditContext(req)
+    );
 
     return res.json(result);
   } catch (error) {

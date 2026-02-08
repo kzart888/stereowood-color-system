@@ -45,3 +45,23 @@
 - Confirm migrated column exists:
   - `PRAGMA table_info(scheme_layers);`
   - Expected column list includes `manual_formula`.
+
+## A3 Additive Migration Rehearsal (History + Audit)
+- Date: 2026-02-08
+- Command: `npm run phaseA:a3:db-dryrun`
+- Source DB set: `backend/production_db/data/color_management.db` + WAL + SHM
+- Method:
+  1. Copy trio into a temp rehearsal DB.
+  2. Boot backend once against copied DB to run migrations.
+  3. Verify schema and integrity after startup.
+- Results:
+  - `A3_DB_DRYRUN=PASS`
+  - Added tables detected:
+    - `audit_events`
+    - `entity_change_events`
+  - Added metadata columns detected:
+    - `custom_colors_history`: `change_action`, `actor_id`, `actor_name`, `request_id`, `source`
+    - `color_schemes_history`: `change_action`, `actor_id`, `actor_name`, `request_id`, `source`
+  - `PRAGMA integrity_check` = `ok`
+  - `PRAGMA quick_check` = `ok`
+  - `PRAGMA foreign_key_check` = no violations

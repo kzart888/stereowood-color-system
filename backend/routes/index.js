@@ -20,5 +20,6 @@ router.use(require('./dictionaries'));
 router.use(require('./mont-marte-colors'));
 router.use(require('./custom-colors'));
 router.use(require('./artworks'));
+router.use(require('./history'));
 
 module.exports = router;

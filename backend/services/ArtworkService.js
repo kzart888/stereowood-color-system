@@ -1,7 +1,7 @@
-/**
- * 作品业务逻辑服务
- * 职责：处理作品和配色方案相关的业务逻辑
- * 引用：被 routes/artworks.js 使用
+﻿/**
+ * 浣滃搧涓氬姟閫昏緫鏈嶅姟
+ * 鑱岃矗锛氬鐞嗕綔鍝佸拰閰嶈壊鏂规鐩稿叧鐨勪笟鍔￠€昏緫
+ * 寮曠敤锛氳 routes/artworks.js 浣跨敤
  * @module services/ArtworkService
  */
 
@@ -9,23 +9,22 @@ const artworkQueries = require('../db/queries/artworks');
 const { db } = require('../db/index');
 const fs = require('fs').promises;
 const path = require('path');
+const AuditService = require('../domains/audit/service');
 
 class ArtworkService {
     /**
-     * 获取所有作品
-     */
+     * 鑾峰彇鎵€鏈変綔鍝?     */
     async getAllArtworks() {
         try {
             const rows = await artworkQueries.getAllArtworks();
             return this.formatArtworkData(rows);
         } catch (error) {
-            throw new Error(`获取作品列表失败: ${error.message}`);
+            throw new Error(`鑾峰彇浣滃搧鍒楄〃澶辫触: ${error.message}`);
         }
     }
 
     /**
-     * 格式化作品数据结构
-     */
+     * 鏍煎紡鍖栦綔鍝佹暟鎹粨鏋?     */
     formatArtworkData(rows) {
         const artworksMap = new Map();
         
@@ -74,25 +73,35 @@ class ArtworkService {
     }
 
     /**
-     * 创建新作品
-     */
-    async createArtwork(artworkData) {
+     * 鍒涘缓鏂颁綔鍝?     */
+    async createArtwork(artworkData, context = {}) {
         try {
             const artworkId = await artworkQueries.createArtwork(artworkData);
-            return await artworkQueries.getArtworkById(artworkId);
+            const created = await artworkQueries.getArtworkById(artworkId);
+            await AuditService.recordEntityChangeSafe({
+                entityType: 'artwork',
+                entityId: artworkId,
+                action: 'create',
+                before: null,
+                after: created,
+                summary: 'Created artwork.',
+                context,
+            });
+            return created;
         } catch (error) {
             if (error.message.includes('UNIQUE')) {
                 throw new Error('Artwork code already exists.');
             }
-            throw new Error(`创建作品失败: ${error.message}`);
+            throw new Error(`鍒涘缓浣滃搧澶辫触: ${error.message}`);
         }
     }
 
     /**
-     * 删除作品
+     * 鍒犻櫎浣滃搧
      */
-    async deleteArtwork(id) {
+    async deleteArtwork(id, context = {}) {
         try {
+            const existingArtwork = await artworkQueries.getArtworkById(id);
             const schemes = await artworkQueries.getArtworkSchemes(id);
 
             const filesToDelete = new Set();
@@ -110,14 +119,28 @@ class ArtworkService {
             }
 
             const changes = await artworkQueries.deleteArtwork(id);
+            if (changes > 0) {
+                await AuditService.recordEntityChangeSafe({
+                    entityType: 'artwork',
+                    entityId: Number(id),
+                    action: 'delete',
+                    before: {
+                        artwork: existingArtwork,
+                        schemes,
+                    },
+                    after: null,
+                    summary: 'Deleted artwork.',
+                    context,
+                });
+            }
             return { success: changes > 0, deletedId: id };
         } catch (error) {
-            throw new Error(`删除作品失败: ${error.message}`);
+            throw new Error(`鍒犻櫎浣滃搧澶辫触: ${error.message}`);
         }
     }
 
     /**
-     * 将颜色代码转换为颜色ID
+     * 灏嗛鑹蹭唬鐮佽浆鎹负棰滆壊ID
      */
     async convertColorCodesToIds(layers) {
         if (!layers || !layers.length) return [];
@@ -164,72 +187,126 @@ class ArtworkService {
     }
 
     /**
-     * 创建配色方案
+     * 鍒涘缓閰嶈壊鏂规
      */
-    async createScheme(schemeData) {
+    async createScheme(schemeData, context = {}) {
         try {
-            // Convert color codes to IDs if needed
             const convertedLayers = await this.convertColorCodesToIds(schemeData.layers);
             const dataWithConvertedLayers = {
                 ...schemeData,
                 layers: convertedLayers
             };
-            
+
             const schemeId = await artworkQueries.createScheme(dataWithConvertedLayers);
+            const createdScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+            await AuditService.recordEntityChangeSafe({
+                entityType: 'color_scheme',
+                entityId: schemeId,
+                action: 'create',
+                before: null,
+                after: createdScheme,
+                summary: 'Created color scheme.',
+                context,
+            });
             return { id: schemeId, ...schemeData };
         } catch (error) {
-            throw new Error(`创建配色方案失败: ${error.message}`);
+            throw new Error(`鍒涘缓閰嶈壊鏂规澶辫触: ${error.message}`);
         }
     }
 
     /**
-     * 更新配色方案
+     * 鏇存柊閰嶈壊鏂规
      */
-    async updateScheme(schemeId, schemeData) {
+    async updateScheme(schemeId, schemeData, context = {}) {
         try {
-            // Convert color codes to IDs if needed
+            const existingScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+
             const convertedLayers = await this.convertColorCodesToIds(schemeData.layers);
             const dataWithConvertedLayers = {
                 ...schemeData,
                 layers: convertedLayers
             };
-            
+
             await artworkQueries.updateScheme(schemeId, dataWithConvertedLayers);
+            const updatedScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+            if (existingScheme) {
+                try {
+                    await artworkQueries.archiveSchemeHistory(existingScheme, {
+                        changeAction: 'UPDATE',
+                        actorId: context.actorId,
+                        actorName: context.actorName,
+                        requestId: context.requestId,
+                        source: context.source,
+                    });
+                } catch (archiveError) {
+                    console.warn('Scheme history archive failed (update):', archiveError.message);
+                }
+            }
+            await AuditService.recordEntityChangeSafe({
+                entityType: 'color_scheme',
+                entityId: Number(schemeId),
+                action: 'update',
+                before: existingScheme,
+                after: updatedScheme,
+                summary: 'Updated color scheme.',
+                context,
+            });
             return { success: true };
         } catch (error) {
-            throw new Error(`更新配色方案失败: ${error.message}`);
+            throw new Error(`鏇存柊閰嶈壊鏂规澶辫触: ${error.message}`);
         }
     }
 
     /**
-     * 删除配色方案
+     * 鍒犻櫎閰嶈壊鏂规
      */
-    async deleteScheme(schemeId) {
+    async deleteScheme(schemeId, context = {}) {
         try {
-            // 获取方案信息以删除缩略图
             const scheme = await artworkQueries.getSchemeById(schemeId);
-            
+            const existingScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+
             if (scheme) {
-                // 删除主缩略图
                 if (scheme.thumbnail_path) {
                     await this.deleteUploadedImage(scheme.thumbnail_path);
                 }
-                // 删除初始方案缩略图
                 if (scheme.initial_thumbnail_path) {
                     await this.deleteUploadedImage(scheme.initial_thumbnail_path);
                 }
             }
-            
+
             const changes = await artworkQueries.deleteScheme(schemeId);
+            if (changes > 0 && existingScheme) {
+                try {
+                    await artworkQueries.archiveSchemeHistory(existingScheme, {
+                        changeAction: 'DELETE',
+                        actorId: context.actorId,
+                        actorName: context.actorName,
+                        requestId: context.requestId,
+                        source: context.source,
+                    });
+                } catch (archiveError) {
+                    console.warn('Scheme history archive failed (delete):', archiveError.message);
+                }
+            }
+            if (changes > 0) {
+                await AuditService.recordEntityChangeSafe({
+                    entityType: 'color_scheme',
+                    entityId: Number(schemeId),
+                    action: 'delete',
+                    before: existingScheme,
+                    after: null,
+                    summary: 'Deleted color scheme.',
+                    context,
+                });
+            }
             return { success: changes > 0, deletedId: schemeId };
         } catch (error) {
-            throw new Error(`删除配色方案失败: ${error.message}`);
+            throw new Error(`鍒犻櫎閰嶈壊鏂规澶辫触: ${error.message}`);
         }
     }
 
     /**
-     * 删除上传的图片文件
-     */
+     * 鍒犻櫎涓婁紶鐨勫浘鐗囨枃浠?     */
     async deleteUploadedImage(imagePath) {
         if (!imagePath) return;
         
@@ -237,10 +314,12 @@ class ArtworkService {
             const fullPath = path.join(__dirname, '..', 'uploads', path.basename(imagePath));
             await fs.unlink(fullPath);
         } catch (error) {
-            console.warn('删除图片文件失败:', error.message);
+            console.warn('鍒犻櫎鍥剧墖鏂囦欢澶辫触:', error.message);
         }
     }
 }
 
 module.exports = new ArtworkService();
+
+
 

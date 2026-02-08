@@ -1,6 +1,6 @@
 # Backend API Overview
 
-Last updated: 2026-02-07
+Last updated: 2026-02-08
 
 This document describes the current Express + SQLite contract served by `backend/server.js`.
 
@@ -121,6 +121,36 @@ Source: `backend/routes/dictionaries.js` -> `backend/services/DictionaryService.
 
 Notes:
 - Route handlers are thin; validation and conflict checks are in service/query layers.
+
+### History Timeline (A3)
+Source: `backend/routes/history.js` -> `backend/domains/history/service.js` -> `backend/db/queries/audit-events.js`
+
+- `GET /api/history/:entityType/:entityId?limit=<n>`
+
+Allowed `entityType`:
+- `custom_color`
+- `artwork`
+- `color_scheme`
+- `mont_marte_color`
+- `supplier`
+- `purchase_link`
+- `category`
+- `mont_marte_category`
+
+Response shape:
+- `{ entityType, entityId, events: [...] }`
+
+Notes:
+- Timeline events are additive and do not change existing endpoint payloads.
+- `limit` is optional (default `50`, max `200`).
+
+## Optional Audit Context Headers
+- `x-actor-id`
+- `x-actor-name`
+- `x-request-id`
+- `x-source`
+
+If omitted, write flows still work and audit defaults are used.
 
 ## Error Behavior Notes
 - Validation issues generally return `400`.

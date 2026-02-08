@@ -240,7 +240,7 @@ function deleteColor(id) {
   });
 }
 
-function archiveColorHistory(colorId, colorData) {
+function archiveColorHistory(colorId, colorData, metadata = {}) {
   const { color_code, image_path, formula, applicable_layers } = colorData;
 
   return new Promise((resolve, reject) => {
@@ -248,8 +248,9 @@ function archiveColorHistory(colorId, colorData) {
       `
       INSERT INTO custom_colors_history
       (custom_color_id, color_code, image_path, formula, applicable_layers,
-      pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      pure_rgb_r, pure_rgb_g, pure_rgb_b, pure_hex_color,
+      change_action, actor_id, actor_name, request_id, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         colorId,
@@ -261,6 +262,11 @@ function archiveColorHistory(colorId, colorData) {
         colorData.pure_rgb_g ?? null,
         colorData.pure_rgb_b ?? null,
         colorData.pure_hex_color ?? null,
+        metadata.changeAction || 'UPDATE',
+        metadata.actorId || null,
+        metadata.actorName || null,
+        metadata.requestId || null,
+        metadata.source || 'api',
       ],
       function onArchive(err) {
         if (err) reject(err);

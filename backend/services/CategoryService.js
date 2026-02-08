@@ -1,4 +1,5 @@
 const { db } = require('../db/index');
+const AuditService = require('../domains/audit/service');
 
 const CATEGORY_CONFIG = {
   color: {
@@ -83,7 +84,7 @@ class CategoryService {
     return dbAll(sql);
   }
 
-  async create(type, payload) {
+  async create(type, payload, context = {}) {
     const config = getConfig(type);
     const { code, name, display_order } = payload;
 
@@ -94,17 +95,36 @@ class CategoryService {
 
     const result = await dbRun(sql, [code, name, display_order]);
 
-    return {
+    const created = {
       id: result.lastID,
       code,
       name,
       display_order,
       [config.countAlias]: 0,
     };
+    await AuditService.recordEntityChangeSafe({
+      entityType: type === 'montMarte' ? 'mont_marte_category' : 'category',
+      entityId: result.lastID,
+      action: 'create',
+      before: null,
+      after: created,
+      summary: 'Created category.',
+      context,
+    });
+
+    return created;
   }
 
-  async reorder(type, updates) {
+  async reorder(type, updates, context = {}) {
     const config = getConfig(type);
+
+    const ids = updates.map((update) => update.id);
+    const beforeRows = ids.length > 0
+      ? await dbAll(
+          `SELECT id, code, name, display_order FROM ${config.categoryTable} WHERE id IN (${ids.map(() => '?').join(',')})`,
+          ids
+        )
+      : [];
 
     await dbRun('BEGIN TRANSACTION');
     try {
@@ -115,6 +135,24 @@ class CategoryService {
         );
       }
       await dbRun('COMMIT');
+      const afterRows = ids.length > 0
+        ? await dbAll(
+            `SELECT id, code, name, display_order FROM ${config.categoryTable} WHERE id IN (${ids.map(() => '?').join(',')})`,
+            ids
+          )
+        : [];
+      const beforeById = new Map(beforeRows.map((row) => [row.id, row]));
+      for (const row of afterRows) {
+        await AuditService.recordEntityChangeSafe({
+          entityType: type === 'montMarte' ? 'mont_marte_category' : 'category',
+          entityId: row.id,
+          action: 'reorder',
+          before: beforeById.get(row.id) || null,
+          after: row,
+          summary: 'Reordered category position.',
+          context,
+        });
+      }
     } catch (error) {
       try {
         await dbRun('ROLLBACK');
@@ -125,8 +163,9 @@ class CategoryService {
     }
   }
 
-  async update(type, id, payload) {
+  async update(type, id, payload, context = {}) {
     const config = getConfig(type);
+    const before = await dbGet(`SELECT id, code, name, display_order FROM ${config.categoryTable} WHERE id = ?`, [id]);
     const { name, code } = payload;
     const fields = ['name = ?'];
     const values = [name];
@@ -141,11 +180,24 @@ class CategoryService {
 
     const sql = `UPDATE ${config.categoryTable} SET ${fields.join(', ')} WHERE id = ?`;
     const result = await dbRun(sql, values);
+    if (result.changes > 0) {
+      const after = await dbGet(`SELECT id, code, name, display_order FROM ${config.categoryTable} WHERE id = ?`, [id]);
+      await AuditService.recordEntityChangeSafe({
+        entityType: type === 'montMarte' ? 'mont_marte_category' : 'category',
+        entityId: id,
+        action: 'update',
+        before,
+        after,
+        summary: 'Updated category.',
+        context,
+      });
+    }
     return result.changes > 0;
   }
 
-  async remove(type, id) {
+  async remove(type, id, context = {}) {
     const config = getConfig(type);
+    const before = await dbGet(`SELECT id, code, name, display_order FROM ${config.categoryTable} WHERE id = ?`, [id]);
     const countRow = await dbGet(
       `SELECT COUNT(*) as count FROM ${config.itemTable} WHERE ${config.itemForeignKey} = ?`,
       [id]
@@ -164,6 +216,16 @@ class CategoryService {
       error.code = 'CATEGORY_NOT_FOUND';
       throw error;
     }
+
+    await AuditService.recordEntityChangeSafe({
+      entityType: type === 'montMarte' ? 'mont_marte_category' : 'category',
+      entityId: id,
+      action: 'delete',
+      before,
+      after: null,
+      summary: 'Deleted category.',
+      context,
+    });
   }
 }
 

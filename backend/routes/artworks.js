@@ -7,7 +7,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const ArtworkService = require('../services/ArtworkService');
+const ArtworkService = require('../domains/artworks/service');
+const { extractAuditContext } = require('./helpers/request-audit-context');
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
@@ -66,7 +67,7 @@ router.post('/artworks', async (req, res) => {
       return sendError(res, 400, 'Artwork code and name are required.');
     }
 
-    const newArtwork = await ArtworkService.createArtwork({ code, name });
+    const newArtwork = await ArtworkService.createArtwork({ code, name }, extractAuditContext(req));
     return res.json(newArtwork);
   } catch (error) {
     if (error.message.includes('already exists') || error.message.includes('宸插瓨鍦')) {
@@ -79,7 +80,7 @@ router.post('/artworks', async (req, res) => {
 // DELETE /api/artworks/:id
 router.delete('/artworks/:id', async (req, res) => {
   try {
-    const result = await ArtworkService.deleteArtwork(req.params.id);
+    const result = await ArtworkService.deleteArtwork(req.params.id, extractAuditContext(req));
     res.json(result);
   } catch (error) {
     sendError(res, 500, error.message);
@@ -112,7 +113,7 @@ router.post(
         thumbnail_path,
         initial_thumbnail_path,
         layers,
-      });
+      }, extractAuditContext(req));
 
       return res.json(newScheme);
     } catch (error) {
@@ -149,7 +150,7 @@ router.put(
         thumbnail_path: newThumbnailPath,
         initial_thumbnail_path: newInitialThumbnailPath,
         layers,
-      });
+      }, extractAuditContext(req));
 
       if (req.files?.thumbnail?.[0] && existingThumbnailPath && existingThumbnailPath !== newThumbnailPath) {
         await ArtworkService.deleteUploadedImage(existingThumbnailPath);
@@ -173,7 +174,7 @@ router.put(
 // DELETE /api/artworks/:artworkId/schemes/:schemeId
 router.delete('/artworks/:artworkId/schemes/:schemeId', async (req, res) => {
   try {
-    const result = await ArtworkService.deleteScheme(req.params.schemeId);
+    const result = await ArtworkService.deleteScheme(req.params.schemeId, extractAuditContext(req));
     res.json(result);
   } catch (error) {
     sendError(res, 500, error.message);

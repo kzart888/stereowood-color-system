@@ -1,5 +1,6 @@
 const express = require('express');
-const DictionaryService = require('../services/DictionaryService');
+const DictionaryService = require('../domains/dictionaries/service');
+const { extractAuditContext } = require('./helpers/request-audit-context');
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ router.get('/suppliers', async (req, res) => {
 
 router.post('/suppliers/upsert', async (req, res) => {
   try {
-    const row = await DictionaryService.upsertSupplier(req.body.name);
+    const row = await DictionaryService.upsertSupplier(req.body.name, extractAuditContext(req));
     return res.json(row);
   } catch (error) {
     return mapServiceError(res, error);
@@ -36,7 +37,7 @@ router.post('/suppliers/upsert', async (req, res) => {
 
 router.delete('/suppliers/:id', async (req, res) => {
   try {
-    const result = await DictionaryService.deleteSupplier(req.params.id);
+    const result = await DictionaryService.deleteSupplier(req.params.id, extractAuditContext(req));
     return res.json(result);
   } catch (error) {
     return mapServiceError(res, error);
@@ -54,7 +55,7 @@ router.get('/purchase-links', async (req, res) => {
 
 router.post('/purchase-links/upsert', async (req, res) => {
   try {
-    const row = await DictionaryService.upsertPurchaseLink(req.body.url);
+    const row = await DictionaryService.upsertPurchaseLink(req.body.url, extractAuditContext(req));
     return res.json(row);
   } catch (error) {
     return mapServiceError(res, error);
