@@ -60,7 +60,7 @@ Private modules:
 - `backend/db/migrations/` (versioned migration scripts)
 
 New cross-cutting domains:
-- `backend/domains/auth/` (accounts, sessions, approvals)
+- `backend/domains/auth/` (accounts, sessions, approvals) [implemented in A4]
 - `backend/domains/audit/` (behavior events)
 - `backend/domains/history/` (entity change timeline)
 - `backend/domains/concurrency/` (optimistic lock policy helpers)
@@ -108,8 +108,8 @@ Existing tables:
 - `mont_marte_colors.version`
 
 Target additive schema (A3 implemented, A4+ extends):
-- `user_accounts` (internal users, status, approval state)
-- `user_sessions` or token/session storage (simple internal auth)
+- `user_accounts` (internal users, status, approval state) [implemented]
+- `user_sessions` or token/session storage (simple internal auth) [implemented]
 - `audit_events` (actor, action, entity, request metadata) [implemented]
 - `entity_change_events` (before/after payload or diff metadata) [implemented]
 - optional `entity_locks` only if optimistic-lock UX is insufficient

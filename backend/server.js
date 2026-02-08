@@ -17,6 +17,7 @@ const fs = require('fs');
 const { db } = require('./db/index');
 const { initDatabase, runMigrations } = require('./db/migrations');
 const routes = require('./routes');
+const { attachAuthUser } = require('./routes/helpers/auth-session');
 
 const app = express();
 const DEFAULT_PORT = Number.isFinite(Number.parseInt(process.env.PORT, 10))
@@ -64,6 +65,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.use('/api', attachAuthUser);
 app.use('/api', routes);
 
 // System config for frontend

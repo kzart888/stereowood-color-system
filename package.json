@@ -18,7 +18,10 @@
     "phaseA:a1:verify": "npm run phaseA:a0:verify && npm run audit:boundaries",
     "phaseA:a3:db-dryrun": "node scripts/phaseA-a3-db-dryrun.js",
     "phaseA:a3:api-smoke": "node scripts/phaseA-a3-api-smoke.js",
-    "phaseA:a3:verify": "npm run phaseA:a3:db-dryrun && npm run phaseA:a3:api-smoke && npm run phase0:verify"
+    "phaseA:a3:verify": "npm run phaseA:a3:db-dryrun && npm run phaseA:a3:api-smoke && npm run phase0:verify",
+    "phaseA:a4:auth-smoke": "node scripts/phaseA-a4-auth-smoke.js",
+    "phaseA:a4:readonly-smoke": "node scripts/phaseA-a4-readonly-smoke.js",
+    "phaseA:a4:verify": "npm run phaseA:a4:auth-smoke && npm run phaseA:a4:readonly-smoke && npm run phase0:verify"
   },
   "keywords": [
     "color-management",

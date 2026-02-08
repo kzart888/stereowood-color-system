@@ -23,6 +23,18 @@
   - `PORT=9099`
   - `DB_FILE=/data/color_management.db`
   - `TZ=Asia/Shanghai`
+  - `AUTH_ENFORCE_WRITES=false` (legacy compatibility default)
+  - `READ_ONLY_MODE=false`
+  - `SESSION_TTL_HOURS=12`
+  - `INTERNAL_ADMIN_KEY=<set-strong-secret-before-using-admin-approval>`
+
+## Auth Mode Notes (A4)
+- If `AUTH_ENFORCE_WRITES=true`:
+  - write APIs require login session token
+  - read APIs stay available
+- If `READ_ONLY_MODE=true`:
+  - write APIs return `503`
+  - read APIs remain available (maintenance fallback)
 
 ## Synology Volume Mapping (Current)
 - `/volume1/docker/stereowood-color-system/data:/data:rw`

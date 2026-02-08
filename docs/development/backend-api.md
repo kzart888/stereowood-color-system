@@ -14,7 +14,7 @@ This document describes the current Express + SQLite contract served by `backend
 ## Common Behavior
 - Success responses return JSON objects or arrays.
 - Error responses return JSON with shape `{ "error": "<message>" }`.
-- API routes do not currently require authentication.
+- API routes are unauthenticated by default, but write routes can be protected by `AUTH_ENFORCE_WRITES=true`.
 - File upload endpoints expect `multipart/form-data`.
 
 ## Endpoint Groups
@@ -151,6 +151,24 @@ Notes:
 - `x-source`
 
 If omitted, write flows still work and audit defaults are used.
+
+### Internal Auth (A4)
+Source: `backend/routes/auth.js` -> `backend/domains/auth/service.js` -> `backend/db/queries/auth.js`
+
+- `POST /api/auth/register-request`
+- `GET /api/auth/admin/pending` (requires `x-admin-key`)
+- `POST /api/auth/admin/requests/:id/approve` (requires `x-admin-key`)
+- `POST /api/auth/admin/requests/:id/reject` (requires `x-admin-key`)
+- `POST /api/auth/login`
+- `POST /api/auth/logout` (token required)
+- `GET /api/auth/me` (token required)
+
+Write-protection behavior:
+- `AUTH_ENFORCE_WRITES=true`:
+  - write routes require session token (`Authorization: Bearer <token>` or `x-session-token`)
+- `READ_ONLY_MODE=true`:
+  - write routes return `503`
+  - read routes remain available
 
 ## Error Behavior Notes
 - Validation issues generally return `400`.

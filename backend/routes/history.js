@@ -12,6 +12,7 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'purchase_link',
   'category',
   'mont_marte_category',
+  'user_account',
 ]);
 
 function parsePositiveId(value) {

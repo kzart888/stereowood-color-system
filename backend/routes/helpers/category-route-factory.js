@@ -1,6 +1,7 @@
-const express = require('express');
+﻿const express = require('express');
 const CategoryService = require('../../domains/categories/service');
 const { extractAuditContext } = require('./request-audit-context');
+const { requireWriteAccess } = require('./write-access');
 const {
   parseRequiredName,
   buildCategoryCode,
@@ -42,7 +43,7 @@ function createCategoryRouter(options) {
   });
 
   // POST /api/<basePath>
-  router.post(`/${options.basePath}`, async (req, res) => {
+  router.post(`/${options.basePath}`, requireWriteAccess, async (req, res) => {
     try {
       const normalizedName = parseRequiredName(req.body.name);
       if (!normalizedName) {
@@ -68,7 +69,7 @@ function createCategoryRouter(options) {
   });
 
   // PUT /api/<basePath>/reorder
-  router.put(`/${options.basePath}/reorder`, async (req, res) => {
+  router.put(`/${options.basePath}/reorder`, requireWriteAccess, async (req, res) => {
     const parseResult = parseReorderUpdates(req.body);
     if (parseResult.error) {
       return sendError(res, 400, parseResult.error);
@@ -88,7 +89,7 @@ function createCategoryRouter(options) {
   });
 
   // PUT /api/<basePath>/:id
-  router.put(`/${options.basePath}/:id`, async (req, res) => {
+  router.put(`/${options.basePath}/:id`, requireWriteAccess, async (req, res) => {
     const id = parsePositiveId(req.params.id);
     if (!id) {
       return sendError(res, 400, 'Invalid category id.');
@@ -124,7 +125,7 @@ function createCategoryRouter(options) {
   });
 
   // DELETE /api/<basePath>/:id
-  router.delete(`/${options.basePath}/:id`, async (req, res) => {
+  router.delete(`/${options.basePath}/:id`, requireWriteAccess, async (req, res) => {
     const id = parsePositiveId(req.params.id);
     if (!id) {
       return sendError(res, 400, 'Invalid category id.');
@@ -142,3 +143,4 @@ function createCategoryRouter(options) {
 }
 
 module.exports = { createCategoryRouter };
+

@@ -112,7 +112,7 @@ Status:
   - `docs/architecture/decisions/A3-0001-history-audit-foundation.md`
   - `docs/architecture/PHASE_A3_REVIEW_GATE.md`
 
-### A4: Internal Auth + Approval + Behavior Audit
+### A4: Internal Auth + Approval + Behavior Audit (Completed)
 Deliverables:
 - Minimal internal account system:
   - account registration request
@@ -128,6 +128,12 @@ Verification:
 
 Rollback:
 - feature flag or bypass mode for local single-user fallback.
+
+Status:
+- Completed on 2026-02-08.
+- Verification artifacts:
+  - `docs/architecture/decisions/A4-0001-auth-approval-write-guard.md`
+  - `docs/architecture/PHASE_A4_REVIEW_GATE.md`
 
 ### A5: Concurrency Conflict Strategy Unification
 Deliverables:

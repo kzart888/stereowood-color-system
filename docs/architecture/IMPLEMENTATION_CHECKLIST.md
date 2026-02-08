@@ -67,18 +67,19 @@ Gate:
 - [x] `docs/architecture/PHASE_A3_REVIEW_GATE.md`
 
 ## Batch A4: Internal Auth + Approval + Behavior Audit
-- [ ] Add minimal account model (pending, approved, disabled).
-- [ ] Add registration request + approval/reject flow.
-- [ ] Add login/session lifecycle for internal users.
-- [ ] Bind actor metadata to write operations and audit events.
-- [ ] Keep read-only flows available for maintenance mode fallback.
-- [ ] Add/update decision record for A4.
+- [x] Add minimal account model (pending, approved, disabled).
+- [x] Add registration request + approval/reject flow.
+- [x] Add login/session lifecycle for internal users.
+- [x] Bind actor metadata to write operations and audit events.
+- [x] Keep read-only flows available for maintenance mode fallback.
+- [x] Add/update decision record for A4.
 
 Gate:
-- [ ] Auth smoke: register -> approve -> login -> protected write.
-- [ ] Audit smoke: write action records actor.
-- [ ] `npm run phase0:verify`
-- [ ] `docs/architecture/decisions/A4-*.md`
+- [x] Auth smoke: register -> approve -> login -> protected write.
+- [x] Audit smoke: write action records actor.
+- [x] `npm run phase0:verify`
+- [x] `docs/architecture/decisions/A4-*.md`
+- [x] `docs/architecture/PHASE_A4_REVIEW_GATE.md`
 
 ## Batch A5: Concurrency Conflict Strategy Unification
 - [ ] Standardize version-check policy across mutable entities.

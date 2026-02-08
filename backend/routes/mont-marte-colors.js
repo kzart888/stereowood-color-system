@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    Module: backend/routes/mont-marte-colors.js
    Responsibility: HTTP handlers for Mont-Marte colors
    Contract: Mount under /api
@@ -10,6 +10,7 @@ const multer = require('multer');
 const path = require('path');
 const MontMarteColorService = require('../domains/materials/service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
+const { requireWriteAccess } = require('./helpers/write-access');
 
 const router = express.Router();
 
@@ -47,7 +48,7 @@ router.get('/mont-marte-colors', async (req, res) => {
 });
 
 // POST /api/mont-marte-colors
-router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
+router.post('/mont-marte-colors', requireWriteAccess, upload.single('image'), async (req, res) => {
   try {
     const created = await MontMarteColorService.createColor(
       req.body,
@@ -61,7 +62,7 @@ router.post('/mont-marte-colors', upload.single('image'), async (req, res) => {
 });
 
 // PUT /api/mont-marte-colors/:id
-router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) => {
+router.put('/mont-marte-colors/:id', requireWriteAccess, upload.single('image'), async (req, res) => {
   try {
     const updated = await MontMarteColorService.updateColor(
       req.params.id,
@@ -76,7 +77,7 @@ router.put('/mont-marte-colors/:id', upload.single('image'), async (req, res) =>
 });
 
 // DELETE /api/mont-marte-colors/:id
-router.delete('/mont-marte-colors/:id', async (req, res) => {
+router.delete('/mont-marte-colors/:id', requireWriteAccess, async (req, res) => {
   try {
     const deleted = await MontMarteColorService.deleteColor(req.params.id, extractAuditContext(req));
     return res.json(deleted);
@@ -86,3 +87,4 @@ router.delete('/mont-marte-colors/:id', async (req, res) => {
 });
 
 module.exports = router;
+

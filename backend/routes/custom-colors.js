@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const ColorService = require('../domains/custom-colors/service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
+const { requireWriteAccess } = require('./helpers/write-access');
 
 const router = express.Router();
 
@@ -143,7 +144,7 @@ router.get('/custom-colors', async (req, res) => {
   }
 });
 
-router.post('/custom-colors', upload.single('image'), async (req, res) => {
+router.post('/custom-colors', requireWriteAccess, upload.single('image'), async (req, res) => {
   try {
     const colorCode = normalizeStringOrNull(req.body.color_code);
     if (!colorCode) {
@@ -183,7 +184,7 @@ router.get('/custom-colors/:id/history', async (req, res) => {
   }
 });
 
-router.delete('/custom-colors/:id', async (req, res) => {
+router.delete('/custom-colors/:id', requireWriteAccess, async (req, res) => {
   try {
     const colorId = parsePositiveId(req.params.id);
     if (!colorId) {
@@ -197,7 +198,7 @@ router.delete('/custom-colors/:id', async (req, res) => {
   }
 });
 
-router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
+router.put('/custom-colors/:id', requireWriteAccess, upload.single('image'), async (req, res) => {
   try {
     const colorId = parsePositiveId(req.params.id);
     if (!colorId) {
@@ -270,7 +271,7 @@ router.put('/custom-colors/:id', upload.single('image'), async (req, res) => {
   }
 });
 
-router.post('/custom-colors/force-merge', async (req, res) => {
+router.post('/custom-colors/force-merge', requireWriteAccess, async (req, res) => {
   try {
     const keepId = parsePositiveId(req.body.keepId);
     if (!Array.isArray(req.body.removeIds)) {
@@ -301,3 +302,4 @@ router.post('/custom-colors/force-merge', async (req, res) => {
 });
 
 module.exports = router;
+

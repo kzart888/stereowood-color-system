@@ -9,6 +9,17 @@ function extractAuditContext(req) {
   const forwardedFor = getHeaderValue(req, 'x-forwarded-for');
   const ipAddress = forwardedFor ? forwardedFor.split(',')[0].trim() : (req.ip || req.connection?.remoteAddress || null);
 
+  if (req && req.authUser) {
+    return {
+      actorId: String(req.authUser.id),
+      actorName: req.authUser.username || null,
+      requestId: getHeaderValue(req, 'x-request-id'),
+      source: getHeaderValue(req, 'x-source') || 'api',
+      ipAddress,
+      userAgent: getHeaderValue(req, 'user-agent'),
+    };
+  }
+
   return {
     actorId: getHeaderValue(req, 'x-actor-id'),
     actorName: getHeaderValue(req, 'x-actor-name'),

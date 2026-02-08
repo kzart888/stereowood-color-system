@@ -16,6 +16,7 @@ const router = express.Router();
 // So we mount them at the root level here
 router.use(require('./categories'));
 router.use(require('./mont-marte-categories'));
+router.use(require('./auth'));
 router.use(require('./dictionaries'));
 router.use(require('./mont-marte-colors'));
 router.use(require('./custom-colors'));

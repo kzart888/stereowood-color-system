@@ -1,6 +1,7 @@
-const express = require('express');
+﻿const express = require('express');
 const DictionaryService = require('../domains/dictionaries/service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
+const { requireWriteAccess } = require('./helpers/write-access');
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ router.get('/suppliers', async (req, res) => {
   }
 });
 
-router.post('/suppliers/upsert', async (req, res) => {
+router.post('/suppliers/upsert', requireWriteAccess, async (req, res) => {
   try {
     const row = await DictionaryService.upsertSupplier(req.body.name, extractAuditContext(req));
     return res.json(row);
@@ -35,7 +36,7 @@ router.post('/suppliers/upsert', async (req, res) => {
   }
 });
 
-router.delete('/suppliers/:id', async (req, res) => {
+router.delete('/suppliers/:id', requireWriteAccess, async (req, res) => {
   try {
     const result = await DictionaryService.deleteSupplier(req.params.id, extractAuditContext(req));
     return res.json(result);
@@ -53,7 +54,7 @@ router.get('/purchase-links', async (req, res) => {
   }
 });
 
-router.post('/purchase-links/upsert', async (req, res) => {
+router.post('/purchase-links/upsert', requireWriteAccess, async (req, res) => {
   try {
     const row = await DictionaryService.upsertPurchaseLink(req.body.url, extractAuditContext(req));
     return res.json(row);
@@ -63,3 +64,4 @@ router.post('/purchase-links/upsert', async (req, res) => {
 });
 
 module.exports = router;
+

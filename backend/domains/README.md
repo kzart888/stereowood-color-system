@@ -13,3 +13,6 @@ move implementation details from `backend/services/*` into domain-local files.
 Phase A3 adds cross-cutting domains:
 - `backend/domains/audit/` for additive write audit events.
 - `backend/domains/history/` for timeline read APIs.
+
+Phase A4 adds:
+- `backend/domains/auth/` for registration approval, login/session lifecycle, and auth context resolution.

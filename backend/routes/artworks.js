@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Artwork routes
  * Responsibility: /api/artworks endpoints
  */
@@ -9,6 +9,7 @@ const multer = require('multer');
 const path = require('path');
 const ArtworkService = require('../domains/artworks/service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
+const { requireWriteAccess } = require('./helpers/write-access');
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
@@ -58,7 +59,7 @@ router.get('/artworks', async (req, res) => {
 });
 
 // POST /api/artworks
-router.post('/artworks', async (req, res) => {
+router.post('/artworks', requireWriteAccess, async (req, res) => {
   try {
     const code = typeof req.body.code === 'string' ? req.body.code.trim() : '';
     const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
@@ -70,7 +71,7 @@ router.post('/artworks', async (req, res) => {
     const newArtwork = await ArtworkService.createArtwork({ code, name }, extractAuditContext(req));
     return res.json(newArtwork);
   } catch (error) {
-    if (error.message.includes('already exists') || error.message.includes('宸插瓨鍦')) {
+    if (error.message.includes('already exists') || error.message.includes('瀹告彃鐡ㄩ崷')) {
       return sendError(res, 400, error.message);
     }
     return sendError(res, 500, error.message);
@@ -78,7 +79,7 @@ router.post('/artworks', async (req, res) => {
 });
 
 // DELETE /api/artworks/:id
-router.delete('/artworks/:id', async (req, res) => {
+router.delete('/artworks/:id', requireWriteAccess, async (req, res) => {
   try {
     const result = await ArtworkService.deleteArtwork(req.params.id, extractAuditContext(req));
     res.json(result);
@@ -90,6 +91,7 @@ router.delete('/artworks/:id', async (req, res) => {
 // POST /api/artworks/:artworkId/schemes
 router.post(
   '/artworks/:artworkId/schemes',
+  requireWriteAccess,
   upload.fields([
     { name: 'thumbnail', maxCount: 1 },
     { name: 'initialThumbnail', maxCount: 1 },
@@ -126,6 +128,7 @@ router.post(
 // PUT /api/artworks/:artworkId/schemes/:schemeId
 router.put(
   '/artworks/:artworkId/schemes/:schemeId',
+  requireWriteAccess,
   upload.fields([
     { name: 'thumbnail', maxCount: 1 },
     { name: 'initialThumbnail', maxCount: 1 },
@@ -172,7 +175,7 @@ router.put(
 );
 
 // DELETE /api/artworks/:artworkId/schemes/:schemeId
-router.delete('/artworks/:artworkId/schemes/:schemeId', async (req, res) => {
+router.delete('/artworks/:artworkId/schemes/:schemeId', requireWriteAccess, async (req, res) => {
   try {
     const result = await ArtworkService.deleteScheme(req.params.schemeId, extractAuditContext(req));
     res.json(result);
@@ -182,3 +185,4 @@ router.delete('/artworks/:artworkId/schemes/:schemeId', async (req, res) => {
 });
 
 module.exports = router;
+

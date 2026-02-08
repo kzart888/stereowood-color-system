@@ -535,6 +535,45 @@ async function runMigrations() {
       }
     }
 
+    // ==================================================================
+    // Phase A4: Internal auth and session foundation (additive)
+    // ==================================================================
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS user_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        approved_by TEXT,
+        approved_at DATETIME,
+        disabled_by TEXT,
+        disabled_reason TEXT,
+        disabled_at DATETIME,
+        last_login_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        session_token TEXT NOT NULL UNIQUE,
+        expires_at DATETIME NOT NULL,
+        revoked_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_seen_at DATETIME,
+        FOREIGN KEY (user_id) REFERENCES user_accounts (id)
+      )
+    `);
+
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_accounts_username ON user_accounts(username)`);
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_accounts_status ON user_accounts(status, id DESC)`);
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token)`);
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, id DESC)`);
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_sessions_active ON user_sessions(session_token, revoked_at, expires_at)`);
+
   } catch (e) {
     console.error('鏁版嵁搴撹縼绉诲け璐?', e);
   }
