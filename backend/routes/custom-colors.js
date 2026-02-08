@@ -94,6 +94,7 @@ function mapColorServiceError(res, error, fallbackStatus = 500) {
   if (error && error.code === 'VERSION_CONFLICT') {
     return sendError(res, 409, error.message, {
       code: 'VERSION_CONFLICT',
+      entityType: error.entityType || 'custom_color',
       expectedVersion: error.expectedVersion,
       actualVersion: error.actualVersion,
       latestData: error.latestData,

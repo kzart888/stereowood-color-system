@@ -217,6 +217,7 @@ class ColorService {
         expectedVersion,
         actualVersion: existing.version,
         latestData: existing,
+        entityType: 'custom_color',
       });
     }
 
@@ -256,6 +257,7 @@ class ColorService {
         expectedVersion,
         actualVersion: latest ? latest.version : null,
         latestData: latest,
+        entityType: 'custom_color',
       });
     }
 

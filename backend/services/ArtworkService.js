@@ -11,6 +11,16 @@ const fs = require('fs').promises;
 const path = require('path');
 const AuditService = require('../domains/audit/service');
 
+function createArtworkError(message, statusCode, code, extra = {}) {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    if (code) {
+        error.code = code;
+    }
+    Object.assign(error, extra);
+    return error;
+}
+
 class ArtworkService {
     /**
      * 鑾峰彇鎵€鏈変綔鍝?     */
@@ -50,6 +60,7 @@ class ArtworkService {
                         name: row.scheme_name,  // Frontend expects 'name' not 'scheme_name'
                         thumbnail_path: row.thumbnail_path,
                         initial_thumbnail_path: row.initial_thumbnail_path,  // Include initial thumbnail
+                        version: row.scheme_version ?? null,
                         created_at: row.scheme_created_at,
                         updated_at: row.scheme_updated_at,
                         layers: []
@@ -217,44 +228,72 @@ class ArtworkService {
     /**
      * 鏇存柊閰嶈壊鏂规
      */
-    async updateScheme(schemeId, schemeData, context = {}) {
-        try {
-            const existingScheme = await artworkQueries.getSchemeWithLayers(schemeId);
-
-            const convertedLayers = await this.convertColorCodesToIds(schemeData.layers);
-            const dataWithConvertedLayers = {
-                ...schemeData,
-                layers: convertedLayers
-            };
-
-            await artworkQueries.updateScheme(schemeId, dataWithConvertedLayers);
-            const updatedScheme = await artworkQueries.getSchemeWithLayers(schemeId);
-            if (existingScheme) {
-                try {
-                    await artworkQueries.archiveSchemeHistory(existingScheme, {
-                        changeAction: 'UPDATE',
-                        actorId: context.actorId,
-                        actorName: context.actorName,
-                        requestId: context.requestId,
-                        source: context.source,
-                    });
-                } catch (archiveError) {
-                    console.warn('Scheme history archive failed (update):', archiveError.message);
-                }
-            }
-            await AuditService.recordEntityChangeSafe({
-                entityType: 'color_scheme',
-                entityId: Number(schemeId),
-                action: 'update',
-                before: existingScheme,
-                after: updatedScheme,
-                summary: 'Updated color scheme.',
-                context,
-            });
-            return { success: true };
-        } catch (error) {
-            throw new Error(`鏇存柊閰嶈壊鏂规澶辫触: ${error.message}`);
+    async updateScheme(schemeId, schemeData, expectedVersion = null, context = {}) {
+        const existingScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+        if (!existingScheme) {
+            throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
         }
+
+        if (expectedVersion !== null && expectedVersion !== undefined && expectedVersion !== '') {
+            const parsedVersion = Number.parseInt(expectedVersion, 10);
+            if (!Number.isInteger(parsedVersion) || parsedVersion < 0) {
+                throw createArtworkError('version must be a non-negative integer.', 400, 'VALIDATION_ERROR');
+            }
+            if (existingScheme.version !== parsedVersion) {
+                throw createArtworkError('Scheme has been modified by another request.', 409, 'VERSION_CONFLICT', {
+                    entityType: 'color_scheme',
+                    expectedVersion: parsedVersion,
+                    actualVersion: existingScheme.version,
+                    latestData: existingScheme,
+                });
+            }
+            expectedVersion = parsedVersion;
+        } else {
+            expectedVersion = null;
+        }
+
+        const convertedLayers = await this.convertColorCodesToIds(schemeData.layers);
+        const dataWithConvertedLayers = {
+            ...schemeData,
+            layers: convertedLayers
+        };
+
+        const changes = await artworkQueries.updateScheme(schemeId, dataWithConvertedLayers, expectedVersion);
+        if (changes === 0) {
+            if (expectedVersion !== null) {
+                const latestScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+                throw createArtworkError('Scheme has been modified by another request.', 409, 'VERSION_CONFLICT', {
+                    entityType: 'color_scheme',
+                    expectedVersion,
+                    actualVersion: latestScheme ? latestScheme.version : null,
+                    latestData: latestScheme,
+                });
+            }
+            throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
+        }
+
+        const updatedScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+        try {
+            await artworkQueries.archiveSchemeHistory(existingScheme, {
+                changeAction: 'UPDATE',
+                actorId: context.actorId,
+                actorName: context.actorName,
+                requestId: context.requestId,
+                source: context.source,
+            });
+        } catch (archiveError) {
+            console.warn('Scheme history archive failed (update):', archiveError.message);
+        }
+        await AuditService.recordEntityChangeSafe({
+            entityType: 'color_scheme',
+            entityId: Number(schemeId),
+            action: 'update',
+            before: existingScheme,
+            after: updatedScheme,
+            summary: 'Updated color scheme.',
+            context,
+        });
+        return { success: true };
     }
 
     /**

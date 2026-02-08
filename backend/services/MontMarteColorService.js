@@ -37,6 +37,17 @@ function normalizeStringOrNull(value) {
   return trimmed === '' ? null : trimmed;
 }
 
+function parseOptionalVersion(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw createError('version must be a non-negative integer.', 400, 'VALIDATION_ERROR');
+  }
+  return parsed;
+}
+
 function isConstraintError(error) {
   const message = String(error && error.message ? error.message : '').toLowerCase();
   return message.includes('constraint') || message.includes('unique') || message.includes('foreign key');
@@ -148,7 +159,7 @@ class MontMarteColorService {
     return created;
   }
 
-  async updateColor(idValue, body, fileName, context = {}) {
+  async updateColor(idValue, body, fileName, expectedVersion = null, context = {}) {
     const id = parsePositiveId(idValue);
     if (!id) {
       throw createError('Invalid color id.', 400, 'VALIDATION_ERROR');
@@ -158,6 +169,17 @@ class MontMarteColorService {
     const existing = await montMarteColorQueries.getColorForUpdate(id);
     if (!existing) {
       throw createError('Color not found.', 404, 'NOT_FOUND');
+    }
+
+    const normalizedExpectedVersion = parseOptionalVersion(expectedVersion);
+    if (normalizedExpectedVersion !== null && existing.version !== normalizedExpectedVersion) {
+      const latest = await montMarteColorQueries.getColorById(id);
+      throw createError('Color has been modified by another request.', 409, 'VERSION_CONFLICT', {
+        expectedVersion: normalizedExpectedVersion,
+        actualVersion: latest ? latest.version : existing.version,
+        latestData: latest || existing,
+        entityType: 'mont_marte_color',
+      });
     }
 
     let imagePath = existing.image_path;
@@ -181,9 +203,18 @@ class MontMarteColorService {
           purchase_link_id: normalized.purchase_link_id,
           category: finalCategory,
           category_id: finalCategoryId,
-        });
+        }, normalizedExpectedVersion);
 
         if (changes === 0) {
+          if (normalizedExpectedVersion !== null) {
+            const latest = await montMarteColorQueries.getColorById(id);
+            throw createError('Color has been modified by another request.', 409, 'VERSION_CONFLICT', {
+              expectedVersion: normalizedExpectedVersion,
+              actualVersion: latest ? latest.version : null,
+              latestData: latest,
+              entityType: 'mont_marte_color',
+            });
+          }
           throw createError('Color not found.', 404, 'NOT_FOUND');
         }
 

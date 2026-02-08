@@ -21,8 +21,40 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-function sendError(res, status, error) {
+function sendError(res, status, error, extraFields) {
+  if (extraFields) {
+    return res.status(status).json({ error, ...extraFields });
+  }
   return res.status(status).json({ error });
+}
+
+function mapArtworkError(res, error, fallbackStatus = 500) {
+  if (error && error.code === 'VERSION_CONFLICT') {
+    return sendError(res, 409, error.message, {
+      code: 'VERSION_CONFLICT',
+      entityType: error.entityType || 'color_scheme',
+      expectedVersion: error.expectedVersion,
+      actualVersion: error.actualVersion,
+      latestData: error.latestData,
+    });
+  }
+
+  const status = error && error.statusCode ? error.statusCode : fallbackStatus;
+  const message = error && error.message ? error.message : 'Internal server error';
+  return sendError(res, status, message);
+}
+
+function parseVersion(value) {
+  if (value === undefined || value === null || value === '') {
+    return { value: null };
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return { error: 'version must be a non-negative integer.' };
+  }
+
+  return { value: parsed };
 }
 
 function parseLayersInput(layers) {
@@ -148,12 +180,17 @@ router.put(
       const newThumbnailPath = req.files?.thumbnail?.[0]?.filename || existingThumbnailPath;
       const newInitialThumbnailPath = req.files?.initialThumbnail?.[0]?.filename || existingInitialThumbnailPath;
 
+      const versionResult = parseVersion(req.body.version);
+      if (versionResult.error) {
+        return sendError(res, 400, versionResult.error);
+      }
+
       await ArtworkService.updateScheme(schemeId, {
         scheme_name: name,
         thumbnail_path: newThumbnailPath,
         initial_thumbnail_path: newInitialThumbnailPath,
         layers,
-      }, extractAuditContext(req));
+      }, versionResult.value, extractAuditContext(req));
 
       if (req.files?.thumbnail?.[0] && existingThumbnailPath && existingThumbnailPath !== newThumbnailPath) {
         await ArtworkService.deleteUploadedImage(existingThumbnailPath);
@@ -169,7 +206,7 @@ router.put(
       return res.json({ success: true });
     } catch (error) {
       await cleanupUploadedFiles(req.files);
-      return sendError(res, error.statusCode || 500, error.message);
+      return mapArtworkError(res, error, 500);
     }
   }
 );

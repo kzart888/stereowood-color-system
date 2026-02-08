@@ -142,11 +142,17 @@ Deliverables:
 - Ensure conflict metadata is actionable in UI (latest snapshot, expected/actual version).
 
 Verification:
-- dual-client stale update tests for color/scheme/material/category edits.
+- dual-client stale update tests for custom color / scheme / material edits.
 - conflict response contract snapshot tests.
 
 Rollback:
 - preserve legacy write path wrappers until conflict path is proven stable.
+
+Status:
+- Completed on 2026-02-08.
+- Verification artifacts:
+  - `docs/architecture/decisions/A5-0001-concurrency-conflict-contract.md`
+  - `docs/architecture/PHASE_A5_REVIEW_GATE.md`
 
 ### A6: UI System Unification
 Deliverables:

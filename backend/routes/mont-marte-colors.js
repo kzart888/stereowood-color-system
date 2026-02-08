@@ -31,7 +31,28 @@ function sendError(res, status, error, extraFields) {
   return res.status(status).json({ error });
 }
 
+function parseVersion(value) {
+  if (value === undefined || value === null || value === '') {
+    return { value: null };
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return { error: 'version must be a non-negative integer.' };
+  }
+  return { value: parsed };
+}
+
 function mapServiceError(res, error) {
+  if (error && error.code === 'VERSION_CONFLICT') {
+    return sendError(res, 409, error.message, {
+      code: 'VERSION_CONFLICT',
+      entityType: error.entityType || 'mont_marte_color',
+      expectedVersion: error.expectedVersion,
+      actualVersion: error.actualVersion,
+      latestData: error.latestData,
+    });
+  }
+
   const status = error && error.statusCode ? error.statusCode : 500;
   const message = error && error.message ? error.message : 'Internal server error';
   return sendError(res, status, message);
@@ -64,10 +85,16 @@ router.post('/mont-marte-colors', requireWriteAccess, upload.single('image'), as
 // PUT /api/mont-marte-colors/:id
 router.put('/mont-marte-colors/:id', requireWriteAccess, upload.single('image'), async (req, res) => {
   try {
+    const versionResult = parseVersion(req.body.version);
+    if (versionResult.error) {
+      return sendError(res, 400, versionResult.error);
+    }
+
     const updated = await MontMarteColorService.updateColor(
       req.params.id,
       req.body,
       req.file ? req.file.filename : null,
+      versionResult.value,
       extractAuditContext(req)
     );
     return res.json(updated);

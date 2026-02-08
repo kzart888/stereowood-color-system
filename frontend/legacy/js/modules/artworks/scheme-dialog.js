@@ -34,6 +34,7 @@
   function createEmptyForm() {
     return {
       id: null,
+      version: null,
       name: '',
       thumbnailFile: null,
       thumbnailPreview: null,
@@ -52,6 +53,7 @@
     }
     const uploadURL = buildUploadURL(baseURL, helpers);
     form.id = scheme.id || null;
+    form.version = Number.isInteger(scheme.version) ? scheme.version : null;
     form.name = scheme.name || scheme.scheme_name || '';
     if (scheme.thumbnail_path) {
       form.thumbnailPreview = uploadURL(scheme.thumbnail_path);

@@ -44,7 +44,7 @@ Error mapping behavior:
   - `COLOR_IN_USE` -> `400`
   - `MERGE_INVALID` -> `400`
   - `NOT_FOUND` -> `404`
-  - `VERSION_CONFLICT` -> `409` (includes `expectedVersion`, `actualVersion`, `latestData`)
+  - `VERSION_CONFLICT` -> `409` (includes `entityType`, `expectedVersion`, `actualVersion`, `latestData`)
 - Route maps status by error code, not by message substrings.
 
 ### Artworks and Schemes
@@ -63,6 +63,16 @@ Key request details:
   - `initialThumbnail`
 - Scheme create/update require `name`.
 - `layers` accepts array JSON or JSON-stringified array.
+- Scheme update (`PUT`) accepts optional `version` for optimistic locking.
+
+Conflict behavior:
+- `VERSION_CONFLICT` -> `409` with payload keys:
+  - `error`
+  - `code`
+  - `entityType` (`color_scheme`)
+  - `expectedVersion`
+  - `actualVersion`
+  - `latestData`
 
 ### Color Categories
 Source: `backend/routes/categories.js` -> `backend/routes/helpers/category-route-factory.js` -> `backend/services/CategoryService.js`
@@ -103,12 +113,20 @@ Key request details:
 - `POST` and `PUT` accept upload field `image`.
 - `POST` requires `name` and either `category` or `category_id`.
 - `PUT` requires `name`, but `category/category_id` may be omitted and existing values are preserved.
+- `PUT` accepts optional `version` for optimistic locking.
 - `PUT` returns additional fields:
   - `updatedReferences` (formula cascade count)
 
 Consistency behavior:
 - Rename update and formula cascade run in one transaction boundary.
 - If cascade fails, the update is rolled back and API returns an error.
+- `VERSION_CONFLICT` returns `409` with payload keys:
+  - `error`
+  - `code`
+  - `entityType` (`mont_marte_color`)
+  - `expectedVersion`
+  - `actualVersion`
+  - `latestData`
 
 ### Dictionaries
 Source: `backend/routes/dictionaries.js` -> `backend/services/DictionaryService.js` -> `backend/db/queries/dictionaries.js`

@@ -114,6 +114,9 @@
     <script src="js/modules/artworks/artworks-api.js"></script>
     <script src="js/modules/mont-marte/dictionary-manager.js"></script>
     <script src="js/modules/mont-marte/save-workflow.js"></script>
+    <script src="js/modules/custom-colors/component-options.js"></script>
+    <script src="js/modules/artworks/component-options.js"></script>
+    <script src="js/modules/mont-marte/component-options.js"></script>
     <!-- Message utility for unified notifications -->
     <script src="js/utils/message.js"></script>
     <!-- Color converter utility for RGB/CMYK/HEX conversion -->
@@ -136,6 +139,9 @@
     
     <!-- API封装 -->
     <!-- 提供: api.categories, api.customColors, api.artworks, api.montMarteColors -->
+    <script src="js/adapters/http-client.js"></script>
+    <script src="js/adapters/api-gateway.js"></script>
+    <script src="js/adapters/conflict-adapter.js"></script>
     <script src="js/api/api.js"></script>
     
     <!-- Vue组件定义 - 必须在app.js之前加载 -->
@@ -174,6 +180,7 @@
     <!-- Utility Scripts (keeping only essentials for small team) -->
     <script src="js/utils/debounce-throttle.js"></script>
     <script src="js/utils/performance-monitor.js"></script>
+    <script src="js/compat/runtime-bridge.js"></script>
     
     <!-- 主应用入口 - 必须最后加载 -->
     <!-- 创建Vue应用实例，注册组件，挂载到app -->

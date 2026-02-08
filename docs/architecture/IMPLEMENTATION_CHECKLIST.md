@@ -82,17 +82,17 @@ Gate:
 - [x] `docs/architecture/PHASE_A4_REVIEW_GATE.md`
 
 ## Batch A5: Concurrency Conflict Strategy Unification
-- [ ] Standardize version-check policy across mutable entities.
-- [ ] Normalize `409` payload contract for all conflict responses.
-- [ ] Add frontend conflict adapter and merge/retry UX rules.
-- [ ] Add service-layer tests or smoke scripts for stale-write scenarios.
-- [ ] Add/update decision record for A5.
+- [x] Standardize version-check policy across mutable entities.
+- [x] Normalize `409` payload contract for all conflict responses.
+- [x] Add frontend conflict adapter and merge/retry UX rules.
+- [x] Add service-layer tests or smoke scripts for stale-write scenarios.
+- [x] Add/update decision record for A5.
 
 Gate:
-- [ ] Dual-client stale-write smoke for critical entities.
-- [ ] Contract snapshot check for conflict payload shape.
-- [ ] `npm run phase0:verify`
-- [ ] `docs/architecture/decisions/A5-*.md`
+- [x] Dual-client stale-write smoke for critical entities.
+- [x] Contract snapshot check for conflict payload shape.
+- [x] `npm run phase0:verify`
+- [x] `docs/architecture/decisions/A5-*.md`
 
 ## Batch A6: UI System Unification
 - [ ] Define design tokens (typography, spacing, color, states).

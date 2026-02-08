@@ -31,6 +31,9 @@
     if (!form.imageFile && form.imagePreview && editing && editing.image_path) {
       formData.append('existingImagePath', editing.image_path);
     }
+    if (Number.isInteger(form.version)) {
+      formData.append('version', form.version);
+    }
 
     return formData;
   }

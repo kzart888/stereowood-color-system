@@ -1,7 +1,7 @@
 const { db } = require('../index');
 
 const SELECT_COLOR_SQL = `
-  SELECT m.id, m.name, m.image_path, m.updated_at,
+  SELECT m.id, m.name, m.image_path, m.updated_at, m.version,
          m.supplier_id, s.name AS supplier_name,
          m.purchase_link_id, p.url AS purchase_link_url,
          m.category,
@@ -59,7 +59,7 @@ function getColorById(id) {
 function getColorForUpdate(id) {
   return dbGet(
     `
-    SELECT id, name, image_path, supplier_id, purchase_link_id, category, category_id
+    SELECT id, name, image_path, supplier_id, purchase_link_id, category, category_id, version, updated_at
       FROM mont_marte_colors
      WHERE id = ?
     `,
@@ -85,22 +85,34 @@ async function createColor(payload) {
   return result.lastID;
 }
 
-async function updateColor(id, payload) {
+async function updateColor(id, payload, expectedVersion = null) {
+  let where = 'id = ?';
+  const values = [
+    payload.name,
+    payload.image_path,
+    payload.supplier_id,
+    payload.purchase_link_id,
+    payload.category,
+    payload.category_id,
+  ];
+
+  if (expectedVersion !== null && expectedVersion !== undefined) {
+    where += ' AND version = ?';
+  }
+
+  values.push(id);
+  if (expectedVersion !== null && expectedVersion !== undefined) {
+    values.push(expectedVersion);
+  }
+
   const result = await dbRun(
     `
     UPDATE mont_marte_colors
-       SET name = ?, image_path = ?, supplier_id = ?, purchase_link_id = ?, category = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?
+       SET name = ?, image_path = ?, supplier_id = ?, purchase_link_id = ?, category = ?, category_id = ?,
+           version = version + 1, updated_at = CURRENT_TIMESTAMP
+     WHERE ${where}
     `,
-    [
-      payload.name,
-      payload.image_path,
-      payload.supplier_id,
-      payload.purchase_link_id,
-      payload.category,
-      payload.category_id,
-      id,
-    ]
+    values
   );
   return result.changes;
 }

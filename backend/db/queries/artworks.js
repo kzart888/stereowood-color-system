@@ -16,6 +16,7 @@ function getAllArtworks() {
         db.all(`
             SELECT a.*, 
                    cs.id as scheme_id, cs.scheme_name, cs.thumbnail_path, cs.initial_thumbnail_path,
+                   cs.version as scheme_version,
                    cs.created_at as scheme_created_at, cs.updated_at as scheme_updated_at,
                    sl.layer_number, sl.custom_color_id, sl.manual_formula,
                    cc.color_code, cc.formula, cc.image_path as color_image_path
@@ -290,9 +291,9 @@ function createScheme(schemeData) {
  * 更新配色方案
  * @param {number} schemeId - 方案ID
  * @param {Object} schemeData - 更新的方案数据
- * @returns {Promise<void>}
+ * @returns {Promise<number>}
  */
-function updateScheme(schemeId, schemeData) {
+function updateScheme(schemeId, schemeData, expectedVersion = null) {
     const { scheme_name, thumbnail_path, initial_thumbnail_path, layers } = schemeData;
     
     return new Promise((resolve, reject) => {
@@ -302,12 +303,17 @@ function updateScheme(schemeId, schemeData) {
             // 更新方案基本信息
             db.run(`
                 UPDATE color_schemes 
-                SET scheme_name = ?, thumbnail_path = ?, initial_thumbnail_path = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            `, [scheme_name, thumbnail_path, initial_thumbnail_path, schemeId], (err) => {
+                SET scheme_name = ?, thumbnail_path = ?, initial_thumbnail_path = ?,
+                    version = version + 1, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND (? IS NULL OR version = ?)
+            `, [scheme_name, thumbnail_path, initial_thumbnail_path, schemeId, expectedVersion, expectedVersion], function(err) {
                 if (err) {
                     db.run('ROLLBACK');
                     return reject(err);
+                }
+                if (this.changes === 0) {
+                    db.run('ROLLBACK');
+                    return resolve(0);
                 }
                 
                 // 删除旧的层信息
@@ -333,7 +339,7 @@ function updateScheme(schemeId, schemeData) {
                                 if (completed === layers.length) {
                                     db.run('COMMIT', (commitErr) => {
                                         if (commitErr) reject(commitErr);
-                                        else resolve();
+                                        else resolve(1);
                                     });
                                 }
                             });
@@ -341,7 +347,7 @@ function updateScheme(schemeId, schemeData) {
                     } else {
                         db.run('COMMIT', (commitErr) => {
                             if (commitErr) reject(commitErr);
-                            else resolve();
+                            else resolve(1);
                         });
                     }
                 });
