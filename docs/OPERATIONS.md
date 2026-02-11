@@ -10,6 +10,7 @@
 - Health: `/health`
 - API root: `/api`
 - Legacy UI root: `/`
+- Pilot UI root: `/pilot` (only when `ENABLE_PILOT_UI=true`)
 
 ## Local Database
 - Default local file: `backend/color_management.db`
@@ -27,6 +28,7 @@
   - `READ_ONLY_MODE=false`
   - `SESSION_TTL_HOURS=12`
   - `INTERNAL_ADMIN_KEY=<set-strong-secret-before-using-admin-approval>`
+  - `ENABLE_PILOT_UI=false` (default off, A7 pilot feature flag)
 
 ## Auth Mode Notes (A4)
 - If `AUTH_ENFORCE_WRITES=true`:

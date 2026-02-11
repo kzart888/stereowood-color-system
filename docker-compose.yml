@@ -8,6 +8,7 @@ services:
       - PORT=9099
       - NODE_ENV=production
       - DB_FILE=/data/color_management.db
+      - ENABLE_PILOT_UI=${ENABLE_PILOT_UI:-false}
     ports:
       - "${HOST_PORT:-9099}:9099"
     volumes:

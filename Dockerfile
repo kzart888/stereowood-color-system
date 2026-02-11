@@ -15,15 +15,17 @@ ENV TZ=Asia/Shanghai \
 WORKDIR /app
 
 # Create data, upload, and backup volumes
-RUN mkdir -p /data /app/backend/uploads /app/backend/backups /app/frontend/legacy
+RUN mkdir -p /data /app/backend/uploads /app/backend/backups /app/frontend/legacy /app/frontend/pilot
 VOLUME ["/data", "/app/backend/uploads", "/app/backend/backups"]
 
 # Copy installed node_modules from base stage
 COPY --from=base /app/node_modules ./node_modules
 # Copy backend source
 COPY backend ./backend
-# Copy legacy frontend static assets only
+# Copy legacy frontend static assets
 COPY frontend/legacy ./frontend/legacy
+# Copy pilot frontend static assets (A7, optional route)
+COPY frontend/pilot ./frontend/pilot
 # Copy scripts for backup/restore
 COPY scripts ./scripts
 # Copy package.json for reference

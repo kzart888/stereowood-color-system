@@ -1,0 +1,120 @@
+:root {
+  --pilot-bg: #f5f7fa;
+  --pilot-card-bg: #ffffff;
+  --pilot-text: #233142;
+  --pilot-muted: #5b6b7b;
+  --pilot-border: #dbe3ea;
+  --pilot-accent: #4e6e8e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  background: var(--pilot-bg);
+  color: var(--pilot-text);
+}
+
+.pilot-app {
+  width: min(1080px, 94vw);
+  margin: 20px auto 36px;
+  display: grid;
+  gap: 14px;
+}
+
+.pilot-header {
+  background: linear-gradient(135deg, #edf2f7 0%, #ffffff 65%);
+  border: 1px solid var(--pilot-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.pilot-header h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.pilot-header p {
+  margin: 0;
+  color: var(--pilot-muted);
+  font-size: 14px;
+}
+
+.pilot-card {
+  background: var(--pilot-card-bg);
+  border: 1px solid var(--pilot-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.pilot-card h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.kv-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.kv-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--pilot-border);
+  border-radius: 6px;
+  background: #fbfcfe;
+  font-size: 13px;
+}
+
+.kv-list .key {
+  color: var(--pilot-muted);
+}
+
+.kv-list .value {
+  color: var(--pilot-text);
+  font-weight: 600;
+}
+
+.sample-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.sample-panel {
+  border: 1px solid var(--pilot-border);
+  border-radius: 8px;
+  background: #fcfdff;
+  padding: 10px;
+}
+
+.sample-panel h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--pilot-accent);
+}
+
+.sample-panel pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.35;
+  background: #f7f9fc;
+  border: 1px solid var(--pilot-border);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.error {
+  color: #b00020;
+  font-weight: 600;
+}

@@ -1,0 +1,9 @@
+services:
+  stereowood:
+    environment:
+      - ENABLE_PILOT_UI=true
+      - NODE_ENV=production
+      - PORT=9099
+      - DB_FILE=/data/color_management.db
+    ports:
+      - "${PILOT_HOST_PORT:-9199}:9099"

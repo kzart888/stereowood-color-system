@@ -43,6 +43,13 @@ app.use((req, res, next) => {
 // Uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Optional pilot UI (A7): isolated from legacy production UI and enabled by env.
+const ENABLE_PILOT_UI = process.env.ENABLE_PILOT_UI === 'true';
+const PILOT_DIR = path.join(__dirname, '..', 'frontend', 'pilot');
+if (ENABLE_PILOT_UI && fs.existsSync(PILOT_DIR)) {
+  app.use('/pilot', express.static(PILOT_DIR, { extensions: ['html'] }));
+}
+
 // Legacy production UI
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend', 'legacy');
 if (fs.existsSync(FRONTEND_DIR)) {
@@ -78,6 +85,7 @@ app.get('/api/config', (req, res) => {
       formulaCalculator: process.env.ENABLE_FORMULA_CALCULATOR === 'true',
       artworkManagement: process.env.ENABLE_ARTWORK_MANAGEMENT === 'true',
       montMarte: process.env.ENABLE_MONT_MARTE === 'true',
+      pilotExplorer: ENABLE_PILOT_UI,
     },
   });
 });

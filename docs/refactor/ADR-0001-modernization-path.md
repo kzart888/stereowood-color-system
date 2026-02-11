@@ -22,6 +22,35 @@
 - Downtime/cutover risk (weight: high): risk during Synology rollout/rollback.
 - Data and API compatibility risk (weight: high): risk of backend contract drift.
 
+## A7 Suitability Matrix (2026-02-11 Update)
+
+### Backend track
+| Candidate | Delivery Risk | Maintainability Gain | Ops Fit (Synology) | Decision |
+|---|---:|---:|---:|---|
+| Keep Express JS (current) + stricter module boundaries | Low | Medium | High | Keep as baseline |
+| Incremental TypeScript in new domain/adapters only | Low-Medium | High | High | Recommended |
+| Full TS conversion in one cutover | High | High | Medium | Reject for now |
+
+### Frontend track
+| Candidate | Delivery Risk | Maintainability Gain | Ops Fit (Synology) | Decision |
+|---|---:|---:|---:|---|
+| Continue legacy-only hardening | Low | Low-Medium | High | Transitional only |
+| Parallel Vue 3 + Vite pilot (read-only slice first) | Medium | High | High | Recommended |
+| Full Vue 3 rewrite with one-time cutover | High | High | Medium | Reject for now |
+
+### Data and runtime track
+| Candidate | Delivery Risk | Maintainability Gain | Ops Fit (Synology) | Decision |
+|---|---:|---:|---:|---|
+| Keep SQLite + additive schema (current) | Low | Medium | High | Keep for Phase A |
+| Move to PostgreSQL during Phase A | High | High | Medium | Defer to post-Phase A |
+
+## A7 Constraints
+1. Keep `frontend/legacy` as production UI in this phase.
+2. Keep `/api` payload and `/health` behavior backward-compatible.
+3. Pilot must be read-only and reversible by env toggle + container rollback.
+4. Synology runtime contract stays unchanged (`/data`, uploads, backups mount paths).
+5. No destructive DB migration in A7.
+
 ## Decision
 - Recommended path: **Option 3 (parallel pilot migration)**.
 - Rationale:
@@ -57,3 +86,10 @@
 1. Define Phase 5.4 pilot slice and API compatibility contract.
 2. Author Synology cutover + rollback runbook for pilot.
 3. Add gate review report after first pilot rehearsal.
+
+## A7 Execution Record
+- Pilot UI implementation path: `frontend/pilot` served at `/pilot` only when `ENABLE_PILOT_UI=true`.
+- Pilot contract and runbook:
+  - `docs/architecture/PHASE_A7_PILOT_CONTRACT.md`
+  - `docs/architecture/PHASE_A7_PILOT_RUNBOOK.md`
+  - `docs/architecture/PHASE_A7_SYNOLOGY_REHEARSAL_EVIDENCE.md`

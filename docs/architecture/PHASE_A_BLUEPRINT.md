@@ -187,6 +187,16 @@ Verification:
 Rollback:
 - pilot isolated from main legacy runtime path.
 
+Status:
+- Completed on 2026-02-11.
+- Verification artifacts:
+  - `docs/refactor/ADR-0001-modernization-path.md`
+  - `docs/architecture/PHASE_A7_PILOT_CONTRACT.md`
+  - `docs/architecture/PHASE_A7_PILOT_RUNBOOK.md`
+  - `docs/architecture/PHASE_A7_SYNOLOGY_REHEARSAL_EVIDENCE.md`
+  - `docs/architecture/PHASE_A7_REVIEW_GATE.md`
+  - `docs/architecture/decisions/A7-0001-modernization-pilot-suitability.md`
+
 ### A8: Phase A Final Gate
 Deliverables:
 - `docs/architecture/PHASE_A_REVIEW_GATE.md` with full code-review-agent findings and resolutions.

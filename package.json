@@ -24,7 +24,9 @@
     "phaseA:a4:verify": "npm run phaseA:a4:auth-smoke && npm run phaseA:a4:readonly-smoke && npm run phase0:verify",
     "phaseA:a5:stale-smoke": "node scripts/phaseA-a5-stale-smoke.js",
     "phaseA:a5:contract-snapshot": "node scripts/phaseA-a5-conflict-contract.js",
-    "phaseA:a5:verify": "npm run phaseA:a5:stale-smoke && npm run phaseA:a5:contract-snapshot && npm run phase0:verify"
+    "phaseA:a5:verify": "npm run phaseA:a5:stale-smoke && npm run phaseA:a5:contract-snapshot && npm run phase0:verify",
+    "phaseA:a7:pilot-parity": "node scripts/phaseA-a7-pilot-parity.js",
+    "phaseA:a7:verify": "npm run phaseA:a7:pilot-parity && npm run phase0:verify"
   },
   "keywords": [
     "color-management",

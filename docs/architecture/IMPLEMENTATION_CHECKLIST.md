@@ -108,16 +108,16 @@ Gate:
 - [x] `docs/architecture/decisions/A6-*.md`
 
 ## Batch A7: Suitable Tech-Stack Upgrade Decision and Pilot
-- [ ] Update modernization ADR with suitability matrix and constraints.
-- [ ] Confirm pilot slice and migration contract.
-- [ ] Implement pilot with rollback-ready deployment script/runbook.
-- [ ] Execute Synology rehearsal for pilot slice.
-- [ ] Add/update decision record for A7.
+- [x] Update modernization ADR with suitability matrix and constraints.
+- [x] Confirm pilot slice and migration contract.
+- [x] Implement pilot with rollback-ready deployment script/runbook.
+- [x] Execute Synology rehearsal for pilot slice.
+- [x] Add/update decision record for A7.
 
 Gate:
-- [ ] Pilot parity checks pass.
-- [ ] Synology rehearsal evidence updated.
-- [ ] `docs/architecture/decisions/A7-*.md`
+- [x] Pilot parity checks pass.
+- [x] Synology rehearsal evidence updated.
+- [x] `docs/architecture/decisions/A7-*.md`
 
 ## Batch A8: Final Gate and Branch Readiness
 - [ ] Run full `code-review-agent` pass and resolve findings.

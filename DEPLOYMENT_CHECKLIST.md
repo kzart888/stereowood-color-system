@@ -7,6 +7,7 @@
 ## Runtime Contract
 - Backend entry: `backend/server.js`
 - UI root: `/`
+- Pilot UI root: `/pilot` (enabled only when `ENABLE_PILOT_UI=true`)
 - API base: `/api`
 - Health endpoint: `/health`
 - Default app port: `9099`
@@ -19,6 +20,7 @@
   - `NODE_ENV=production`
   - `PORT=9099`
   - `DB_FILE=/data/color_management.db`
+  - `ENABLE_PILOT_UI=false` (default)
   - `TZ=Asia/Shanghai`
 - Volume mappings:
   - `/volume1/docker/stereowood-color-system/data:/data:rw`
@@ -50,6 +52,7 @@
    - `GET /api/custom-colors` -> `200`
    - `GET /api/artworks` -> `200`
    - root `/` loads correctly
+   - if pilot enabled: `GET /pilot` -> `200`
 4. Stop candidate container.
 5. Cut over production container to candidate image using unchanged env and volumes.
 
@@ -62,6 +65,7 @@
    - `/api/mont-marte-colors`
    - `/api/categories`
 4. No new browser console blocking errors.
+5. If pilot was enabled for rehearsal/cutover, verify `/pilot` is functional.
 
 ## Rollback
 1. Start previous known-good image tag with identical env and volumes.
