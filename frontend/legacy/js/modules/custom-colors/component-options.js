@@ -415,12 +415,16 @@
         // Helper to get message service
         getMsg() {
             if (window.msg) return window.msg;
-            return {
-                success: (text) => ElementPlus.ElMessage.success(text),
-                error: (text) => ElementPlus.ElMessage.error(text),
-                warning: (text) => ElementPlus.ElMessage.warning(text),
-                info: (text) => ElementPlus.ElMessage.info(text)
-            };
+            if (!window.__swMsgNoop) {
+                const noop = () => {};
+                window.__swMsgNoop = {
+                    success: noop,
+                    error: noop,
+                    warning: noop,
+                    info: noop
+                };
+            }
+            return window.__swMsgNoop;
         },
         
         setColorItemRef(color) {
