@@ -120,12 +120,12 @@ Gate:
 - [x] `docs/architecture/decisions/A7-*.md`
 
 ## Batch A8: Final Gate and Branch Readiness
-- [ ] Run full `code-review-agent` pass and resolve findings.
-- [ ] Publish `docs/architecture/PHASE_A_REVIEW_GATE.md`.
-- [ ] Confirm deployment/runbook docs stay aligned.
-- [ ] Freeze branch for merge decision.
+- [x] Run full `code-review-agent` pass and resolve findings.
+- [x] Publish `docs/architecture/PHASE_A_REVIEW_GATE.md`.
+- [x] Confirm deployment/runbook docs stay aligned.
+- [x] Freeze branch for merge decision.
 
 Gate:
-- [ ] No open Critical/High findings.
-- [ ] `npm run phase0:verify` pass.
-- [ ] Merge recommendation documented.
+- [x] No open Critical/High findings.
+- [x] `npm run phase0:verify` pass.
+- [x] Merge recommendation documented.
