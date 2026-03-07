@@ -1,9 +1,8 @@
-﻿const fs = require('fs').promises;
-const path = require('path');
-const { db } = require('../db/index');
+﻿const { db } = require('../db/index');
 const montMarteColorQueries = require('../db/queries/mont-marte-colors');
 const { cascadeRenameInFormulasNoTransaction } = require('./formula');
 const AuditService = require('../domains/audit/service');
+const UploadImageService = require('./upload-image-service');
 
 function createError(message, statusCode, code, extraFields = {}) {
   const error = new Error(message);
@@ -119,18 +118,21 @@ function mapDbWriteError(error) {
 }
 
 async function safeDeleteUpload(fileName) {
-  if (!fileName) return;
-  const absolutePath = path.join(__dirname, '..', 'uploads', path.basename(fileName));
-  try {
-    await fs.unlink(absolutePath);
-  } catch {
-    // best-effort cleanup
-  }
+  await UploadImageService.deleteUploadAndThumbnail(fileName);
+}
+
+function withThumbPath(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    image_thumb_path: UploadImageService.buildThumbnailName(row.image_path),
+  };
 }
 
 class MontMarteColorService {
   async getAllColors() {
-    return montMarteColorQueries.getAllColors();
+    const rows = await montMarteColorQueries.getAllColors();
+    return rows.map((row) => withThumbPath(row));
   }
 
   async createColor(body, fileName, context = {}) {
@@ -146,7 +148,7 @@ class MontMarteColorService {
       mapDbWriteError(error);
     }
 
-    const created = await montMarteColorQueries.getColorById(colorId);
+    const created = withThumbPath(await montMarteColorQueries.getColorById(colorId));
     await AuditService.recordEntityChangeSafe({
       entityType: 'mont_marte_color',
       entityId: colorId,
@@ -230,7 +232,7 @@ class MontMarteColorService {
       await safeDeleteUpload(existing.image_path);
     }
 
-    const updated = await montMarteColorQueries.getColorById(id);
+    const updated = withThumbPath(await montMarteColorQueries.getColorById(id));
     await AuditService.recordEntityChangeSafe({
       entityType: 'mont_marte_color',
       entityId: id,

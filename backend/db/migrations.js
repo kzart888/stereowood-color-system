@@ -175,6 +175,57 @@ async function runMigrations() {
       await runSafe(`ALTER TABLE color_schemes ADD COLUMN initial_thumbnail_path TEXT NULL`);
     }
 
+    // Scheme related assets table (supports image/doc attachments)
+    await runSafe(`
+      CREATE TABLE IF NOT EXISTS color_scheme_assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        scheme_id INTEGER NOT NULL,
+        asset_type TEXT NOT NULL DEFAULT 'document',
+        original_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        mime_type TEXT,
+        file_size INTEGER,
+        sort_order INTEGER NOT NULL DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (scheme_id) REFERENCES color_schemes (id) ON DELETE CASCADE
+      )
+    `);
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_color_scheme_assets_scheme_sort ON color_scheme_assets(scheme_id, sort_order)`);
+    await runSafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_color_scheme_assets_scheme_file ON color_scheme_assets(scheme_id, file_path)`);
+
+    // Backfill existing initial thumbnail into first related asset slot when missing.
+    await runSafe(`
+      INSERT INTO color_scheme_assets (
+        scheme_id,
+        asset_type,
+        original_name,
+        file_path,
+        mime_type,
+        file_size,
+        sort_order
+      )
+      SELECT
+        cs.id,
+        'image',
+        COALESCE(NULLIF(TRIM(cs.initial_thumbnail_path), ''), 'legacy-image'),
+        cs.initial_thumbnail_path,
+        'image/*',
+        NULL,
+        COALESCE(
+          (SELECT MAX(a.sort_order) + 1 FROM color_scheme_assets a WHERE a.scheme_id = cs.id),
+          1
+        )
+      FROM color_schemes cs
+      WHERE cs.initial_thumbnail_path IS NOT NULL
+        AND TRIM(cs.initial_thumbnail_path) <> ''
+        AND NOT EXISTS (
+          SELECT 1 FROM color_scheme_assets a
+          WHERE a.scheme_id = cs.id
+            AND a.file_path = cs.initial_thumbnail_path
+        )
+    `);
+
     // 杩佺Щ锛歝ustom_colors_history 鍘婚櫎瀵?custom_colors 鐨勫閿害鏉燂紝閬垮厤鍒犻櫎鐖惰褰曟椂鍙楅樆
     // 妫€娴嬫槸鍚﹀瓨鍦ㄥ閿紩鐢?
     const hasHistoryFK = await new Promise((resolve) => {

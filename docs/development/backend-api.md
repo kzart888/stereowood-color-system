@@ -1,6 +1,6 @@
 # Backend API Overview
 
-Last updated: 2026-03-07
+Last updated: 2026-03-08
 
 This document describes the current Express + SQLite contract served by `backend/server.js`.
 
@@ -57,6 +57,10 @@ Source: `backend/routes/artworks.js` -> `backend/services/ArtworkService.js` -> 
 - `POST /api/artworks/:artworkId/schemes`
 - `PUT /api/artworks/:artworkId/schemes/:schemeId`
 - `DELETE /api/artworks/:artworkId/schemes/:schemeId`
+- `GET /api/artworks/:artworkId/schemes/:schemeId/assets`
+- `POST /api/artworks/:artworkId/schemes/:schemeId/assets`
+- `DELETE /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId`
+- `PUT /api/artworks/:artworkId/schemes/:schemeId/assets/reorder`
 
 Key request details:
 - Scheme create/update use upload fields:
@@ -65,6 +69,13 @@ Key request details:
 - Scheme create/update require `name`.
 - `layers` accepts array JSON or JSON-stringified array.
 - Scheme update (`PUT`) accepts optional `version` for optimistic locking.
+- Scheme asset upload field is `asset`.
+- Scheme asset upload accepts `image/*`, `doc`, `docx`, `xls`, `xlsx`, `txt`, `md`.
+- Scheme related-asset maximum count: `6` per scheme.
+- `/api/artworks` scheme payload appends:
+  - `thumbnail_thumb_path`
+  - `initial_thumbnail_thumb_path`
+  - `related_assets[]` (each item includes `thumb_path` for images).
 
 Conflict behavior:
 - `VERSION_CONFLICT` -> `409` with payload keys:
@@ -266,6 +277,8 @@ From `GET /api/config` -> `features`:
 ## Upload Notes
 - Uploaded files are persisted under `backend/uploads`.
 - Update/delete flows attempt best-effort cleanup for replaced/orphaned files.
+- Image uploads generate sidecar thumbnails (`*.thumb256.jpg`) used by list views.
+- Deleting image uploads also attempts to delete their sidecar thumbnails.
 
 ## Formula Rename Behavior
 - Renaming a mont-marte color may cascade into custom color formulas.

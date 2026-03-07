@@ -1,6 +1,6 @@
 # Latest Roadmap and Checklist (P0-P6 + Auth Hardening Refresh)
 
-Last updated: 2026-03-07  
+Last updated: 2026-03-08  
 Scope: legacy production continuity + completed auth/RBAC hardening + modernization preparation.
 
 This file remains the architecture execution source of truth.
@@ -26,6 +26,14 @@ This file remains the architecture execution source of truth.
   - single active session per account
   - account creation rule: create `user` first, then promote to `admin` if needed
   - separate login page and account-management page
+- Legacy UI deep optimization (U0-U7) is now completed on the working branch:
+  - default pagination moved to 24
+  - category-manager drag/alignment polish
+  - artworks related-assets model + API + UI
+  - dialog/button consistency pass
+  - thumbnail sidecar generation and thumbnail-first rendering
+  - execution checklist: `docs/architecture/LEGACY_UI_U0_U7_CHECKLIST.md`
+  - review gate: `docs/architecture/U7_REVIEW_GATE.md`
 
 ## Phase Status Overview
 
@@ -40,6 +48,7 @@ This file remains the architecture execution source of truth.
 | P6 | Modernization pilot (Vue path) | Completed (gate-ready) | Pilot write slice, parity, and rollback rehearsal completed. |
 | P7 | Auth/RBAC hardening refresh | Completed | Login split, role-based admin, forced password change, cookie session completed. |
 | P8 | Modern platform build-out | Pending | Start new modern frontend branch after stable merge/tag. |
+| U0-U7 | Legacy UI deep optimization | Completed | Related-assets + visual consistency + thumbnail quality pass on legacy runtime. |
 
 ## P7 Completion Checklist (This Iteration)
 

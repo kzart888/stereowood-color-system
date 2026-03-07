@@ -44,6 +44,14 @@
         getGateway().artworks.updateScheme(getBaseURL(), artworkId, schemeId, formData),
       deleteScheme: (artworkId, schemeId) =>
         getGateway().artworks.deleteScheme(getBaseURL(), artworkId, schemeId),
+      listSchemeAssets: (artworkId, schemeId) =>
+        getGateway().artworks.listSchemeAssets(getBaseURL(), artworkId, schemeId),
+      addSchemeAsset: (artworkId, schemeId, formData) =>
+        getGateway().artworks.addSchemeAsset(getBaseURL(), artworkId, schemeId, formData),
+      deleteSchemeAsset: (artworkId, schemeId, assetId) =>
+        getGateway().artworks.deleteSchemeAsset(getBaseURL(), artworkId, schemeId, assetId),
+      reorderSchemeAssets: (artworkId, schemeId, orderedIds) =>
+        getGateway().artworks.reorderSchemeAssets(getBaseURL(), artworkId, schemeId, orderedIds),
     },
     montMarteColors: {
       getAll: () => getGateway().montMarteColors.getAll(getBaseURL()),

@@ -122,6 +122,7 @@
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    outline: none !important;
     background: transparent;
     color: var(--sw-text-secondary);
     transition: all var(--sw-transition-fast);
@@ -146,11 +147,19 @@
     background: var(--sw-primary) !important;
     border-color: var(--sw-primary) !important;
     color: white !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 .dual-toggle-group .el-button--primary:hover {
     background: var(--sw-primary-hover) !important;
     border-color: var(--sw-primary-hover) !important;
+}
+
+.dual-toggle-group .el-button:focus-visible,
+.dual-toggle-group button:focus-visible {
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 /* === 分类筛选按钮 === */

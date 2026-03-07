@@ -390,6 +390,200 @@ function deleteScheme(schemeId) {
     });
 }
 
+function getSchemeAssets(schemeId) {
+    return new Promise((resolve, reject) => {
+        db.all(
+            `
+            SELECT
+                id,
+                scheme_id,
+                asset_type,
+                original_name,
+                file_path,
+                mime_type,
+                file_size,
+                sort_order,
+                created_at,
+                updated_at
+            FROM color_scheme_assets
+            WHERE scheme_id = ?
+            ORDER BY sort_order ASC, id ASC
+            `,
+            [schemeId],
+            (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows || []);
+            }
+        );
+    });
+}
+
+function getSchemeAssetsForSchemeIds(schemeIds = []) {
+    return new Promise((resolve, reject) => {
+        if (!Array.isArray(schemeIds) || schemeIds.length === 0) {
+            return resolve([]);
+        }
+        const placeholders = schemeIds.map(() => '?').join(',');
+        db.all(
+            `
+            SELECT
+                id,
+                scheme_id,
+                asset_type,
+                original_name,
+                file_path,
+                mime_type,
+                file_size,
+                sort_order,
+                created_at,
+                updated_at
+            FROM color_scheme_assets
+            WHERE scheme_id IN (${placeholders})
+            ORDER BY scheme_id ASC, sort_order ASC, id ASC
+            `,
+            schemeIds,
+            (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows || []);
+            }
+        );
+    });
+}
+
+function countSchemeAssets(schemeId) {
+    return new Promise((resolve, reject) => {
+        db.get(
+            `SELECT COUNT(*) AS count FROM color_scheme_assets WHERE scheme_id = ?`,
+            [schemeId],
+            (err, row) => {
+                if (err) reject(err);
+                else resolve((row && row.count) || 0);
+            }
+        );
+    });
+}
+
+function createSchemeAsset(assetData) {
+    const {
+        scheme_id,
+        asset_type,
+        original_name,
+        file_path,
+        mime_type,
+        file_size,
+        sort_order,
+    } = assetData;
+
+    return new Promise((resolve, reject) => {
+        db.run(
+            `
+            INSERT INTO color_scheme_assets (
+                scheme_id,
+                asset_type,
+                original_name,
+                file_path,
+                mime_type,
+                file_size,
+                sort_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            `,
+            [scheme_id, asset_type, original_name, file_path, mime_type, file_size, sort_order],
+            function onInsert(err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+            }
+        );
+    });
+}
+
+function getSchemeAssetById(assetId) {
+    return new Promise((resolve, reject) => {
+        db.get(
+            `
+            SELECT
+                id,
+                scheme_id,
+                asset_type,
+                original_name,
+                file_path,
+                mime_type,
+                file_size,
+                sort_order,
+                created_at,
+                updated_at
+            FROM color_scheme_assets
+            WHERE id = ?
+            `,
+            [assetId],
+            (err, row) => {
+                if (err) reject(err);
+                else resolve(row || null);
+            }
+        );
+    });
+}
+
+function deleteSchemeAsset(assetId, schemeId = null) {
+    return new Promise((resolve, reject) => {
+        const params = [assetId];
+        let sql = `DELETE FROM color_scheme_assets WHERE id = ?`;
+        if (schemeId !== null && schemeId !== undefined) {
+            sql += ` AND scheme_id = ?`;
+            params.push(schemeId);
+        }
+        db.run(sql, params, function onDelete(err) {
+            if (err) reject(err);
+            else resolve(this.changes);
+        });
+    });
+}
+
+function reorderSchemeAssets(schemeId, updates = []) {
+    return new Promise((resolve, reject) => {
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+
+            let completed = 0;
+            let failed = false;
+
+            if (!Array.isArray(updates) || updates.length === 0) {
+                db.run('COMMIT', (commitErr) => {
+                    if (commitErr) reject(commitErr);
+                    else resolve(0);
+                });
+                return;
+            }
+
+            updates.forEach((item) => {
+                db.run(
+                    `
+                    UPDATE color_scheme_assets
+                    SET sort_order = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND scheme_id = ?
+                    `,
+                    [item.sort_order, item.id, schemeId],
+                    function onUpdate(err) {
+                        if (failed) return;
+                        if (err) {
+                            failed = true;
+                            db.run('ROLLBACK');
+                            reject(err);
+                            return;
+                        }
+                        completed += 1;
+                        if (completed === updates.length) {
+                            db.run('COMMIT', (commitErr) => {
+                                if (commitErr) reject(commitErr);
+                                else resolve(completed);
+                            });
+                        }
+                    }
+                );
+            });
+        });
+    });
+}
+
 module.exports = {
     getAllArtworks,
     getArtworkById,
@@ -402,5 +596,12 @@ module.exports = {
     archiveSchemeHistory,
     createScheme,
     updateScheme,
-    deleteScheme
+    deleteScheme,
+    getSchemeAssets,
+    getSchemeAssetsForSchemeIds,
+    countSchemeAssets,
+    createSchemeAsset,
+    getSchemeAssetById,
+    deleteSchemeAsset,
+    reorderSchemeAssets
 };

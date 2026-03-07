@@ -1,8 +1,8 @@
 ﻿const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const ColorService = require('../domains/custom-colors/service');
+const UploadImageService = require('../domains/shared/upload-image-service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
 const { requireWriteAccess } = require('./helpers/write-access');
 
@@ -163,6 +163,9 @@ router.post('/custom-colors', requireWriteAccess, upload.single('image'), async 
       color_code: colorCode,
       image_path: req.file ? req.file.filename : null,
     };
+    if (req.file) {
+      await UploadImageService.ensureThumbnailForUpload(req.file);
+    }
 
     const result = await ColorService.createColor(colorData, extractAuditContext(req));
     return res.json(result);
@@ -250,11 +253,11 @@ router.put('/custom-colors/:id', requireWriteAccess, upload.single('image'), asy
 
     if (req.file) {
       colorData.image_path = req.file.filename;
+      await UploadImageService.ensureThumbnailForUpload(req.file);
 
       const previousImage = normalizeStringOrNull(req.body.existingImagePath);
       if (previousImage && previousImage !== req.file.filename) {
-        const oldImagePath = path.join(__dirname, '..', 'uploads', path.basename(previousImage));
-        fs.unlink(oldImagePath, () => {});
+        UploadImageService.deleteUploadAndThumbnail(previousImage).catch(() => {});
       }
     } else if (req.body.existingImagePath !== undefined) {
       colorData.image_path = normalizeStringOrNull(req.body.existingImagePath);

@@ -1,6 +1,6 @@
 # Architecture Docs Index
 
-Last updated: 2026-03-07 (P7 auth/rbac refresh)
+Last updated: 2026-03-08 (legacy UI U0-U7 refresh)
 
 ## Active (Current Source of Truth)
 - `docs/architecture/LATEST_ROADMAP_P0_P6.md` - consolidated future work roadmap and execution checklist.
@@ -19,6 +19,8 @@ Last updated: 2026-03-07 (P7 auth/rbac refresh)
 - `docs/architecture/P6_2_CUTOVER_DECISION_PACKAGE.md` - go/no-go and rollback decision package.
 - `docs/architecture/P6_FULL_REVIEW_GATE.md` - full-repo code-review-agent gate after P5.2 -> P6.2.
 - `docs/architecture/P7_AUTH_RBAC_REVIEW_GATE.md` - login split + RBAC hardening review gate.
+- `docs/architecture/LEGACY_UI_U0_U7_CHECKLIST.md` - legacy UI deep optimization execution checklist and gate evidence.
+- `docs/architecture/U7_REVIEW_GATE.md` - code-review-agent gate result for legacy UI deep optimization.
 - `docs/architecture/P8_MODERN_PLATFORM_BLUEPRINT.md` - modern frontend migration blueprint and cutover rules.
 - `docs/architecture/PHASE_A_BLUEPRINT.md` - original Phase A architecture blueprint.
 - `docs/architecture/MODULE_MAP.md` - module boundaries and target ownership map.

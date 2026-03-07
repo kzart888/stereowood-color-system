@@ -26,16 +26,26 @@
     return true;
   }
 
-  function buildImageUrl(color, options = {}) {
-    if (!color || !color.image_path) return null;
+  function buildImageUrlFromPath(path, options = {}) {
+    if (!path) return null;
     if (typeof options.buildURL === 'function' && options.baseURL) {
-      return options.buildURL(options.baseURL, color.image_path);
+      return options.buildURL(options.baseURL, path);
     }
     if (options.baseURL) {
       const base = options.baseURL.replace(/\/$/, '');
-      return `${base}/uploads/${color.image_path}`;
+      return `${base}/uploads/${path}`;
     }
-    return color.image_path;
+    return path;
+  }
+
+  function buildImageUrl(color, options = {}) {
+    const candidatePath = color?.image_thumb_path || color?.image_path;
+    return buildImageUrlFromPath(candidatePath, options);
+  }
+
+  function buildPreviewImageUrl(color, options = {}) {
+    const candidatePath = color?.image_path || color?.image_thumb_path;
+    return buildImageUrlFromPath(candidatePath, options);
   }
 
   function deriveHexFromColor(color) {
@@ -56,9 +66,11 @@
 
     const imageUrl = buildImageUrl(color, options);
     if (imageUrl) {
+      const previewUrl = buildPreviewImageUrl(color, options) || imageUrl;
       return {
         type: 'image',
         imageUrl,
+        previewUrl,
         style: { backgroundImage: `url(${imageUrl})` }
       };
     }

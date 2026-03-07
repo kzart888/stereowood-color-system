@@ -1,6 +1,21 @@
 # Changelog
 
-## Unreleased (2026-03-07, P1/P2)
+## Unreleased (2026-03-08, U0-U7 + legacy UI pass)
+### Legacy UI Deep Optimization (U0-U7)
+- Changed legacy pagination defaults to `24` for custom-colors / artworks / mont-marte (while preserving existing local preference values).
+- Polished category manager drag interaction and top input-row alignment.
+- Added artworks related-assets backend model and APIs:
+  - `color_scheme_assets` migration + idempotent backfill from `initial_thumbnail_path`
+  - list/add/delete/reorder endpoints for scheme assets.
+- Updated artworks legacy UI:
+  - renamed scheme-side section to `相关资料`
+  - added quick-add plus-card and multi-asset editor in add/edit dialog
+  - mixed image/document asset support with lightweight details + open-file flow.
+- Unified key dialog/button styles and reduced dual-toggle selected-state visual artifacts.
+- Added thumbnail sidecar generation (`*.thumb256.jpg`) and thumbnail-first rendering in list views.
+- Added `docs/architecture/LEGACY_UI_U0_U7_CHECKLIST.md` and linked docs index/roadmap updates.
+
+### Earlier Unreleased Entries (2026-03-07 cycle)
 ### P1/P2 Execution: Docs Alignment + Test Hardening
 - Added docs/runtime contract audit matrix and P1 review gate.
 - Archived obsolete top-level legacy plan docs under `docs/archive/legacy-plans/2026-03-top-level/`.

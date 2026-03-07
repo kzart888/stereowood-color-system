@@ -81,7 +81,7 @@
       return false;
     }
     if (swatch.type === 'image' && swatch.imageUrl) {
-      thumbPreview.show(event, swatch.imageUrl);
+      thumbPreview.show(event, swatch.previewUrl || swatch.imageUrl);
       return true;
     }
 

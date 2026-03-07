@@ -41,6 +41,9 @@
       initialThumbnailFile: null,
       initialThumbnailPreview: null,
       existingInitialThumbnailPath: null,
+      relatedAssets: [],
+      removedRelatedAssetIds: [],
+      newRelatedFiles: [],
       mappings: [cloneMapping(DEFAULT_MAPPING)]
     };
   }
@@ -62,6 +65,21 @@
       form.initialThumbnailPreview = uploadURL(scheme.initial_thumbnail_path);
       form.existingInitialThumbnailPath = scheme.initial_thumbnail_path;
     }
+    const relatedAssets = Array.isArray(scheme.related_assets) ? scheme.related_assets.slice() : [];
+    if (!relatedAssets.length && scheme.initial_thumbnail_path) {
+      relatedAssets.push({
+        id: `legacy-${scheme.id || 'new'}`,
+        scheme_id: scheme.id || null,
+        asset_type: 'image',
+        file_path: scheme.initial_thumbnail_path,
+        original_name: '初始方案',
+        is_image: true,
+        thumb_path: scheme.initial_thumbnail_thumb_path || null,
+      });
+    }
+    form.relatedAssets = relatedAssets;
+    form.removedRelatedAssetIds = [];
+    form.newRelatedFiles = [];
     if (window.ArtworkSchemeUtils && typeof window.ArtworkSchemeUtils.normalizeMappings === 'function') {
       const normalized = window.ArtworkSchemeUtils.normalizeMappings(scheme);
       if (normalized.length) {
@@ -87,7 +105,9 @@
       id: form.id || null,
       name: (form.name || '').trim(),
       thumbnail: form.thumbnailPreview ? '1' : '',
-      initialThumbnail: form.initialThumbnailPreview ? '1' : '',
+      relatedAssetIds: (form.relatedAssets || []).map((asset) => String(asset.id)).sort(),
+      removedRelatedAssetIds: (form.removedRelatedAssetIds || []).map((id) => String(id)).sort(),
+      pendingRelatedAssetNames: (form.newRelatedFiles || []).map((asset) => String(asset.name || '')).sort(),
       mappings: normalizedMappings
     });
   }

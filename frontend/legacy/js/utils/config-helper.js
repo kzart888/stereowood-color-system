@@ -16,10 +16,10 @@ window.ConfigHelper = {
         
         // Default values for different components
         const defaults = {
-            'custom-colors': 12,
-            'artworks': 12,
+            'custom-colors': 24,
+            'artworks': 24,
             'mont-marte': 24,
-            'default': 12
+            'default': 24
         };
         
         return defaults[componentType] || defaults['default'];

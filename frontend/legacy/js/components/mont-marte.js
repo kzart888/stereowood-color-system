@@ -50,9 +50,9 @@ const MontMarteComponent = {
                                         </div>
                                     </div>
                                     <div style="display:flex; gap:12px; padding:6px 4px 4px;">
-                                                            <div class="scheme-thumbnail" :class="{ 'no-image': !color.image_path }" @click="color.image_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, color.image_path))">
-                                                                <template v-if="!color.image_path">未上传图片</template>
-                                                                <img v-else :src="$helpers.buildUploadURL(baseURL, color.image_path)" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                                                            <div class="scheme-thumbnail" :class="{ 'no-image': !materialThumbSrc(color) }" @click="materialPreviewSrc(color) && $thumbPreview && $thumbPreview.show($event, materialPreviewSrc(color))">
+                                                                <template v-if="!materialThumbSrc(color)">未上传图片</template>
+                                                                <img v-else :src="materialThumbSrc(color)" @error="onThumbError" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                                                             </div>
                                         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
                                             <div class="meta-text" v-if="color.updated_at">更新：{{ $helpers.formatDate(color.updated_at) }}</div>

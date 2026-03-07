@@ -95,6 +95,12 @@
       const list = (this.editingArtwork.schemes || []).filter(s => s && typeof s.name === 'string');
       return list.some(s => s.name === name && s.id !== this.schemeForm.id);
     },
+    remainingRelatedAssetSlots() {
+      const existing = Array.isArray(this.schemeForm?.relatedAssets) ? this.schemeForm.relatedAssets.length : 0;
+      const pending = Array.isArray(this.schemeForm?.newRelatedFiles) ? this.schemeForm.newRelatedFiles.length : 0;
+      const remaining = 6 - existing - pending;
+      return remaining > 0 ? remaining : 0;
+    },
     customColors() { return this.globalData.customColors.value || []; },
     formDupCounts() {
       const counts = {};

@@ -84,6 +84,14 @@
         getClient().putMultipart(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}`), formData),
       deleteScheme: (baseURL, artworkId, schemeId) =>
         getClient().delete(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}`)),
+      listSchemeAssets: (baseURL, artworkId, schemeId) =>
+        getClient().get(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets`)),
+      addSchemeAsset: (baseURL, artworkId, schemeId, formData) =>
+        getClient().postMultipart(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets`), formData),
+      deleteSchemeAsset: (baseURL, artworkId, schemeId, assetId) =>
+        getClient().delete(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets/${assetId}`)),
+      reorderSchemeAssets: (baseURL, artworkId, schemeId, orderedIds) =>
+        getClient().put(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets/reorder`), { orderedIds }),
     },
     montMarteColors: {
       getAll: (baseURL) => getClient().get(withBase(baseURL, '/api/mont-marte-colors')),

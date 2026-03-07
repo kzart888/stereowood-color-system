@@ -1,8 +1,7 @@
-const path = require('path');
-const fs = require('fs').promises;
 const { db } = require('../db/index');
 const colorQueries = require('../db/queries/colors');
 const AuditService = require('../domains/audit/service');
+const UploadImageService = require('./upload-image-service');
 
 const COLOR_ERROR = {
   VALIDATION: 'VALIDATION_ERROR',
@@ -45,6 +44,14 @@ function dbAll(sql, params = []) {
 }
 
 class ColorService {
+  withThumbPath(row) {
+    if (!row) return row;
+    return {
+      ...row,
+      image_thumb_path: UploadImageService.buildThumbnailName(row.image_path),
+    };
+  }
+
   validateRGB(r, g, b) {
     const channels = [
       { key: 'R', value: r },
@@ -158,11 +165,12 @@ class ColorService {
   }
 
   async getAllColors() {
-    return colorQueries.getAllColors();
+    const colors = await colorQueries.getAllColors();
+    return colors.map((row) => this.withThumbPath(row));
   }
 
   async getColorById(id) {
-    const color = await colorQueries.getColorById(id);
+    const color = this.withThumbPath(await colorQueries.getColorById(id));
     if (!color) {
       throw createColorError(COLOR_ERROR.NOT_FOUND, 'Custom color not found.');
     }
@@ -299,12 +307,7 @@ class ColorService {
     }
 
     if (color.image_path) {
-      try {
-        const imagePath = path.join(__dirname, '..', 'uploads', path.basename(color.image_path));
-        await fs.unlink(imagePath);
-      } catch {
-        // best-effort cleanup
-      }
+      await UploadImageService.deleteUploadAndThumbnail(color.image_path);
     }
 
     try {
@@ -359,12 +362,7 @@ class ColorService {
 
   async deleteUploadedImage(imagePath) {
     if (!imagePath) return;
-    try {
-      const fullPath = path.join(__dirname, '..', 'uploads', path.basename(imagePath));
-      await fs.unlink(fullPath);
-    } catch {
-      // best-effort cleanup
-    }
+    await UploadImageService.deleteUploadAndThumbnail(imagePath);
   }
 
   async forceMerge({ keepId, removeIds, signature }, context = {}) {

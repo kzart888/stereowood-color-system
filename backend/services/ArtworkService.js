@@ -7,9 +7,19 @@
 
 const artworkQueries = require('../db/queries/artworks');
 const { db } = require('../db/index');
-const fs = require('fs').promises;
-const path = require('path');
 const AuditService = require('../domains/audit/service');
+const UploadImageService = require('./upload-image-service');
+
+const MAX_SCHEME_ASSETS = 6;
+const DOC_MIME_SET = new Set([
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/markdown',
+    'text/x-markdown',
+]);
 
 function createArtworkError(message, statusCode, code, extra = {}) {
     const error = new Error(message);
@@ -28,7 +38,36 @@ class ArtworkService {
     async getAllArtworks() {
         try {
             const rows = await artworkQueries.getAllArtworks();
-            return this.formatArtworkData(rows);
+            const artworks = this.formatArtworkData(rows);
+            const schemeIds = [];
+
+            artworks.forEach((artwork) => {
+                (artwork.schemes || []).forEach((scheme) => {
+                    schemeIds.push(scheme.id);
+                });
+            });
+
+            if (schemeIds.length === 0) {
+                return artworks;
+            }
+
+            const assets = await artworkQueries.getSchemeAssetsForSchemeIds(schemeIds);
+            const assetsByScheme = new Map();
+            assets.forEach((asset) => {
+                const normalized = this.toPublicSchemeAsset(asset);
+                if (!assetsByScheme.has(normalized.scheme_id)) {
+                    assetsByScheme.set(normalized.scheme_id, []);
+                }
+                assetsByScheme.get(normalized.scheme_id).push(normalized);
+            });
+
+            artworks.forEach((artwork) => {
+                (artwork.schemes || []).forEach((scheme) => {
+                    scheme.related_assets = assetsByScheme.get(scheme.id) || [];
+                });
+            });
+
+            return artworks;
         } catch (error) {
             throw new Error(`获取作品列表失败: ${error.message}`);
         }
@@ -61,11 +100,14 @@ class ArtworkService {
                         id: row.scheme_id,
                         name: row.scheme_name,  // Frontend expects 'name' not 'scheme_name'
                         thumbnail_path: row.thumbnail_path,
+                        thumbnail_thumb_path: UploadImageService.buildThumbnailName(row.thumbnail_path),
                         initial_thumbnail_path: row.initial_thumbnail_path,  // Include initial thumbnail
+                        initial_thumbnail_thumb_path: UploadImageService.buildThumbnailName(row.initial_thumbnail_path),
                         version: row.scheme_version ?? null,
                         created_at: row.scheme_created_at,
                         updated_at: row.scheme_updated_at,
-                        layers: []
+                        layers: [],
+                        related_assets: []
                     };
                     artwork.schemes.push(scheme);
                 }
@@ -83,6 +125,39 @@ class ArtworkService {
         });
         
         return Array.from(artworksMap.values());
+    }
+
+    toPublicSchemeAsset(asset) {
+        if (!asset) return null;
+        const assetType = this.resolveAssetType(asset.mime_type, asset.file_path, asset.asset_type);
+        const isImage = assetType === 'image';
+        return {
+            id: asset.id,
+            scheme_id: asset.scheme_id,
+            asset_type: assetType,
+            original_name: asset.original_name,
+            file_path: asset.file_path,
+            mime_type: asset.mime_type || null,
+            file_size: Number.isFinite(asset.file_size) ? asset.file_size : null,
+            sort_order: Number.isFinite(asset.sort_order) ? asset.sort_order : 0,
+            created_at: asset.created_at || null,
+            updated_at: asset.updated_at || null,
+            is_image: isImage,
+            thumb_path: isImage ? UploadImageService.buildThumbnailName(asset.file_path) : null,
+        };
+    }
+
+    resolveAssetType(mimeType, filePath, fallbackType = null) {
+        if (UploadImageService.isImageMimeOrPath(mimeType, filePath)) {
+            return 'image';
+        }
+        if (DOC_MIME_SET.has(String(mimeType || '').toLowerCase())) {
+            return 'document';
+        }
+        if (fallbackType === 'image' || fallbackType === 'document') {
+            return fallbackType;
+        }
+        return 'document';
     }
 
     /**
@@ -117,6 +192,10 @@ class ArtworkService {
         try {
             const existingArtwork = await artworkQueries.getArtworkById(id);
             const schemes = await artworkQueries.getArtworkSchemes(id);
+            const schemeIds = [...new Set((schemes || []).map((scheme) => scheme.id).filter(Boolean))];
+            const schemeAssets = schemeIds.length > 0
+                ? await artworkQueries.getSchemeAssetsForSchemeIds(schemeIds)
+                : [];
 
             const filesToDelete = new Set();
             for (const scheme of schemes) {
@@ -125,6 +204,11 @@ class ArtworkService {
                 }
                 if (scheme.initial_thumbnail_path) {
                     filesToDelete.add(scheme.initial_thumbnail_path);
+                }
+            }
+            for (const asset of schemeAssets) {
+                if (asset.file_path) {
+                    filesToDelete.add(asset.file_path);
                 }
             }
 
@@ -213,6 +297,9 @@ class ArtworkService {
 
             const schemeId = await artworkQueries.createScheme(dataWithConvertedLayers);
             const createdScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+            if (createdScheme) {
+                createdScheme.related_assets = [];
+            }
             await AuditService.recordEntityChangeSafe({
                 entityType: 'color_scheme',
                 entityId: schemeId,
@@ -236,6 +323,9 @@ class ArtworkService {
         if (!existingScheme) {
             throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
         }
+        existingScheme.related_assets = (await artworkQueries.getSchemeAssets(schemeId)).map((asset) =>
+            this.toPublicSchemeAsset(asset)
+        );
 
         if (expectedVersion !== null && expectedVersion !== undefined && expectedVersion !== '') {
             const parsedVersion = Number.parseInt(expectedVersion, 10);
@@ -262,20 +352,30 @@ class ArtworkService {
         };
 
         const changes = await artworkQueries.updateScheme(schemeId, dataWithConvertedLayers, expectedVersion);
-        if (changes === 0) {
-            if (expectedVersion !== null) {
-                const latestScheme = await artworkQueries.getSchemeWithLayers(schemeId);
-                throw createArtworkError('Scheme has been modified by another request.', 409, 'VERSION_CONFLICT', {
-                    entityType: 'color_scheme',
-                    expectedVersion,
-                    actualVersion: latestScheme ? latestScheme.version : null,
-                    latestData: latestScheme,
+            if (changes === 0) {
+                if (expectedVersion !== null) {
+                    const latestScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+                    if (latestScheme) {
+                        latestScheme.related_assets = (await artworkQueries.getSchemeAssets(schemeId)).map((asset) =>
+                            this.toPublicSchemeAsset(asset)
+                        );
+                    }
+                    throw createArtworkError('Scheme has been modified by another request.', 409, 'VERSION_CONFLICT', {
+                        entityType: 'color_scheme',
+                        expectedVersion,
+                        actualVersion: latestScheme ? latestScheme.version : null,
+                        latestData: latestScheme,
                 });
             }
             throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
         }
 
         const updatedScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+        if (updatedScheme) {
+            updatedScheme.related_assets = (await artworkQueries.getSchemeAssets(schemeId)).map((asset) =>
+                this.toPublicSchemeAsset(asset)
+            );
+        }
         try {
             await artworkQueries.archiveSchemeHistory(existingScheme, {
                 changeAction: 'UPDATE',
@@ -306,6 +406,10 @@ class ArtworkService {
         try {
             const scheme = await artworkQueries.getSchemeById(schemeId);
             const existingScheme = await artworkQueries.getSchemeWithLayers(schemeId);
+            const schemeAssets = await artworkQueries.getSchemeAssets(schemeId);
+            if (existingScheme) {
+                existingScheme.related_assets = schemeAssets.map((asset) => this.toPublicSchemeAsset(asset));
+            }
 
             if (scheme) {
                 if (scheme.thumbnail_path) {
@@ -313,6 +417,11 @@ class ArtworkService {
                 }
                 if (scheme.initial_thumbnail_path) {
                     await this.deleteUploadedImage(scheme.initial_thumbnail_path);
+                }
+            }
+            for (const asset of schemeAssets) {
+                if (asset.file_path) {
+                    await this.deleteUploadedImage(asset.file_path);
                 }
             }
 
@@ -347,18 +456,138 @@ class ArtworkService {
         }
     }
 
+    async listSchemeAssets(artworkId, schemeId) {
+        const scheme = await artworkQueries.getSchemeById(schemeId);
+        if (!scheme || Number(scheme.artwork_id) !== Number(artworkId)) {
+            throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
+        }
+        const assets = await artworkQueries.getSchemeAssets(schemeId);
+        return assets.map((asset) => this.toPublicSchemeAsset(asset));
+    }
+
+    async addSchemeAsset(artworkId, schemeId, file, context = {}) {
+        const scheme = await artworkQueries.getSchemeById(schemeId);
+        if (!scheme || Number(scheme.artwork_id) !== Number(artworkId)) {
+            throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
+        }
+        if (!file || !file.filename) {
+            throw createArtworkError('Asset file is required.', 400, 'VALIDATION_ERROR');
+        }
+
+        const existingCount = await artworkQueries.countSchemeAssets(schemeId);
+        if (existingCount >= MAX_SCHEME_ASSETS) {
+            throw createArtworkError(`A scheme can have at most ${MAX_SCHEME_ASSETS} related assets.`, 400, 'ASSET_LIMIT');
+        }
+
+        const currentAssets = await artworkQueries.getSchemeAssets(schemeId);
+        const nextOrder = currentAssets.length > 0
+            ? Math.max(...currentAssets.map((asset) => Number(asset.sort_order) || 0)) + 1
+            : 1;
+        const assetType = this.resolveAssetType(file.mimetype, file.originalname, null);
+        const originalName = String(file.originalname || file.filename || '').slice(0, 255);
+
+        await artworkQueries.createSchemeAsset({
+            scheme_id: schemeId,
+            asset_type: assetType,
+            original_name: originalName || file.filename,
+            file_path: file.filename,
+            mime_type: file.mimetype || null,
+            file_size: Number.isFinite(file.size) ? file.size : null,
+            sort_order: nextOrder,
+        });
+
+        if (assetType === 'image') {
+            await UploadImageService.ensureThumbnailForUpload(file);
+        }
+
+        const latestAssets = await artworkQueries.getSchemeAssets(schemeId);
+        const createdAsset = latestAssets.find((asset) => asset.file_path === file.filename) || latestAssets[latestAssets.length - 1];
+        const payload = this.toPublicSchemeAsset(createdAsset);
+
+        await AuditService.recordEntityChangeSafe({
+            entityType: 'color_scheme',
+            entityId: Number(schemeId),
+            action: 'update',
+            before: null,
+            after: { related_asset: payload, operation: 'asset_add' },
+            summary: 'Added related asset.',
+            context,
+        });
+
+        return payload;
+    }
+
+    async deleteSchemeAsset(artworkId, schemeId, assetId, context = {}) {
+        const scheme = await artworkQueries.getSchemeById(schemeId);
+        if (!scheme || Number(scheme.artwork_id) !== Number(artworkId)) {
+            throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
+        }
+        const asset = await artworkQueries.getSchemeAssetById(assetId);
+        if (!asset || Number(asset.scheme_id) !== Number(schemeId)) {
+            throw createArtworkError('Asset not found.', 404, 'NOT_FOUND');
+        }
+
+        const changes = await artworkQueries.deleteSchemeAsset(assetId, schemeId);
+        if (changes === 0) {
+            throw createArtworkError('Asset not found.', 404, 'NOT_FOUND');
+        }
+
+        await this.deleteUploadedImage(asset.file_path);
+
+        await AuditService.recordEntityChangeSafe({
+            entityType: 'color_scheme',
+            entityId: Number(schemeId),
+            action: 'update',
+            before: { related_asset: this.toPublicSchemeAsset(asset), operation: 'asset_delete' },
+            after: null,
+            summary: 'Deleted related asset.',
+            context,
+        });
+
+        return { success: true, deletedId: Number(assetId) };
+    }
+
+    async reorderSchemeAssets(artworkId, schemeId, orderedIds = [], context = {}) {
+        const scheme = await artworkQueries.getSchemeById(schemeId);
+        if (!scheme || Number(scheme.artwork_id) !== Number(artworkId)) {
+            throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
+        }
+
+        const assets = await artworkQueries.getSchemeAssets(schemeId);
+        const currentIds = assets.map((asset) => Number(asset.id)).sort((a, b) => a - b);
+        const requestedIds = (orderedIds || []).map((id) => Number(id)).sort((a, b) => a - b);
+
+        if (currentIds.length !== requestedIds.length || currentIds.some((id, idx) => id !== requestedIds[idx])) {
+            throw createArtworkError('Reorder payload must include all existing asset ids exactly once.', 400, 'VALIDATION_ERROR');
+        }
+
+        const updates = (orderedIds || []).map((id, index) => ({
+            id: Number(id),
+            sort_order: index + 1,
+        }));
+
+        await artworkQueries.reorderSchemeAssets(schemeId, updates);
+
+        const after = (await artworkQueries.getSchemeAssets(schemeId)).map((asset) => this.toPublicSchemeAsset(asset));
+        await AuditService.recordEntityChangeSafe({
+            entityType: 'color_scheme',
+            entityId: Number(schemeId),
+            action: 'update',
+            before: assets.map((asset) => this.toPublicSchemeAsset(asset)),
+            after,
+            summary: 'Reordered related assets.',
+            context,
+        });
+
+        return after;
+    }
+
     /**
      * 删除上传的图片文件
      */
     async deleteUploadedImage(imagePath) {
         if (!imagePath) return;
-        
-        try {
-            const fullPath = path.join(__dirname, '..', 'uploads', path.basename(imagePath));
-            await fs.unlink(fullPath);
-        } catch (error) {
-            console.warn('删除图片文件失败:', error.message);
-        }
+        await UploadImageService.deleteUploadAndThumbnail(imagePath);
     }
 }
 

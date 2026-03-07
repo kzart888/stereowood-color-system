@@ -35,15 +35,34 @@
 
 .category-add-section .el-form {
     margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
 }
 
 .category-add-section .el-form-item {
     margin-bottom: 0;
-    margin-right: 12px;
+    margin-right: 0;
+    display: inline-flex;
+    align-items: center;
 }
 
 .category-add-section .el-form-item:last-child {
     margin-right: 0;
+}
+
+.category-add-section .el-form-item__label {
+    display: inline-flex;
+    align-items: center;
+    line-height: 32px;
+    height: 32px;
+    padding-right: 8px;
+}
+
+.category-add-section .el-form-item__content {
+    display: inline-flex;
+    align-items: center;
 }
 
 /* Category List Section */
@@ -101,12 +120,12 @@
     display: inline-block;
     cursor: move;
     cursor: grab;
-    font-size: 20px;
+    font-size: 16px;
     line-height: 1;
     color: var(--sw-text-secondary);
     user-select: none;
-    padding: 4px 8px;
-    transition: all 0.2s ease;
+    padding: 6px 8px;
+    transition: color 0.12s ease, background-color 0.12s ease;
     border-radius: var(--sw-radius-sm);
     touch-action: none;
     -webkit-user-drag: element;
@@ -114,7 +133,6 @@
 
 .drag-handle:hover {
     color: var(--sw-primary);
-    transform: scale(1.1);
     background: var(--sw-bg-light);
 }
 
@@ -128,7 +146,6 @@
 
 .drag-handle:active {
     cursor: grabbing;
-    transform: scale(0.95);
 }
 
 .drag-handle.dragging {
@@ -146,18 +163,17 @@
 
 /* Drag and Drop Visual Feedback */
 .el-table__row {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .el-table__row.dragging {
-    opacity: 0.4;
+    opacity: 0.55;
     background: var(--sw-bg-light) !important;
-    transform: scale(0.98);
-    box-shadow: inset 0 0 0 2px var(--sw-primary);
+    box-shadow: inset 0 0 0 1px var(--sw-primary);
 }
 
 .el-table__row.drop-target {
-    background: linear-gradient(to bottom, #e6f7ff, #f0f9ff) !important;
+    background: #eef6ff !important;
     position: relative;
 }
 
@@ -171,11 +187,9 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: -2px;
-    height: 3px;
+    top: -1px;
+    height: 2px;
     background: var(--sw-primary);
-    box-shadow: 0 0 8px rgba(64, 169, 255, 0.5);
-    animation: pulse 1s infinite;
     z-index: 10;
 }
 
@@ -184,21 +198,10 @@
     position: absolute;
     left: 0;
     right: 0;
-    bottom: -2px;
-    height: 3px;
+    bottom: -1px;
+    height: 2px;
     background: var(--sw-primary);
-    box-shadow: 0 0 8px rgba(64, 169, 255, 0.5);
-    animation: pulse 1s infinite;
     z-index: 10;
-}
-
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.6;
-    }
 }
 
 /* Category Name Display */

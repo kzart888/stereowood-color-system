@@ -19,8 +19,9 @@ const CategoryManagerComponent = {
         >
             <!-- Add New Category Section -->
             <div class="category-add-section">
-                <el-form inline @submit.native.prevent="addCategory">
+                <el-form inline class="category-add-form" @submit.native.prevent="addCategory">
                     <el-form-item 
+                        class="category-inline-field"
                         label="新分类名称:"
                         :error="validationError"
                     >
@@ -34,6 +35,7 @@ const CategoryManagerComponent = {
                         />
                     </el-form-item>
                     <el-form-item 
+                        class="category-inline-field"
                         label="代码:"
                         :error="codeValidationError"
                     >
@@ -92,7 +94,7 @@ const CategoryManagerComponent = {
                                 @dragend="handleDragEnd"
                                 title="拖动排序"
                             >
-                                ≡
+                                <el-icon><Menu /></el-icon>
                             </span>
                         </template>
                     </el-table-column>
@@ -248,7 +250,9 @@ const CategoryManagerComponent = {
             validationError: '',
             codeValidationError: '',
             editValidationError: '',
-            codeEditValidationError: ''
+            codeEditValidationError: '',
+            dragOverRaf: null,
+            pendingDragOver: null
         };
     },
 
@@ -678,57 +682,73 @@ const CategoryManagerComponent = {
 
         // Drag and Drop Methods
         handleDragStart(index, event) {
-            
             this.draggedIndex = index;
             event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/html', event.target.innerHTML);
-            
-            // Add dragging class to the row, not just the handle
+
             const row = event.target.closest('tr');
             if (row) row.classList.add('dragging');
-            
-            // Set drag image (optional - for better visual feedback)
-            if (event.dataTransfer.setDragImage) {
-                const dragImage = row.cloneNode(true);
-                dragImage.style.opacity = '0.8';
-                dragImage.style.transform = 'rotate(2deg)';
-                document.body.appendChild(dragImage);
-                event.dataTransfer.setDragImage(dragImage, event.offsetX, event.offsetY);
-                setTimeout(() => document.body.removeChild(dragImage), 0);
-            }
         },
 
         handleDragOver(index, event) {
             event.preventDefault();
-            
-            event.dataTransfer.dropEffect = 'move';
-            
-            // Visual feedback for drop zone
-            if (this.dropTargetIndex !== index && this.draggedIndex !== index) {
-                // Remove all previous drop target highlights
-                const allRows = event.target.closest('tbody').querySelectorAll('tr');
-                allRows.forEach(row => row.classList.remove('drop-target', 'drop-target-before', 'drop-target-after'));
-                
-                // Add new drop target highlight
-                this.dropTargetIndex = index;
-                const currentTarget = event.target.closest('tr');
-                if (currentTarget) {
-                    currentTarget.classList.add('drop-target');
-                    
-                    // Add directional indicator based on mouse position
-                    const rect = currentTarget.getBoundingClientRect();
-                    const midpoint = rect.top + rect.height / 2;
-                    if (event.clientY < midpoint) {
-                        currentTarget.classList.add('drop-target-before');
-                    } else {
-                        currentTarget.classList.add('drop-target-after');
-                    }
-                }
+            if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'move';
+            }
+
+            if (this.draggedIndex === index) {
+                return;
+            }
+
+            this.pendingDragOver = {
+                index,
+                target: event.target.closest('tr'),
+                tbody: event.target.closest('tbody'),
+                clientY: event.clientY
+            };
+
+            if (this.dragOverRaf !== null) {
+                return;
+            }
+
+            this.dragOverRaf = requestAnimationFrame(() => {
+                this.dragOverRaf = null;
+                this.flushDragOverVisual();
+            });
+        },
+
+        flushDragOverVisual() {
+            const pending = this.pendingDragOver;
+            this.pendingDragOver = null;
+            if (!pending || !pending.target || !pending.tbody) {
+                return;
+            }
+
+            if (this.dropTargetIndex === pending.index) {
+                return;
+            }
+
+            const allRows = pending.tbody.querySelectorAll('tr');
+            allRows.forEach((row) => row.classList.remove('drop-target', 'drop-target-before', 'drop-target-after'));
+
+            this.dropTargetIndex = pending.index;
+            pending.target.classList.add('drop-target');
+
+            const rect = pending.target.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            if (pending.clientY < midpoint) {
+                pending.target.classList.add('drop-target-before');
+            } else {
+                pending.target.classList.add('drop-target-after');
             }
         },
 
         async handleDrop(index, event) {
             event.preventDefault();
+            if (this.dragOverRaf !== null) {
+                cancelAnimationFrame(this.dragOverRaf);
+                this.dragOverRaf = null;
+            }
+            this.pendingDragOver = null;
             
             // Clean up drop target highlight
             const dropTarget = event.target.closest('tr');
@@ -762,11 +782,15 @@ const CategoryManagerComponent = {
         },
 
         handleDragEnd(event) {
-            // Clean up the dragging class from the row
             const row = event.target.closest('tr');
             if (row) row.classList.remove('dragging');
-            
-            // Clean up any remaining drop target highlights
+
+            if (this.dragOverRaf !== null) {
+                cancelAnimationFrame(this.dragOverRaf);
+                this.dragOverRaf = null;
+            }
+            this.pendingDragOver = null;
+
             const dropTargets = document.querySelectorAll('.drop-target, .drop-target-before, .drop-target-after, .dragging');
             dropTargets.forEach(el => {
                 el.classList.remove('drop-target', 'drop-target-before', 'drop-target-after', 'dragging');

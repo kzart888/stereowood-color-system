@@ -422,6 +422,191 @@
     width: 100%;
 }
 
+/* === Scheme Meta / Related Assets === */
+.scheme-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.scheme-meta-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 160px;
+}
+
+.scheme-related-assets-block {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.related-assets-label {
+    min-width: 58px;
+}
+
+.related-assets-strip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.related-asset-card,
+.related-asset-add {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    border: 1px solid var(--sw-border-light);
+    background: var(--sw-bg-white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color var(--sw-transition-fast), box-shadow var(--sw-transition-fast);
+}
+
+.related-asset-card:hover,
+.related-asset-add:hover {
+    border-color: var(--sw-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.related-asset-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: auto;
+}
+
+.related-asset-doc {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: var(--sw-text-secondary);
+    font-size: 11px;
+    line-height: 1.1;
+}
+
+.related-asset-doc strong {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sw-text-primary);
+}
+
+.related-asset-doc small {
+    font-size: 10px;
+}
+
+.related-asset-add {
+    position: relative;
+    background: #f1f3f5;
+    border-style: dashed;
+}
+
+.related-asset-add.is-uploading {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.related-asset-plus {
+    font-size: 22px;
+    font-weight: 500;
+    color: #8c8f94;
+    line-height: 1;
+}
+
+.related-asset-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* === Related Assets Editor === */
+.scheme-related-editor {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.scheme-related-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.scheme-related-editor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scheme-related-item {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.scheme-related-name {
+    font-size: 12px;
+    color: var(--sw-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* === Dialog Layout Polish === */
+.scheme-dialog .el-form-item {
+    margin-bottom: 14px;
+}
+
+.scheme-dialog .el-form-item__label {
+    display: inline-flex;
+    align-items: center;
+    line-height: 32px;
+}
+
+.inline-scheme-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.mapping-table th:nth-child(2),
+.mapping-table td:nth-child(2) {
+    min-width: 220px;
+}
+
+.mapping-table th:nth-child(3),
+.mapping-table td:nth-child(3) {
+    width: 92px;
+}
+
+.mapping-action-btn {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
+}
+
+.add-button-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
 
 /* === 配方显示 === */
 .artworks-page .formula-lines {

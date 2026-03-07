@@ -1,29 +1,82 @@
-(function (window) {
+﻿(function (window) {
+  const MAX_RELATED_ASSETS = 6;
+  const ALLOWED_DOC_EXTENSIONS = new Set(['doc', 'docx', 'xls', 'xlsx', 'txt', 'md']);
+  const ALLOWED_DOC_MIME_TYPES = new Set([
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/markdown',
+    'text/x-markdown',
+  ]);
+
+  function getResponseData(response) {
+    if (response && Object.prototype.hasOwnProperty.call(response, 'data')) {
+      return response.data;
+    }
+    return response;
+  }
+
+  function normalizeExtension(fileName) {
+    const raw = String(fileName || '');
+    const index = raw.lastIndexOf('.');
+    if (index === -1) {
+      return '';
+    }
+    return raw.slice(index + 1).toLowerCase();
+  }
+
+  function isImageMime(mimeType) {
+    return String(mimeType || '').toLowerCase().startsWith('image/');
+  }
+
+  function isAllowedRelatedFile(file) {
+    const mimeType = String(file?.type || file?.mimeType || '').toLowerCase();
+    const extension = normalizeExtension(file?.name || file?.original_name || file?.file_path);
+    if (isImageMime(mimeType)) {
+      return true;
+    }
+    if (ALLOWED_DOC_MIME_TYPES.has(mimeType)) {
+      return true;
+    }
+    return ALLOWED_DOC_EXTENSIONS.has(extension);
+  }
+
+  function toSizeLabel(fileSize) {
+    if (!Number.isFinite(fileSize) || fileSize <= 0) {
+      return '未知';
+    }
+    if (fileSize < 1024) {
+      return `${fileSize} B`;
+    }
+    if (fileSize < 1024 * 1024) {
+      return `${Math.round(fileSize / 1024)} KB`;
+    }
+    return `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
   window.ArtworksSchemeDialogMethods = {
     addScheme(art) {
       this.editingArtId = art.id;
       this.schemeEditing = { art, scheme: null };
       const dialog = this.getSchemeDialogModule();
-      if (dialog && typeof dialog.createEmptyForm === 'function') {
-        this.schemeForm = dialog.createEmptyForm();
-        this.schemeForm.id = null;
-      } else {
-        this.schemeForm = {
-          id: null,
-          version: null,
-          name: '',
-          thumbnailFile: null,
-          thumbnailPreview: null,
-          initialThumbnailFile: null,
-          initialThumbnailPreview: null,
-          existingInitialThumbnailPath: null,
-          mappings: [{ layer: 1, colorCode: '' }]
-        };
-      }
+      this.schemeForm = dialog && typeof dialog.createEmptyForm === 'function'
+        ? dialog.createEmptyForm()
+        : {
+            id: null,
+            version: null,
+            name: '',
+            thumbnailFile: null,
+            thumbnailPreview: null,
+            relatedAssets: [],
+            removedRelatedAssetIds: [],
+            newRelatedFiles: [],
+            mappings: [{ layer: 1, colorCode: '' }],
+          };
+      this.quickAssetUploadingSchemeId = null;
       this.showSchemeDialog = true;
     },
-
-    // 子bar“修改”
 
     editScheme(art, scheme) {
       this.editingArtId = art.id;
@@ -33,11 +86,8 @@
         this.schemeForm = dialog.hydrateFormFromScheme({
           scheme,
           baseURL: this.baseURL,
-          helpers: this.$helpers
+          helpers: this.$helpers,
         });
-        if (!Number.isInteger(this.schemeForm.version) && Number.isInteger(scheme.version)) {
-          this.schemeForm.version = scheme.version;
-        }
       } else {
         const rows = this.normalizedMappings(scheme);
         this.schemeForm = {
@@ -45,13 +95,16 @@
           version: Number.isInteger(scheme.version) ? scheme.version : null,
           name: scheme.name || '',
           thumbnailFile: null,
-          thumbnailPreview: scheme.thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.thumbnail_path) : null,
-          initialThumbnailFile: null,
-          initialThumbnailPreview: scheme.initial_thumbnail_path ? this.$helpers.buildUploadURL(this.baseURL, scheme.initial_thumbnail_path) : null,
-          existingInitialThumbnailPath: scheme.initial_thumbnail_path,
-          mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }]
+          thumbnailPreview: scheme.thumbnail_path
+            ? this.$helpers.buildUploadURL(this.baseURL, scheme.thumbnail_path)
+            : null,
+          relatedAssets: this.getSchemeRelatedAssets(scheme),
+          removedRelatedAssetIds: [],
+          newRelatedFiles: [],
+          mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }],
         };
       }
+      this.quickAssetUploadingSchemeId = null;
       this.showSchemeDialog = true;
     },
 
@@ -69,11 +122,13 @@
     },
 
     onCloseDialog() {
+      this.clearPendingRelatedAssetPreviews();
       if (this._schemeDialogGuard && typeof this._schemeDialogGuard.clearSnapshot === 'function') {
         this._schemeDialogGuard.clearSnapshot();
       } else {
         this._schemeOriginalSnapshot = null;
       }
+      this.quickAssetUploadingSchemeId = null;
       this._unbindEsc();
     },
 
@@ -90,8 +145,15 @@
         id: this.schemeForm.id || null,
         name: this.schemeForm.name || '',
         thumbnail: this.schemeForm.thumbnailPreview ? '1' : '',
-        mappings: (this.schemeForm.mappings||[]).map(m=>({layer:Number(m.layer)||0, code:String(m.colorCode||'').trim()}))
-          .sort((a,b)=>a.layer-b.layer)
+        relatedAssetIds: (this.schemeForm.relatedAssets || []).map((asset) => String(asset.id)).sort(),
+        removedRelatedAssetIds: (this.schemeForm.removedRelatedAssetIds || []).map((id) => String(id)).sort(),
+        pendingRelatedAssets: (this.schemeForm.newRelatedFiles || []).map((asset) => String(asset.name || '')).sort(),
+        mappings: (this.schemeForm.mappings || [])
+          .map((item) => ({
+            layer: Number(item.layer) || 0,
+            code: String(item.colorCode || '').trim(),
+          }))
+          .sort((left, right) => left.layer - right.layer),
       };
     },
 
@@ -99,224 +161,433 @@
       if (this._schemeDialogGuard && typeof this._schemeDialogGuard.isDirty === 'function') {
         return this._schemeDialogGuard.isDirty(this._normalizedSchemeForm());
       }
-      if (!this._schemeOriginalSnapshot) return false;
+      if (!this._schemeOriginalSnapshot) {
+        return false;
+      }
       return this._createSchemeSnapshot() !== this._schemeOriginalSnapshot;
     },
 
     async attemptCloseSchemeDialog() {
       if (this._isSchemeDirty()) {
         try {
-          await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存的修改', {
+          await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存修改', {
             confirmButtonText: '丢弃修改',
             cancelButtonText: '继续编辑',
-            type: 'warning'
+            type: 'warning',
           });
-        } catch(e) { return; }
+        } catch {
+          return;
+        }
       }
       this.showSchemeDialog = false;
     },
 
     _bindEsc() {
-      if (this._escHandler) return;
-      this._escHandler = (e)=>{
-        if (e.key === 'Escape') {
-          if (this.showSchemeDialog) return this.attemptCloseSchemeDialog();
-          if (this.showArtworkDialog) return this.attemptCloseArtworkDialog();
+      if (this._escHandler) {
+        return;
+      }
+      this._escHandler = (event) => {
+        if (event.key !== 'Escape') {
+          return;
+        }
+        if (this.showSchemeDialog) {
+          this.attemptCloseSchemeDialog();
+          return;
+        }
+        if (this.showArtworkDialog) {
+          this.attemptCloseArtworkDialog();
         }
       };
       document.addEventListener('keydown', this._escHandler);
     },
 
     _unbindEsc() {
-      if (this._escHandler) {
-        document.removeEventListener('keydown', this._escHandler);
-        this._escHandler = null;
+      if (!this._escHandler) {
+        return;
       }
+      document.removeEventListener('keydown', this._escHandler);
+      this._escHandler = null;
     },
 
     onThumbChange(file) {
-      const raw = file.raw || file;
-      this.schemeForm.thumbnailFile = raw;
+      const rawFile = file?.raw || file;
+      if (!rawFile) {
+        return;
+      }
+      this.schemeForm.thumbnailFile = rawFile;
       const reader = new FileReader();
-      reader.onload = () => { this.schemeForm.thumbnailPreview = reader.result; };
-      reader.readAsDataURL(raw);
+      reader.onload = () => {
+        this.schemeForm.thumbnailPreview = reader.result;
+      };
+      reader.readAsDataURL(rawFile);
     },
 
     clearThumb() {
       this.schemeForm.thumbnailFile = null;
       this.schemeForm.thumbnailPreview = null;
-      // 仅清预览，是否删除服务器旧图由保存时处理
-    },
-    
-    // Handle initial thumbnail upload
-
-    onInitialThumbChange(f) {
-      if (!f || !f.raw) return;
-      this.schemeForm.initialThumbnailFile = f.raw;
-      const raw = f.raw;
-      const reader = new FileReader();
-      reader.onload = () => { this.schemeForm.initialThumbnailPreview = reader.result; };
-      reader.readAsDataURL(raw);
     },
 
-    clearInitialThumb() {
-      this.schemeForm.initialThumbnailFile = null;
-      this.schemeForm.initialThumbnailPreview = null;
-      // 仅清预览，是否删除服务器旧图由保存时处理
+    normalizeIncomingAsset(asset) {
+      if (!asset) {
+        return null;
+      }
+      const normalized = Object.assign({}, asset);
+      const mimeType = String(normalized.mime_type || '').toLowerCase();
+      const assetType = String(normalized.asset_type || '').toLowerCase();
+      normalized.is_image = Boolean(normalized.is_image || assetType === 'image' || mimeType.startsWith('image/'));
+      return normalized;
     },
-    
-    // Handle initial preview click in edit dialog
 
-    handleInitialPreviewClick(event) {
-      const imageUrl = this.schemeForm.initialThumbnailPreview;
-      if (!imageUrl) return;
-      
-      // Open in new window for better A4 document viewing
-      const newWindow = window.open('', '_blank', 'width=1200,height=900,scrollbars=yes,resizable=yes');
-      if (newWindow) {
-        newWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>初始方案预览</title>
-            <style>
-              body { margin: 0; padding: 20px; background: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-              img { max-width: 100%; height: auto; background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-              .controls { position: fixed; top: 10px; right: 10px; z-index: 10; }
-              .controls button { padding: 10px 20px; margin: 0 5px; background: rgba(255,255,255,0.9); border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
-              .controls button:hover { background: white; }
-            </style>
-          </head>
-          <body>
-            <div class="controls">
-              <button onclick="window.print()">打印</button>
-              <button onclick="window.close()">关闭</button>
-            </div>
-            <img src="${imageUrl}" alt="初始方案预览" />
-          </body>
-          </html>
-        `);
-        newWindow.document.close();
+    getSchemeRelatedAssets(scheme) {
+      const source = Array.isArray(scheme?.related_assets) ? scheme.related_assets : [];
+      const assets = source
+        .map((item) => this.normalizeIncomingAsset(item))
+        .filter(Boolean)
+        .slice(0, MAX_RELATED_ASSETS);
+
+      if (!assets.length && scheme?.initial_thumbnail_path) {
+        assets.push(this.normalizeIncomingAsset({
+          id: `legacy-${scheme.id || 'new'}`,
+          scheme_id: scheme.id || null,
+          asset_type: 'image',
+          original_name: '历史初始方案',
+          file_path: scheme.initial_thumbnail_path,
+          thumb_path: scheme.initial_thumbnail_thumb_path || null,
+          is_image: true,
+        }));
+      }
+      return assets;
+    },
+
+    canQuickAddAsset(scheme) {
+      if (!scheme || this.quickAssetUploadingSchemeId === scheme.id) {
+        return false;
+      }
+      return this.getSchemeRelatedAssets(scheme).length < MAX_RELATED_ASSETS;
+    },
+
+    assetThumbURL(asset) {
+      if (!asset) {
+        return '';
+      }
+      const filePath = asset.thumb_path || asset.file_path;
+      return filePath ? this.$helpers.buildUploadURL(this.baseURL, filePath) : '';
+    },
+
+    assetExt(asset) {
+      const raw = String(asset?.original_name || asset?.file_path || '').toLowerCase();
+      const extension = normalizeExtension(raw);
+      if (!extension) {
+        return asset?.is_image ? 'IMG' : 'DOC';
+      }
+      return extension.toUpperCase();
+    },
+
+    async onQuickAddAssetChange(art, scheme, event) {
+      const file = event?.target?.files?.[0];
+      if (!file) {
+        return;
+      }
+      if (!scheme?.id) {
+        msg.warning('请先保存配色方案，再添加相关资料。');
+        event.target.value = '';
+        return;
+      }
+      if (!window.ArtworksApi || typeof window.ArtworksApi.addSchemeAsset !== 'function') {
+        msg.error('缺少相关资料上传接口。');
+        event.target.value = '';
+        return;
+      }
+      if (!isAllowedRelatedFile(file)) {
+        msg.warning('仅支持图片、Word、Excel、TXT、MD 文件。');
+        event.target.value = '';
+        return;
+      }
+
+      this.quickAssetUploadingSchemeId = scheme.id;
+      try {
+        const formData = new FormData();
+        formData.append('asset', file);
+        await window.ArtworksApi.addSchemeAsset({
+          baseURL: this.baseURL,
+          artId: art.id,
+          schemeId: scheme.id,
+          formData,
+        });
+        msg.success('相关资料已添加');
+        await this.refreshAll();
+      } catch (error) {
+        const serverMessage = error?.response?.data?.error || '';
+        msg.error(serverMessage || '添加相关资料失败');
+      } finally {
+        this.quickAssetUploadingSchemeId = null;
+        event.target.value = '';
       }
     },
-    
-    // Handle initial thumbnail click for enhanced preview
 
-    handleInitialThumbnailClick(event, scheme) {
-      if (!scheme.initial_thumbnail_path) return;
-      
-      const imageUrl = this.$helpers.buildUploadURL(this.baseURL, scheme.initial_thumbnail_path);
-      // Open in new window for better A4 document viewing
-      const newWindow = window.open('', '_blank', 'width=1200,height=900,scrollbars=yes,resizable=yes');
-      if (newWindow) {
-        newWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>初始方案 - ${scheme.name || '未命名'}</title>
-            <style>
-              body { margin: 0; padding: 20px; background: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-              img { max-width: 100%; height: auto; background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-              .controls { position: fixed; top: 10px; right: 10px; z-index: 10; }
-              .controls button { padding: 10px 20px; margin: 0 5px; background: rgba(255,255,255,0.9); border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
-              .controls button:hover { background: white; }
-            </style>
-          </head>
-          <body>
-            <div class="controls">
-              <button onclick="window.print()">打印</button>
-              <button onclick="window.close()">关闭</button>
-            </div>
-            <img src="${imageUrl}" alt="初始方案" />
-          </body>
-          </html>
-        `);
-        newWindow.document.close();
-      } else {
-        // Fallback to regular thumbnail preview if popup blocked
-        this.$thumbPreview && this.$thumbPreview.show(event, imageUrl);
+    onRelatedAssetFilesChange(file) {
+      const rawFile = file?.raw || file;
+      if (!rawFile) {
+        return;
       }
+      if (!isAllowedRelatedFile(rawFile)) {
+        msg.warning('仅支持图片、Word、Excel、TXT、MD 文件。');
+        return;
+      }
+
+      const existingCount = Array.isArray(this.schemeForm.relatedAssets) ? this.schemeForm.relatedAssets.length : 0;
+      const pendingCount = Array.isArray(this.schemeForm.newRelatedFiles) ? this.schemeForm.newRelatedFiles.length : 0;
+      if (existingCount + pendingCount >= MAX_RELATED_ASSETS) {
+        msg.warning(`每个方案最多 ${MAX_RELATED_ASSETS} 个相关资料。`);
+        return;
+      }
+
+      const extension = normalizeExtension(rawFile.name);
+      const isImage = isImageMime(rawFile.type);
+      const uid = String(rawFile.uid || `${Date.now()}-${Math.round(Math.random() * 1000000)}`);
+      const item = {
+        uid,
+        file: rawFile,
+        name: rawFile.name,
+        mimeType: rawFile.type || '',
+        size: rawFile.size || 0,
+        extension: extension ? extension.toUpperCase() : (isImage ? 'IMG' : 'DOC'),
+        isImage,
+        previewUrl: null,
+      };
+
+      if (isImage) {
+        item.previewUrl = URL.createObjectURL(rawFile);
+      }
+
+      if (!Array.isArray(this.schemeForm.newRelatedFiles)) {
+        this.schemeForm.newRelatedFiles = [];
+      }
+      this.schemeForm.newRelatedFiles.push(item);
+    },
+
+    removeExistingRelatedAsset(asset) {
+      const assetId = Number(asset?.id);
+      if (!assetId) {
+        return;
+      }
+      this.schemeForm.relatedAssets = (this.schemeForm.relatedAssets || []).filter((item) => Number(item.id) !== assetId);
+      if (!Array.isArray(this.schemeForm.removedRelatedAssetIds)) {
+        this.schemeForm.removedRelatedAssetIds = [];
+      }
+      if (!this.schemeForm.removedRelatedAssetIds.includes(assetId)) {
+        this.schemeForm.removedRelatedAssetIds.push(assetId);
+      }
+    },
+
+    removePendingRelatedAsset(uid) {
+      const pending = Array.isArray(this.schemeForm.newRelatedFiles) ? this.schemeForm.newRelatedFiles : [];
+      const target = pending.find((item) => item.uid === uid);
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      this.schemeForm.newRelatedFiles = pending.filter((item) => item.uid !== uid);
+    },
+
+    clearPendingRelatedAssetPreviews() {
+      const pending = Array.isArray(this.schemeForm?.newRelatedFiles) ? this.schemeForm.newRelatedFiles : [];
+      pending.forEach((item) => {
+        if (item?.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+      if (this.schemeForm) {
+        this.schemeForm.newRelatedFiles = [];
+      }
+    },
+
+    openPendingRelatedAsset(asset, event) {
+      if (!asset) {
+        return;
+      }
+      if (asset.isImage && asset.previewUrl) {
+        this.$thumbPreview && this.$thumbPreview.show(event, asset.previewUrl);
+        return;
+      }
+      this.showDocumentAssetDetails(
+        {
+          original_name: asset.name,
+          mime_type: asset.mimeType,
+          file_size: asset.size,
+        },
+        null
+      );
+    },
+
+    openRelatedAsset(asset, event) {
+      if (!asset) {
+        return;
+      }
+      const fileUrl = asset.file_path ? this.$helpers.buildUploadURL(this.baseURL, asset.file_path) : null;
+      if (asset.is_image && fileUrl) {
+        this.$thumbPreview && this.$thumbPreview.show(event, fileUrl);
+        return;
+      }
+      this.showDocumentAssetDetails(asset, fileUrl);
+    },
+
+    async showDocumentAssetDetails(asset, fileUrl) {
+      const name = asset?.original_name || asset?.file_path || '未命名文件';
+      const type = asset?.mime_type || '未知类型';
+      const size = toSizeLabel(Number(asset?.file_size));
+
+      const details = `文件名：${name}<br>文件类型：${type}<br>文件大小：${size}`;
+      if (!fileUrl) {
+        await ElementPlus.ElMessageBox.alert(details, '相关资料', {
+          dangerouslyUseHTMLString: true,
+          confirmButtonText: '知道了',
+        });
+        return;
+      }
+
+      try {
+        await ElementPlus.ElMessageBox.confirm(`${details}<br><br>是否打开原文件？`, '相关资料', {
+          dangerouslyUseHTMLString: true,
+          confirmButtonText: '打开',
+          cancelButtonText: '取消',
+          type: 'info',
+        });
+        window.open(fileUrl, '_blank', 'noopener,noreferrer');
+      } catch {
+        // cancelled
+      }
+    },
+
+    async syncSchemeRelatedAssets(artId, schemeId) {
+      if (!window.ArtworksApi) {
+        return;
+      }
+      const removedIds = Array.isArray(this.schemeForm.removedRelatedAssetIds)
+        ? this.schemeForm.removedRelatedAssetIds.slice()
+        : [];
+      for (const assetId of removedIds) {
+        try {
+          await window.ArtworksApi.deleteSchemeAsset({
+            baseURL: this.baseURL,
+            artId,
+            schemeId,
+            assetId,
+          });
+        } catch (error) {
+          const status = error?.response?.status;
+          if (status !== 404) {
+            throw error;
+          }
+        }
+      }
+
+      const pending = Array.isArray(this.schemeForm.newRelatedFiles)
+        ? this.schemeForm.newRelatedFiles.slice()
+        : [];
+      for (const item of pending) {
+        const formData = new FormData();
+        formData.append('asset', item.file);
+        await window.ArtworksApi.addSchemeAsset({
+          baseURL: this.baseURL,
+          artId,
+          schemeId,
+          formData,
+        });
+      }
+    },
+
+    schemePreviewSource(scheme) {
+      const path = scheme?.thumbnail_thumb_path || scheme?.thumbnail_path;
+      return path ? this.$helpers.buildUploadURL(this.baseURL, path) : '';
+    },
+
+    schemePreviewOriginal(scheme) {
+      const path = scheme?.thumbnail_path || scheme?.thumbnail_thumb_path;
+      return path ? this.$helpers.buildUploadURL(this.baseURL, path) : '';
     },
 
     async saveScheme() {
       const valid = await this.$refs.schemeFormRef.validate().catch(() => false);
-      if (!valid) return;
-      if (this.schemeNameDuplicate) return;
-      const artId = this.editingArtId;
-      if (!artId) return;
+      if (!valid || this.schemeNameDuplicate) {
+        return;
+      }
 
-      const fd = new FormData();
-      fd.append('name', this.schemeForm.name.trim());
-      fd.append('layers', JSON.stringify(this.buildLayerPayload()));
+      const artId = this.editingArtId;
+      if (!artId) {
+        msg.error('缺少作品信息，无法保存方案。');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('name', String(this.schemeForm.name || '').trim());
+      formData.append('layers', JSON.stringify(this.buildLayerPayload()));
+
       if (this.schemeForm.thumbnailFile) {
-        fd.append('thumbnail', this.schemeForm.thumbnailFile);
+        formData.append('thumbnail', this.schemeForm.thumbnailFile);
+      } else if (this.schemeEditing?.scheme?.thumbnail_path && this.schemeForm.thumbnailPreview) {
+        formData.append('existingThumbnailPath', this.schemeEditing.scheme.thumbnail_path);
       }
-      if (!this.schemeForm.thumbnailFile && this.schemeEditing?.scheme?.thumbnail_path) {
-        fd.append('existingThumbnailPath', this.schemeEditing.scheme.thumbnail_path);
-      }
-      if (this.schemeForm.initialThumbnailFile) {
-        fd.append('initialThumbnail', this.schemeForm.initialThumbnailFile);
-      }
-      if (!this.schemeForm.initialThumbnailFile && this.schemeForm.existingInitialThumbnailPath) {
-        fd.append('existingInitialThumbnailPath', this.schemeForm.existingInitialThumbnailPath);
-      }
+
       if (Number.isInteger(this.schemeForm.version)) {
-        fd.append('version', this.schemeForm.version);
+        formData.append('version', this.schemeForm.version);
       }
 
       this.saving = true;
       try {
-        if (window.ArtworksApi && typeof window.ArtworksApi.saveScheme === 'function') {
-          await window.ArtworksApi.saveScheme({
-            baseURL: this.baseURL,
-            artId,
-            schemeId: this.schemeForm.id || null,
-            formData: fd
-          });
-        } else {
+        if (!window.ArtworksApi || typeof window.ArtworksApi.saveScheme !== 'function') {
           throw new Error('ArtworksApi.saveScheme is unavailable');
         }
-        msg.success(this.schemeForm.id ? '已保存方案修改' : '已新增配色方案');
+
+        const isEditing = Boolean(this.schemeForm.id);
+        const response = await window.ArtworksApi.saveScheme({
+          baseURL: this.baseURL,
+          artId,
+          schemeId: this.schemeForm.id || null,
+          formData,
+        });
+        const payload = getResponseData(response) || {};
+        const targetSchemeId = this.schemeForm.id || payload.id;
+
+        const hasRelatedAssetDiff =
+          (this.schemeForm.removedRelatedAssetIds || []).length > 0 ||
+          (this.schemeForm.newRelatedFiles || []).length > 0;
+
+        if (hasRelatedAssetDiff) {
+          if (!targetSchemeId) {
+            throw new Error('Scheme id missing after save; cannot sync related assets.');
+          }
+          await this.syncSchemeRelatedAssets(artId, targetSchemeId);
+        }
+
+        msg.success(isEditing ? '配色方案已保存' : '配色方案已创建');
         await this.refreshAll();
         this.showSchemeDialog = false;
       } catch (error) {
-        console.error('保存配色方案失败', error);
         const conflictAdapter = window.conflictAdapter;
-        if (conflictAdapter && conflictAdapter.isVersionConflict && conflictAdapter.isVersionConflict(error, 'color_scheme')) {
+        if (
+          conflictAdapter &&
+          typeof conflictAdapter.isVersionConflict === 'function' &&
+          conflictAdapter.isVersionConflict(error, 'color_scheme')
+        ) {
           const conflict = conflictAdapter.extract(error, { entityType: 'color_scheme' });
-          msg.warning(conflictAdapter.getMessage(conflict, '方案已被其他操作更新，请刷新后重试。'));
+          msg.warning(conflictAdapter.getMessage(conflict, '方案已被其他用户更新，请刷新后重试。'));
           if (conflict.latestData) {
             const dialog = this.getSchemeDialogModule();
+            this.clearPendingRelatedAssetPreviews();
             if (dialog && typeof dialog.hydrateFormFromScheme === 'function') {
               this.schemeForm = dialog.hydrateFormFromScheme({
                 scheme: conflict.latestData,
                 baseURL: this.baseURL,
-                helpers: this.$helpers
+                helpers: this.$helpers,
               });
-            } else {
-              const rows = this.normalizedMappings(conflict.latestData);
-              this.schemeForm = {
-                id: conflict.latestData.id,
-                version: Number.isInteger(conflict.latestData.version) ? conflict.latestData.version : conflict.actualVersion || null,
-                name: conflict.latestData.name || conflict.latestData.scheme_name || '',
-                thumbnailFile: null,
-                thumbnailPreview: conflict.latestData.thumbnail_path
-                  ? this.$helpers.buildUploadURL(this.baseURL, conflict.latestData.thumbnail_path)
-                  : null,
-                initialThumbnailFile: null,
-                initialThumbnailPreview: conflict.latestData.initial_thumbnail_path
-                  ? this.$helpers.buildUploadURL(this.baseURL, conflict.latestData.initial_thumbnail_path)
-                  : null,
-                existingInitialThumbnailPath: conflict.latestData.initial_thumbnail_path || null,
-                mappings: rows.length ? rows : [{ layer: 1, colorCode: '' }]
-              };
             }
           }
           await this.refreshAll();
           return;
         }
+
         const serverMessage = error?.response?.data?.error || '';
-        msg.error(serverMessage || '保存失败');
+        msg.error(serverMessage || '保存方案失败');
       } finally {
         this.saving = false;
       }
@@ -325,36 +596,44 @@
     async deleteScheme(art, scheme) {
       const ok = await this.$helpers.doubleDangerConfirm({
         firstMessage: `确定要删除配色方案 "${scheme?.name || ''}" 吗？`,
-        secondMessage: '删除后将无法恢复，确认最终删除？',
-        secondConfirmText: '永久删除'
+        secondMessage: '删除后将无法恢复，确认最终删除吗？',
+        secondConfirmText: '永久删除',
       });
-      if (!ok) return;
+      if (!ok) {
+        return;
+      }
+
       try {
-        if (window.ArtworksApi && typeof window.ArtworksApi.deleteScheme === 'function') {
-          await window.ArtworksApi.deleteScheme({ baseURL: this.baseURL, artId: art.id, schemeId: scheme.id });
-        } else {
+        if (!window.ArtworksApi || typeof window.ArtworksApi.deleteScheme !== 'function') {
           throw new Error('ArtworksApi.deleteScheme is unavailable');
         }
-        msg.success('已删除配色方案');
+        await window.ArtworksApi.deleteScheme({
+          baseURL: this.baseURL,
+          artId: art.id,
+          schemeId: scheme.id,
+        });
+        msg.success('配色方案已删除');
         await this.refreshAll();
       } catch (error) {
-        console.error('删除配色方案失败', error);
         const payload =
           window.ArtworksApi && typeof window.ArtworksApi.getErrorPayload === 'function'
             ? window.ArtworksApi.getErrorPayload(error)
             : { status: error?.response?.status, message: error?.response?.data?.error || '' };
-        const status = payload.status;
-        const serverMessage = payload.message || '';
-        if (status === 404) {
-          msg.warning(serverMessage || '配色方案不存在或已被删除');
+
+        if (payload.status === 404) {
+          msg.warning(payload.message || '配色方案不存在或已删除。');
           await this.refreshAll();
-        } else if (status === 400) {
-          msg.warning(serverMessage || '无法删除该配色方案');
-        } else if (status === 409) {
-          msg.warning(serverMessage || '该配色方案存在引用，无法删除');
-        } else {
-          msg.error(serverMessage || '删除失败');
+          return;
         }
+        if (payload.status === 400) {
+          msg.warning(payload.message || '当前配色方案不允许删除。');
+          return;
+        }
+        if (payload.status === 409) {
+          msg.warning(payload.message || '配色方案存在引用，无法删除。');
+          return;
+        }
+        msg.error(payload.message || '删除配色方案失败');
       }
     },
   };

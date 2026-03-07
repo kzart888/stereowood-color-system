@@ -59,27 +59,46 @@ const ArtworksComponent = {
           <div v-if="(art.schemes && art.schemes.length) > 0">
             <div class="scheme-bar" v-for="scheme in art.schemes" :key="scheme.id" :ref="setSchemeRef(scheme)" :class="{ 'highlight-pulse': highlightSchemeId === scheme.id }">
               <div class="scheme-header">
-                <div class="scheme-thumbnail" :class="{ 'no-image': !scheme.thumbnail_path }" @click="scheme.thumbnail_path && $thumbPreview && $thumbPreview.show($event, $helpers.buildUploadURL(baseURL, scheme.thumbnail_path))">
-                  <template v-if="!scheme.thumbnail_path">未上传图片</template>
-                  <img v-else :src="$helpers.buildUploadURL(baseURL, scheme.thumbnail_path)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                <div class="scheme-thumbnail" :class="{ 'no-image': !schemePreviewSource(scheme) }" @click="schemePreviewOriginal(scheme) && $thumbPreview && $thumbPreview.show($event, schemePreviewOriginal(scheme))">
+                  <template v-if="!schemePreviewSource(scheme)">未上传图片</template>
+                  <img v-else :src="schemePreviewSource(scheme)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                 </div>
                 <div style="flex: 1;">
                   <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
-                  <div style="display: flex; align-items: flex-start; gap: 30px; margin-top: 4px;">
+                  <div class="scheme-meta-row">
                     <!-- 左列：层数和更新时间 -->
-                    <div>
+                    <div class="scheme-meta-main">
                       <div class="meta-text">层数：{{ (scheme.layers || []).length }}</div>
                       <div class="meta-text" v-if="scheme.updated_at">更新：{{ $helpers.formatDate(scheme.updated_at) }}</div>
                     </div>
-                    <!-- 右列：初始方案缩略图 -->
-                    <div style="display: flex; align-items: flex-start; gap: 8px;">
-                      <span class="meta-text" style="white-space: nowrap;">原始配色：</span>
-                      <span class="initial-thumbnail-inline a4-preview-trigger" 
-                            :class="{ 'no-image': !scheme.initial_thumbnail_path }"
-                            @click="handleInitialThumbnailClick($event, scheme)">
-                        <img v-if="scheme.initial_thumbnail_path" :src="$helpers.buildUploadURL(baseURL, scheme.initial_thumbnail_path)" />
-                        <span v-else>无</span>
-                      </span>
+                    <div class="scheme-related-assets-block">
+                      <span class="meta-text related-assets-label">相关资料：</span>
+                      <div class="related-assets-strip">
+                        <button
+                          type="button"
+                          class="related-asset-card"
+                          v-for="asset in getSchemeRelatedAssets(scheme)"
+                          :key="asset.id"
+                          @click="openRelatedAsset(asset, $event)"
+                          :title="asset.original_name || asset.file_path"
+                        >
+                          <img v-if="asset.is_image" :src="assetThumbURL(asset)" />
+                          <span v-else class="related-asset-doc">
+                            <strong>{{ assetExt(asset) }}</strong>
+                            <small>查看详情</small>
+                          </span>
+                        </button>
+                        <label v-if="canQuickAddAsset(scheme)" class="related-asset-add" :title="'添加资料（最多6个）'" :class="{ 'is-uploading': quickAssetUploadingSchemeId === scheme.id }">
+                          <input
+                            class="related-asset-input"
+                            type="file"
+                            accept="image/*,.doc,.docx,.xls,.xlsx,.txt,.md"
+                            :disabled="quickAssetUploadingSchemeId === scheme.id"
+                            @change="onQuickAddAssetChange(art, scheme, $event)"
+                          />
+                          <span class="related-asset-plus">+</span>
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -393,45 +412,57 @@ const ArtworksComponent = {
             </div>
           </el-form-item>
 
-          <!-- 初始方案缩略图上传 -->
-          <el-form-item label="初始方案">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <!-- 初始方案缩略图预览区域 -->
-              <div class="scheme-thumbnail"
-                :style="{
-                  backgroundImage: schemeForm.initialThumbnailPreview ? 'url(' + schemeForm.initialThumbnailPreview + ')' : 'none',
-                  backgroundColor: schemeForm.initialThumbnailPreview ? 'transparent' : '#f0f0f0'
-                }"
-                :class="{ 'no-image': !schemeForm.initialThumbnailPreview }"
-                style="width: 80px; height: 80px; flex-shrink: 0;"
-                @click="schemeForm.initialThumbnailPreview && handleInitialPreviewClick($event)"
-              >
-                <template v-if="!schemeForm.initialThumbnailPreview">未上传图片</template>
-              </div>
-              
-              <!-- 操作按钮区域 -->
-              <div style="display: flex; flex-direction: column; gap: 8px;">
+          <el-form-item label="相关资料">
+            <div class="scheme-related-editor">
+              <div class="scheme-related-editor-actions">
                 <el-upload
                   :auto-upload="false"
                   :show-file-list="false"
-                  :on-change="onInitialThumbChange"
-                  accept="image/*"
+                  :on-change="onRelatedAssetFilesChange"
+                  accept="image/*,.doc,.docx,.xls,.xlsx,.txt,.md"
+                  :disabled="remainingRelatedAssetSlots <= 0"
                 >
-                  <el-button size="small" type="primary">
+                  <el-button size="small" type="primary" :disabled="remainingRelatedAssetSlots <= 0">
                     <el-icon><Upload /></el-icon>
-                    选择图片
+                    添加资料
                   </el-button>
                 </el-upload>
-                
-                <el-button 
-                  v-if="schemeForm.initialThumbnailPreview" 
-                  size="small" 
-                  type="danger" 
-                  @click="clearInitialThumb"
+                <span class="meta-text">最多6个，当前可添加 {{ remainingRelatedAssetSlots }} 个</span>
+              </div>
+              <div class="scheme-related-editor-list">
+                <div
+                  class="scheme-related-item"
+                  v-for="asset in schemeForm.relatedAssets"
+                  :key="'existing-'+asset.id"
                 >
-                  <el-icon><Delete /></el-icon>
-                  清除图片
-                </el-button>
+                  <button type="button" class="related-asset-card" @click="openRelatedAsset(asset, $event)">
+                    <img v-if="asset.is_image" :src="assetThumbURL(asset)" />
+                    <span v-else class="related-asset-doc">
+                      <strong>{{ assetExt(asset) }}</strong>
+                      <small>查看详情</small>
+                    </span>
+                  </button>
+                  <span class="scheme-related-name">{{ asset.original_name || asset.file_path }}</span>
+                  <el-button size="small" type="danger" plain @click="removeExistingRelatedAsset(asset)">删除</el-button>
+                </div>
+                <div
+                  class="scheme-related-item"
+                  v-for="asset in schemeForm.newRelatedFiles"
+                  :key="'new-'+asset.uid"
+                >
+                  <button type="button" class="related-asset-card" @click="openPendingRelatedAsset(asset, $event)">
+                    <img v-if="asset.isImage" :src="asset.previewUrl" />
+                    <span v-else class="related-asset-doc">
+                      <strong>{{ asset.extension }}</strong>
+                      <small>待上传</small>
+                    </span>
+                  </button>
+                  <span class="scheme-related-name">{{ asset.name }}</span>
+                  <el-button size="small" type="danger" plain @click="removePendingRelatedAsset(asset.uid)">移除</el-button>
+                </div>
+                <div v-if="!schemeForm.relatedAssets.length && !schemeForm.newRelatedFiles.length" class="meta-text">
+                  暂无相关资料
+                </div>
               </div>
             </div>
           </el-form-item>
@@ -442,8 +473,8 @@ const ArtworksComponent = {
                 <thead>
                   <tr>
                     <th style="width:60px;">层号</th>
-                    <th style="min-width:300px;">自配色号</th>
-                    <th style="width:120px;">操作</th>
+                    <th style="min-width:220px;">自配色号</th>
+                    <th style="width:92px;">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -508,9 +539,8 @@ const ArtworksComponent = {
                         <el-button 
                           size="small" 
                           type="primary" 
-                          @click="duplicateRow(idx)" 
-                          circle 
-                          style="width: 22px; height: 22px; padding: 0;"
+                          @click="duplicateRow(idx)"
+                          class="mapping-action-btn"
                           title="复制行"
                         >
                           <el-icon><Plus /></el-icon>
@@ -518,9 +548,8 @@ const ArtworksComponent = {
                         <el-button 
                           size="small" 
                           type="danger" 
-                          @click="removeRow(idx)" 
-                          circle 
-                          style="width: 22px; height: 22px; padding: 0;"
+                          @click="removeRow(idx)"
+                          class="mapping-action-btn"
                           title="删除行"
                         >
                           <el-icon><Minus /></el-icon>
@@ -534,9 +563,8 @@ const ArtworksComponent = {
                 <el-button 
                   size="small" 
                   type="primary" 
-                  @click="addRow" 
-                  circle 
-                  style="width: 22px; height: 22px; padding: 0;"
+                  @click="addRow"
+                  class="mapping-action-btn"
                 >
                   <el-icon><Plus /></el-icon>
                 </el-button>
@@ -574,6 +602,9 @@ const ArtworksComponent = {
         name: '',
         thumbnailFile: null,
         thumbnailPreview: null,
+        relatedAssets: [],
+        removedRelatedAssetIds: [],
+        newRelatedFiles: [],
         mappings: [] // [{ layer: Number, colorCode: String }]
       },
   schemeRules: { name: [ { required:true, message:'请输入方案名称', trigger:'blur' } ] },
@@ -585,7 +616,7 @@ const ArtworksComponent = {
       
       // Pagination
       currentPage: 1,
-      itemsPerPage: 12  // Default, will be updated from app config
+      itemsPerPage: 24  // Default, will be updated from app config
   , artworkRules: {
     title: [
       { required: true, message: '请输入“编号-名称”', trigger: 'blur' },
@@ -609,6 +640,7 @@ const ArtworksComponent = {
     _listState: null,
     _artworkDialogGuard: null,
     _schemeDialogGuard: null
+  , quickAssetUploadingSchemeId: null
     };
   },
   ...(window.ArtworksComponentOptions || {})

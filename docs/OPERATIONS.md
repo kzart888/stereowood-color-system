@@ -100,3 +100,4 @@ npm run gate:full
 2. If UI cannot enter `/app`, check login state (`/api/auth/me`) and forced password-change status.
 3. If images fail, check write access to `/app/backend/uploads`.
 4. If Docker build fails on Windows, ensure `backend/uploads` junction is excluded by `.dockerignore`.
+5. If list thumbnails are missing, check whether `sharp` installed successfully (`npm ci` / image build logs) and confirm both original files and `*.thumb256.jpg` sidecars exist in `/app/backend/uploads`.

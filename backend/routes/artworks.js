@@ -8,6 +8,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const ArtworkService = require('../domains/artworks/service');
+const UploadImageService = require('../domains/shared/upload-image-service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
 const { requireWriteAccess } = require('./helpers/write-access');
 
@@ -20,6 +21,33 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage });
+const ASSET_DOC_MIME_SET = new Set([
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+  'text/markdown',
+  'text/x-markdown',
+]);
+
+const ASSET_EXT_SET = new Set(['.doc', '.docx', '.xls', '.xlsx', '.txt', '.md']);
+
+function assetFileFilter(req, file, cb) {
+  const mime = String(file.mimetype || '').toLowerCase();
+  const ext = String(path.extname(file.originalname || '') || '').toLowerCase();
+  if (mime.startsWith('image/') || ASSET_DOC_MIME_SET.has(mime) || ASSET_EXT_SET.has(ext)) {
+    cb(null, true);
+    return;
+  }
+  cb(new Error('Unsupported asset type. Allowed: image/doc/docx/xls/xlsx/txt/md'));
+}
+
+const assetUpload = multer({
+  storage,
+  fileFilter: assetFileFilter,
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
 
 function sendError(res, status, error, extraFields) {
   if (extraFields) {
@@ -77,6 +105,9 @@ async function cleanupUploadedFiles(files) {
   }
   if (files?.initialThumbnail?.[0]) {
     await ArtworkService.deleteUploadedImage(files.initialThumbnail[0].filename);
+  }
+  if (files?.asset?.[0]) {
+    await ArtworkService.deleteUploadedImage(files.asset[0].filename);
   }
 }
 
@@ -140,6 +171,12 @@ router.post(
       const layers = parseLayersInput(req.body.layers);
       const thumbnail_path = req.files?.thumbnail?.[0]?.filename || null;
       const initial_thumbnail_path = req.files?.initialThumbnail?.[0]?.filename || null;
+      if (req.files?.thumbnail?.[0]) {
+        await UploadImageService.ensureThumbnailForUpload(req.files.thumbnail[0]);
+      }
+      if (req.files?.initialThumbnail?.[0]) {
+        await UploadImageService.ensureThumbnailForUpload(req.files.initialThumbnail[0]);
+      }
 
       const newScheme = await ArtworkService.createScheme({
         artwork_id: artworkId,
@@ -179,6 +216,12 @@ router.put(
       const existingInitialThumbnailPath = req.body.existingInitialThumbnailPath;
       const newThumbnailPath = req.files?.thumbnail?.[0]?.filename || existingThumbnailPath;
       const newInitialThumbnailPath = req.files?.initialThumbnail?.[0]?.filename || existingInitialThumbnailPath;
+      if (req.files?.thumbnail?.[0]) {
+        await UploadImageService.ensureThumbnailForUpload(req.files.thumbnail[0]);
+      }
+      if (req.files?.initialThumbnail?.[0]) {
+        await UploadImageService.ensureThumbnailForUpload(req.files.initialThumbnail[0]);
+      }
 
       const versionResult = parseVersion(req.body.version);
       if (versionResult.error) {
@@ -220,6 +263,88 @@ router.delete('/artworks/:artworkId/schemes/:schemeId', requireWriteAccess, asyn
     sendError(res, 500, error.message);
   }
 });
+
+// GET /api/artworks/:artworkId/schemes/:schemeId/assets
+router.get('/artworks/:artworkId/schemes/:schemeId/assets', async (req, res) => {
+  try {
+    const assets = await ArtworkService.listSchemeAssets(req.params.artworkId, req.params.schemeId);
+    return res.json(assets);
+  } catch (error) {
+    return mapArtworkError(res, error, 500);
+  }
+});
+
+// POST /api/artworks/:artworkId/schemes/:schemeId/assets
+router.post(
+  '/artworks/:artworkId/schemes/:schemeId/assets',
+  requireWriteAccess,
+  assetUpload.single('asset'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return sendError(res, 400, 'asset file is required.');
+      }
+      const created = await ArtworkService.addSchemeAsset(
+        req.params.artworkId,
+        req.params.schemeId,
+        req.file,
+        extractAuditContext(req)
+      );
+      return res.json(created);
+    } catch (error) {
+      if (req.file?.filename) {
+        await ArtworkService.deleteUploadedImage(req.file.filename);
+      }
+      return mapArtworkError(res, error, 500);
+    }
+  }
+);
+
+// DELETE /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId
+router.delete(
+  '/artworks/:artworkId/schemes/:schemeId/assets/:assetId',
+  requireWriteAccess,
+  async (req, res) => {
+    try {
+      const result = await ArtworkService.deleteSchemeAsset(
+        req.params.artworkId,
+        req.params.schemeId,
+        req.params.assetId,
+        extractAuditContext(req)
+      );
+      return res.json(result);
+    } catch (error) {
+      return mapArtworkError(res, error, 500);
+    }
+  }
+);
+
+// PUT /api/artworks/:artworkId/schemes/:schemeId/assets/reorder
+router.put(
+  '/artworks/:artworkId/schemes/:schemeId/assets/reorder',
+  requireWriteAccess,
+  async (req, res) => {
+    try {
+      const orderedIds = Array.isArray(req.body?.orderedIds)
+        ? req.body.orderedIds
+        : Array.isArray(req.body)
+          ? req.body
+          : null;
+      if (!orderedIds) {
+        return sendError(res, 400, 'orderedIds array is required.');
+      }
+      const assets = await ArtworkService.reorderSchemeAssets(
+        req.params.artworkId,
+        req.params.schemeId,
+        orderedIds,
+        extractAuditContext(req)
+      );
+      return res.json(assets);
+    } catch (error) {
+      return mapArtworkError(res, error, 500);
+    }
+  }
+);
 
 module.exports = router;
 

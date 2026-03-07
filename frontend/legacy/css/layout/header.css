@@ -203,8 +203,8 @@
 /* 双按钮组 */
 .dual-toggle-group {
     display: inline-flex;
-    align-items: stretch;
-    height: 30px;
+    align-items: center;
+    height: 32px;
     box-sizing: border-box;
     border: 1px solid var(--sw-border-base);
     border-radius: var(--sw-radius-sm);
@@ -214,8 +214,7 @@
 
 .dual-toggle-group button,
 .dual-toggle-group .el-button {
-    height: 100% !important;
-    max-height: 28px !important;
+    height: 30px !important;
     padding: 0 8px;
     margin: 0 !important;
     font-size: 13px;
@@ -224,14 +223,7 @@
     box-shadow: none !important;
     background: transparent;
     transition: all var(--sw-transition-fast);
-    line-height: 28px !important;
-}
-
-/* Specifically target the primary small buttons in dual-toggle */
-.dual-toggle-group .el-button--primary.el-button--small {
-    height: 28px !important;
-    max-height: 28px !important;
-    line-height: 26px !important;
+    line-height: 30px !important;
 }
 
 .dual-toggle-group button:not(:last-child),
@@ -249,6 +241,7 @@
 .dual-toggle-group .el-button.is-active {
     background: var(--sw-primary);
     color: white;
+    box-shadow: none !important;
 }
 
 /* Add button styles moved to buttons.css for consistency */

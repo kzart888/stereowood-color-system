@@ -233,6 +233,14 @@
             const cat = this.montMarteCategories.find(c => c.id === categoryId);
             return cat ? cat.name : '未分类';
         },
+        materialThumbSrc(color) {
+            const relativePath = color?.image_thumb_path || color?.image_path;
+            return relativePath ? this.$helpers.buildUploadURL(this.baseURL, relativePath) : '';
+        },
+        materialPreviewSrc(color) {
+            const relativePath = color?.image_path || color?.image_thumb_path;
+            return relativePath ? this.$helpers.buildUploadURL(this.baseURL, relativePath) : '';
+        },
         
         async loadMontMarteCategories() {
             try {

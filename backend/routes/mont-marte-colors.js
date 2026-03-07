@@ -9,6 +9,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const MontMarteColorService = require('../domains/materials/service');
+const UploadImageService = require('../domains/shared/upload-image-service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
 const { requireWriteAccess } = require('./helpers/write-access');
 
@@ -71,6 +72,9 @@ router.get('/mont-marte-colors', async (req, res) => {
 // POST /api/mont-marte-colors
 router.post('/mont-marte-colors', requireWriteAccess, upload.single('image'), async (req, res) => {
   try {
+    if (req.file) {
+      await UploadImageService.ensureThumbnailForUpload(req.file);
+    }
     const created = await MontMarteColorService.createColor(
       req.body,
       req.file ? req.file.filename : null,
@@ -85,6 +89,9 @@ router.post('/mont-marte-colors', requireWriteAccess, upload.single('image'), as
 // PUT /api/mont-marte-colors/:id
 router.put('/mont-marte-colors/:id', requireWriteAccess, upload.single('image'), async (req, res) => {
   try {
+    if (req.file) {
+      await UploadImageService.ensureThumbnailForUpload(req.file);
+    }
     const versionResult = parseVersion(req.body.version);
     if (versionResult.error) {
       return sendError(res, 400, versionResult.error);
