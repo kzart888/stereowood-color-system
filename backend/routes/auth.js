@@ -1,18 +1,79 @@
 const express = require('express');
 const AuthService = require('../domains/auth/service');
+const { AUTH_ROLE } = require('../domains/auth/service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
-const { extractTokenFromRequest } = require('./helpers/auth-session');
+const {
+  extractTokenFromRequest,
+  requireAuthenticatedSession,
+} = require('./helpers/auth-session');
+const { requireRole } = require('./helpers/authz');
 
 const router = express.Router();
+
+const SESSION_COOKIE_NAME = 'sw_session';
 
 function parsePositiveId(value) {
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
 }
 
+function parseFlag(value, fallback = false) {
+  if (value === true) return true;
+  if (value === false) return false;
+  if (typeof value !== 'string') return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+function getSessionCookieOptions() {
+  const ttlHours = Number.parseInt(process.env.SESSION_TTL_HOURS || '720', 10);
+  const maxAge = (!Number.isNaN(ttlHours) && ttlHours > 0 ? ttlHours : 24 * 30) * 60 * 60 * 1000;
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: parseFlag(process.env.COOKIE_SECURE, false),
+    path: '/',
+    maxAge,
+  };
+}
+
+function setSessionCookie(res, token) {
+  const options = getSessionCookieOptions();
+  const encoded = encodeURIComponent(token);
+  const parts = [
+    `${SESSION_COOKIE_NAME}=${encoded}`,
+    `Max-Age=${Math.floor(options.maxAge / 1000)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+  ];
+  if (options.secure) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+function clearSessionCookie(res) {
+  res.setHeader(
+    'Set-Cookie',
+    `${SESSION_COOKIE_NAME}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax`
+  );
+}
+
 function mapAuthError(res, error) {
   const mapped = AuthService.mapError(error);
   return res.status(mapped.statusCode || 400).json({ error: mapped.message, code: mapped.code });
+}
+
+function getActorFromRequest(req) {
+  if (req.authUser) {
+    return {
+      id: req.authUser.id || null,
+      username: req.authUser.username || null,
+      role: req.authUser.role || AUTH_ROLE.USER,
+    };
+  }
+  return null;
 }
 
 router.post('/auth/register-request', async (req, res) => {
@@ -34,16 +95,16 @@ router.post('/auth/register-request', async (req, res) => {
   }
 });
 
-router.get('/auth/admin/pending', async (req, res) => {
+router.get('/auth/admin/pending', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
-    const pending = await AuthService.listPending(req.get('x-admin-key'));
+    const pending = await AuthService.listPending(getActorFromRequest(req));
     return res.json({ pending });
   } catch (error) {
     return mapAuthError(res, error);
   }
 });
 
-router.get('/auth/admin/accounts', async (req, res) => {
+router.get('/auth/admin/accounts', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const result = await AuthService.listAccounts(
       {
@@ -52,7 +113,7 @@ router.get('/auth/admin/accounts', async (req, res) => {
         page: req.query.page,
         pageSize: req.query.pageSize,
       },
-      req.get('x-admin-key')
+      getActorFromRequest(req)
     );
     return res.json(result);
   } catch (error) {
@@ -60,15 +121,16 @@ router.get('/auth/admin/accounts', async (req, res) => {
   }
 });
 
-router.post('/auth/admin/accounts', async (req, res) => {
+router.post('/auth/admin/accounts', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const account = await AuthService.createAccountByAdmin(
       {
         username: req.body.username,
         password: req.body.password,
         status: req.body.status,
+        role: req.body.role,
       },
-      req.get('x-admin-key'),
+      getActorFromRequest(req),
       extractAuditContext(req)
     );
     return res.status(201).json({ success: true, account });
@@ -77,25 +139,55 @@ router.post('/auth/admin/accounts', async (req, res) => {
   }
 });
 
-router.post('/auth/admin/accounts/:id/reset-password', async (req, res) => {
-  try {
-    const id = parsePositiveId(req.params.id);
-    if (!id) {
-      return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
-    }
-    const result = await AuthService.resetPasswordByAdmin(
-      id,
-      req.body.password,
-      req.get('x-admin-key'),
-      extractAuditContext(req)
-    );
-    return res.json({ success: true, ...result });
-  } catch (error) {
-    return mapAuthError(res, error);
-  }
-});
+router.post(
+  '/auth/admin/accounts/reset-password-batch',
+  requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]),
+  async (req, res) => {
+    try {
+      const confirm = String(req.body.confirm || '').trim().toUpperCase();
+      if (confirm !== 'RESET') {
+        return res.status(400).json({
+          error: 'Secondary confirmation is required.',
+          code: 'AUTH_VALIDATION_ERROR',
+        });
+      }
 
-router.post('/auth/admin/accounts/:id/disable', async (req, res) => {
+      const result = await AuthService.resetPasswordBatchByAdmin(
+        req.body.ids,
+        req.body.password,
+        getActorFromRequest(req),
+        extractAuditContext(req)
+      );
+      return res.json({ success: true, ...result });
+    } catch (error) {
+      return mapAuthError(res, error);
+    }
+  }
+);
+
+router.post(
+  '/auth/admin/accounts/:id/reset-password',
+  requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]),
+  async (req, res) => {
+    try {
+      const id = parsePositiveId(req.params.id);
+      if (!id) {
+        return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
+      }
+      const result = await AuthService.resetPasswordByAdmin(
+        id,
+        req.body.password,
+        getActorFromRequest(req),
+        extractAuditContext(req)
+      );
+      return res.json({ success: true, ...result });
+    } catch (error) {
+      return mapAuthError(res, error);
+    }
+  }
+);
+
+router.post('/auth/admin/accounts/:id/disable', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const id = parsePositiveId(req.params.id);
     if (!id) {
@@ -104,7 +196,7 @@ router.post('/auth/admin/accounts/:id/disable', async (req, res) => {
     const account = await AuthService.disableAccountByAdmin(
       id,
       req.body.reason,
-      req.get('x-admin-key'),
+      getActorFromRequest(req),
       extractAuditContext(req)
     );
     return res.json({ success: true, account });
@@ -113,7 +205,7 @@ router.post('/auth/admin/accounts/:id/disable', async (req, res) => {
   }
 });
 
-router.post('/auth/admin/accounts/:id/enable', async (req, res) => {
+router.post('/auth/admin/accounts/:id/enable', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const id = parsePositiveId(req.params.id);
     if (!id) {
@@ -121,7 +213,7 @@ router.post('/auth/admin/accounts/:id/enable', async (req, res) => {
     }
     const account = await AuthService.enableAccountByAdmin(
       id,
-      req.get('x-admin-key'),
+      getActorFromRequest(req),
       extractAuditContext(req)
     );
     return res.json({ success: true, account });
@@ -130,7 +222,7 @@ router.post('/auth/admin/accounts/:id/enable', async (req, res) => {
   }
 });
 
-router.delete('/auth/admin/accounts/:id', async (req, res) => {
+router.delete('/auth/admin/accounts/:id', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const id = parsePositiveId(req.params.id);
     if (!id) {
@@ -138,7 +230,7 @@ router.delete('/auth/admin/accounts/:id', async (req, res) => {
     }
     const result = await AuthService.deleteAccountByAdmin(
       id,
-      req.get('x-admin-key'),
+      getActorFromRequest(req),
       extractAuditContext(req)
     );
     return res.json({ success: true, ...result });
@@ -147,7 +239,7 @@ router.delete('/auth/admin/accounts/:id', async (req, res) => {
   }
 });
 
-router.post('/auth/admin/accounts/:id/revoke-sessions', async (req, res) => {
+router.post('/auth/admin/accounts/:id/revoke-sessions', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const id = parsePositiveId(req.params.id);
     if (!id) {
@@ -155,7 +247,7 @@ router.post('/auth/admin/accounts/:id/revoke-sessions', async (req, res) => {
     }
     const result = await AuthService.revokeSessionsByAdmin(
       id,
-      req.get('x-admin-key'),
+      getActorFromRequest(req),
       extractAuditContext(req)
     );
     return res.json({ success: true, ...result });
@@ -164,23 +256,57 @@ router.post('/auth/admin/accounts/:id/revoke-sessions', async (req, res) => {
   }
 });
 
-router.get('/auth/admin/runtime-flags', async (req, res) => {
+router.post('/auth/admin/accounts/:id/promote-admin', requireRole([AUTH_ROLE.SUPER_ADMIN]), async (req, res) => {
   try {
-    const flags = await AuthService.getRuntimeFlags(req.get('x-admin-key'));
+    const id = parsePositiveId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
+    }
+    const account = await AuthService.promoteToAdmin(
+      id,
+      getActorFromRequest(req),
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, account });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.post('/auth/admin/accounts/:id/demote-admin', requireRole([AUTH_ROLE.SUPER_ADMIN]), async (req, res) => {
+  try {
+    const id = parsePositiveId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
+    }
+    const account = await AuthService.demoteAdmin(
+      id,
+      getActorFromRequest(req),
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, account });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.get('/auth/admin/runtime-flags', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
+  try {
+    const flags = await AuthService.getRuntimeFlags(getActorFromRequest(req));
     return res.json({ flags });
   } catch (error) {
     return mapAuthError(res, error);
   }
 });
 
-router.post('/auth/admin/runtime-flags', async (req, res) => {
+router.post('/auth/admin/runtime-flags', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const flags = await AuthService.setRuntimeFlags(
       {
         authEnforceWrites: req.body.authEnforceWrites,
         readOnlyMode: req.body.readOnlyMode,
       },
-      req.get('x-admin-key'),
+      getActorFromRequest(req),
       extractAuditContext(req)
     );
     return res.json({ success: true, flags });
@@ -189,7 +315,7 @@ router.post('/auth/admin/runtime-flags', async (req, res) => {
   }
 });
 
-router.post('/auth/admin/requests/:id/approve', async (req, res) => {
+router.post('/auth/admin/requests/:id/approve', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const id = parsePositiveId(req.params.id);
     if (!id) {
@@ -198,7 +324,7 @@ router.post('/auth/admin/requests/:id/approve', async (req, res) => {
 
     const approved = await AuthService.approveRequest(
       id,
-      req.get('x-admin-key'),
+      getActorFromRequest(req),
       extractAuditContext(req)
     );
 
@@ -208,7 +334,7 @@ router.post('/auth/admin/requests/:id/approve', async (req, res) => {
   }
 });
 
-router.post('/auth/admin/requests/:id/reject', async (req, res) => {
+router.post('/auth/admin/requests/:id/reject', requireRole([AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN]), async (req, res) => {
   try {
     const id = parsePositiveId(req.params.id);
     if (!id) {
@@ -218,7 +344,7 @@ router.post('/auth/admin/requests/:id/reject', async (req, res) => {
     const rejected = await AuthService.rejectRequest(
       id,
       req.body.reason,
-      req.get('x-admin-key'),
+      getActorFromRequest(req),
       extractAuditContext(req)
     );
 
@@ -238,6 +364,7 @@ router.post('/auth/login', async (req, res) => {
       extractAuditContext(req)
     );
 
+    setSessionCookie(res, loginResult.token);
     return res.json(loginResult);
   } catch (error) {
     return mapAuthError(res, error);
@@ -247,12 +374,28 @@ router.post('/auth/login', async (req, res) => {
 router.post('/auth/logout', async (req, res) => {
   try {
     const token = extractTokenFromRequest(req);
+    clearSessionCookie(res);
     if (!token) {
-      return res.status(400).json({ error: 'Session token is required.', code: 'AUTH_VALIDATION_ERROR' });
+      return res.json({ revoked: false });
     }
 
     const result = await AuthService.logout(token, extractAuditContext(req));
     return res.json(result);
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.post('/auth/change-password', requireAuthenticatedSession, async (req, res) => {
+  try {
+    const token = extractTokenFromRequest(req);
+    const result = await AuthService.changePassword(
+      token,
+      req.body.oldPassword,
+      req.body.newPassword,
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, ...result });
   } catch (error) {
     return mapAuthError(res, error);
   }
@@ -267,6 +410,8 @@ router.get('/auth/me', async (req, res) => {
     user: {
       id: req.authUser.id,
       username: req.authUser.username,
+      role: req.authUser.role || AUTH_ROLE.USER,
+      must_change_password: Boolean(req.authUser.mustChangePassword),
     },
     session: req.authSession
       ? {
@@ -278,4 +423,3 @@ router.get('/auth/me', async (req, res) => {
 });
 
 module.exports = router;
-

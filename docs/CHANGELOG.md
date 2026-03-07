@@ -58,6 +58,23 @@
   - `docs/architecture/P6_2_CUTOVER_DECISION_PACKAGE.md`
   - `docs/architecture/P6_FULL_REVIEW_GATE.md`
 
+### P7 Execution: Login/RBAC Hardening Refresh
+- Switched web auth to cookie-first flow with independent login page:
+  - `/` and `/login` for auth entry
+  - `/app` for legacy business shell
+  - `/account-management` for admin/super-admin account operations
+- Added/confirmed first-login forced password change (`must_change_password`) for bootstrap, created, and reset accounts.
+- Added role hardening rules:
+  - create account as `user` first
+  - promote/demote admin through dedicated APIs
+- Changed auth token resolution to cookie-first and removed frontend localStorage token injection from active runtime path.
+- Set legacy `x-admin-key` compatibility fallback to opt-in (`ALLOW_LEGACY_ADMIN_KEY=true`), default disabled.
+- Added batch password reset API flow with secondary confirmation.
+- Added dedicated RBAC smoke gate: `npm run phaseL:auth-rbac:smoke`.
+- Updated phase P4 smoke to validate audit panel from authenticated `/app` route.
+- Published P7 review gate: `docs/architecture/P7_AUTH_RBAC_REVIEW_GATE.md`.
+- Published modernization planning baseline: `docs/architecture/P8_MODERN_PLATFORM_BLUEPRINT.md`.
+
 ## v0.9.9 (2026-03-07)
 ### Documentation and Execution Alignment Refresh
 - Archived completed one-time architecture execution logs into `docs/archive/architecture/2026-03-phase-a-closure/`.

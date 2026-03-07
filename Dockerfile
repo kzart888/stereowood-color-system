@@ -14,9 +14,10 @@ ENV TZ=Asia/Shanghai \
     DB_FILE=/data/color_management.db
 WORKDIR /app
 
-# Create data, upload, and backup volumes
-RUN mkdir -p /data /app/backend/uploads /app/backend/backups /app/frontend/legacy /app/frontend/pilot
-VOLUME ["/data", "/app/backend/uploads", "/app/backend/backups"]
+# Create base runtime directories before source copy.
+# Note: /app/backend/uploads is created after COPY to avoid conflict with
+# local Windows junctions (backend/uploads) in build context.
+RUN mkdir -p /data /app/backend/backups /app/frontend/legacy /app/frontend/pilot
 
 # Copy installed node_modules from base stage
 COPY --from=base /app/node_modules ./node_modules
@@ -30,6 +31,10 @@ COPY frontend/pilot ./frontend/pilot
 COPY scripts ./scripts
 # Copy package.json for reference
 COPY package.json ./
+
+# Ensure runtime volume mount points exist after source copy.
+RUN mkdir -p /app/backend/uploads /app/backend/backups
+VOLUME ["/data", "/app/backend/uploads", "/app/backend/backups"]
 
 # Expose port
 EXPOSE 9099

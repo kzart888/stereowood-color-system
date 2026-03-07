@@ -30,6 +30,10 @@ function getApiGateway() {
             history: {
                 feed: (params = {}) => directGateway.history.feed(baseURL, params),
                 timeline: (entityType, entityId, limit = 50) => directGateway.history.timeline(baseURL, entityType, entityId, limit)
+            },
+            auth: {
+                me: () => directGateway.auth.me(baseURL),
+                logout: () => directGateway.auth.logout(baseURL)
             }
         };
     }
@@ -46,6 +50,7 @@ const app = createApp({
         return {
             baseURL: window.location.origin,
             loading: false,
+            authUser: null,
             activeTab: initTab,
             artworksViewMode: 'byLayer',
             customColorsSortMode: 'time',
@@ -160,45 +165,54 @@ const app = createApp({
         };
     },
     mounted() {
-        this.initApp();
-        try { if (!localStorage.getItem('sw-active-tab')) localStorage.setItem('sw-active-tab', this.activeTab); } catch(e) {}
-        const restoreScroll = () => {
-            try {
-                const raw = localStorage.getItem('sw-scroll-map');
-                if (!raw) return;
-                const map = JSON.parse(raw);
-                const pos = map && typeof map[this.activeTab]==='number' ? map[this.activeTab] : 0;
-                if (pos>0) window.scrollTo(0,pos);
-            } catch(e) {}
-        };
-        setTimeout(restoreScroll, 80);
-        let _stTimer=null;
-        window.addEventListener('scroll', ()=>{
-            if (_stTimer) return;
-            _stTimer = setTimeout(()=>{
-                _stTimer=null;
+        const setupAfterAuth = async () => {
+            const ok = await this.ensureWebSession();
+            if (!ok) {
+                return;
+            }
+
+            this.initApp();
+            try { if (!localStorage.getItem('sw-active-tab')) localStorage.setItem('sw-active-tab', this.activeTab); } catch(e) {}
+            const restoreScroll = () => {
+                try {
+                    const raw = localStorage.getItem('sw-scroll-map');
+                    if (!raw) return;
+                    const map = JSON.parse(raw);
+                    const pos = map && typeof map[this.activeTab]==='number' ? map[this.activeTab] : 0;
+                    if (pos>0) window.scrollTo(0,pos);
+                } catch(e) {}
+            };
+            setTimeout(restoreScroll, 80);
+            let _stTimer=null;
+            window.addEventListener('scroll', ()=>{
+                if (_stTimer) return;
+                _stTimer = setTimeout(()=>{
+                    _stTimer=null;
+                    try {
+                        const raw = localStorage.getItem('sw-scroll-map');
+                        const map = raw ? JSON.parse(raw) : {};
+                        map[this.activeTab] = window.scrollY||0;
+                        localStorage.setItem('sw-scroll-map', JSON.stringify(map));
+                    } catch(e) {}
+                },200);
+            }, { passive:true });
+            this.$watch('activeTab', ()=>{
                 try {
                     const raw = localStorage.getItem('sw-scroll-map');
                     const map = raw ? JSON.parse(raw) : {};
-                    map[this.activeTab] = window.scrollY||0;
+                    map[this._lastTabForScroll || this.activeTab] = window.scrollY||0;
                     localStorage.setItem('sw-scroll-map', JSON.stringify(map));
                 } catch(e) {}
-            },200);
-        }, { passive:true });
-        this.$watch('activeTab', ()=>{
-            try {
-                const raw = localStorage.getItem('sw-scroll-map');
-                const map = raw ? JSON.parse(raw) : {};
-                map[this._lastTabForScroll || this.activeTab] = window.scrollY||0;
-                localStorage.setItem('sw-scroll-map', JSON.stringify(map));
-            } catch(e) {}
-            this._lastTabForScroll = this.activeTab;
-            if (!this._suppressNextRestore) {
-                this.$nextTick(()=> setTimeout(restoreScroll,40));
-            } else {
-                this._suppressNextRestore = false;
-            }
-        });
+                this._lastTabForScroll = this.activeTab;
+                if (!this._suppressNextRestore) {
+                    this.$nextTick(()=> setTimeout(restoreScroll,40));
+                } else {
+                    this._suppressNextRestore = false;
+                }
+            });
+        };
+
+        setupAfterAuth();
     },
     watch: {
         activeTab(val){ try { localStorage.setItem('sw-active-tab', val); } catch(e) {} }
@@ -221,6 +235,47 @@ const app = createApp({
                 // 初次加载后构建自配色配方同步索引
                 this._buildColorFormulaIndex();
             } catch(e) { } finally { this.loading = false; }
+        },
+        async ensureWebSession() {
+            try {
+                const gateway = getApiGateway();
+                if (!gateway.auth || typeof gateway.auth.me !== 'function') {
+                    throw new Error('auth gateway is unavailable');
+                }
+                const response = await gateway.auth.me();
+                const user = response && response.data ? response.data.user : null;
+                if (!user) {
+                    window.location.href = '/login';
+                    return false;
+                }
+                if (user.must_change_password) {
+                    window.location.href = '/login?force=1';
+                    return false;
+                }
+                this.authUser = user;
+                return true;
+            } catch (error) {
+                window.location.href = '/login';
+                return false;
+            }
+        },
+        openAccountManagement() {
+            if (!this.authUser || !['super_admin', 'admin'].includes(this.authUser.role)) {
+                return;
+            }
+            window.location.href = '/account-management';
+        },
+        async logout() {
+            try {
+                const gateway = getApiGateway();
+                if (gateway.auth && typeof gateway.auth.logout === 'function') {
+                    await gateway.auth.logout();
+                }
+            } catch (error) {
+                console.warn('logout request failed', error);
+            } finally {
+                window.location.href = '/login';
+            }
         },
         async loadAppConfig() {
             try {
@@ -435,7 +490,6 @@ app.component('artworks-component', ArtworksComponent);
 app.component('mont-marte-component', MontMarteComponent);
 if (typeof ColorDictionaryComponent !== 'undefined') app.component('color-dictionary-component', ColorDictionaryComponent);
 if (typeof AppHeaderBar !== 'undefined') app.component('app-header-bar', AppHeaderBar);
-if (typeof AdminAuthPanelComponent !== 'undefined') app.component('admin-auth-panel-component', AdminAuthPanelComponent);
 if (typeof AuditTimelinePanelComponent !== 'undefined') app.component('audit-timeline-panel-component', AuditTimelinePanelComponent);
 // 计算器浮层（渲染由全局服务控制）
 if (typeof FormulaCalculatorOverlay !== 'undefined') {

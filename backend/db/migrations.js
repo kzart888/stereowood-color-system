@@ -543,7 +543,10 @@ async function runMigrations() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
         status TEXT NOT NULL DEFAULT 'pending',
+        must_change_password INTEGER NOT NULL DEFAULT 1,
+        password_changed_at DATETIME,
         approved_by TEXT,
         approved_at DATETIME,
         disabled_by TEXT,
@@ -573,6 +576,19 @@ async function runMigrations() {
     await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token)`);
     await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, id DESC)`);
     await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_sessions_active ON user_sessions(session_token, revoked_at, expires_at)`);
+
+    if (!(await columnExists('user_accounts', 'role'))) {
+      await runSafe(`ALTER TABLE user_accounts ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`);
+      await runSafe(`UPDATE user_accounts SET role = 'user' WHERE role IS NULL OR TRIM(role) = ''`);
+    }
+    if (!(await columnExists('user_accounts', 'must_change_password'))) {
+      await runSafe(`ALTER TABLE user_accounts ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 1`);
+      await runSafe(`UPDATE user_accounts SET must_change_password = 1 WHERE must_change_password IS NULL`);
+    }
+    if (!(await columnExists('user_accounts', 'password_changed_at'))) {
+      await runSafe(`ALTER TABLE user_accounts ADD COLUMN password_changed_at DATETIME`);
+    }
+    await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_accounts_role ON user_accounts(role, id DESC)`);
 
   } catch (e) {
     console.error('鏁版嵁搴撹縼绉诲け璐?', e);

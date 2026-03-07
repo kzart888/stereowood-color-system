@@ -40,6 +40,7 @@
     "phaseP6:pilot-rollback-rehearsal": "node scripts/phaseP6-pilot-rollback-rehearsal.js",
     "phaseP6:pilot-write-docker-smoke": "node scripts/phaseP6-pilot-write-docker-smoke.js",
     "phaseP6:verify": "npm run phaseP6:pilot-write-smoke && npm run phaseP6:pilot-rollback-rehearsal && npm run phaseP6:pilot-write-docker-smoke && npm run phase0:verify",
+    "phaseL:auth-rbac:smoke": "node scripts/phaseL-auth-rbac-smoke.js",
     "predeploy:check": "node scripts/predeploy-check.js",
     "gate:full": "node scripts/gate-full.js"
   },

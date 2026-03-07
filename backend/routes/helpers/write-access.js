@@ -10,6 +10,12 @@ function requireWriteAccess(req, res, next) {
   }
 
   if (req.authUser) {
+    if (req.authUser.mustChangePassword) {
+      return res.status(403).json({
+        error: 'Password change required before write operations.',
+        code: 'AUTH_PASSWORD_CHANGE_REQUIRED',
+      });
+    }
     return next();
   }
 
@@ -23,4 +29,3 @@ function requireWriteAccess(req, res, next) {
 module.exports = {
   requireWriteAccess,
 };
-

@@ -1,194 +1,120 @@
-# Latest Roadmap and Checklist (P0-P6)
+# Latest Roadmap and Checklist (P0-P6 + Auth Hardening Refresh)
 
 Last updated: 2026-03-07  
-Scope: legacy-first production stabilization complete, then staged architecture modernization.
+Scope: legacy production continuity + completed auth/RBAC hardening + modernization preparation.
 
-This document is the current execution source of truth for future work.
+This file remains the architecture execution source of truth.
 
 ## Current Position
 
-- Runtime contract stays: backend serves `frontend/legacy` at `/`, APIs at `/api`, health at `/health`, port `9099`.
-- Branch state is aligned: `main` and `architecture-upgrade` are at the same commit.
-- Local Docker rehearsal is now passing again on Windows after host restart.
-- UTF-8 runtime baseline is stable (`text/html; charset=utf-8`, frontend UTF-8 meta present).
-
-## Goal Alignment
-
-Your goals are reasonable and are preserved in this roadmap:
-- Remove obsolete/useless code and docs.
-- Remove duplicated logic and unify gateways/contracts.
-- Improve maintainability with clear module boundaries.
-- Add internal auth/admin workflow with simple operations.
-- Add visible history/audit UX for daily operations.
-- Keep production safe during modernization (no big-bang rewrite).
+- Runtime contract remains:
+  - production frontend source: `frontend/legacy`
+  - legacy app shell: `/app`
+  - login entry: `/` and `/login`
+  - APIs: `/api`
+  - health: `/health`
+  - default port: `9099`
+  - container DB path: `/data/color_management.db`
+- Branch fact correction:
+  - `main` is ahead of `architecture-upgrade`; they are not aligned.
+- Docker baseline is green again:
+  - Windows junction copy blocker was fixed in Docker build path.
+- Auth mode is now upgraded:
+  - HttpOnly cookie session (30 days default)
+  - role model: `super_admin`, `admin`, `user`
+  - first-login forced password change
+  - single active session per account
+  - account creation rule: create `user` first, then promote to `admin` if needed
+  - separate login page and account-management page
 
 ## Phase Status Overview
 
 | Phase | Title | Status | Notes |
 |---|---|---|---|
-| P0 | Branch and baseline decision | Completed | Phase A merged posture confirmed; Docker rehearsal recovered and passing. |
-| P1 | Ops/document alignment | Completed | Contract matrix, archive cleanup, and P1 gate are published. |
-| P2 | Test system hardening | Completed | Full one-command gate, Docker smoke automation, strict dry-run mode, and predeploy checker are published. |
-| P3 | Internal auth completion | Completed | Admin account workflows, single-session policy, runtime switches, and P3 gate are passing. |
-| P4 | History/audit UX | Completed | Feed API + bottom timeline panel shipped with filters/pagination and UTF-8 label checks. |
-| P5 | Obsolete/duplicate cleanup | Completed | Network path unification + oversized module decomposition + conservative archive pass completed with gates. |
-| P6 | Modernization (Vue3 path) | In progress (Gate-ready) | Pilot write slice implemented and rehearsed; cutover decision package published. |
+| P0 | Branch and baseline decision | Completed | Baseline verification and branch posture clarified. |
+| P1 | Ops/document alignment | Completed | Contract matrix and docs alignment published. |
+| P2 | Test system hardening | Completed | Full gate + Docker smoke + predeploy checks are in place. |
+| P3 | Internal auth completion (initial) | Completed | Initial auth/admin panel was shipped in previous cycle. |
+| P4 | History/audit UX | Completed | Feed API + bottom timeline panel shipped. |
+| P5 | Obsolete/duplicate cleanup | Completed | Network unification + decomposition + docs cleanup completed. |
+| P6 | Modernization pilot (Vue path) | Completed (gate-ready) | Pilot write slice, parity, and rollback rehearsal completed. |
+| P7 | Auth/RBAC hardening refresh | Completed | Login split, role-based admin, forced password change, cookie session completed. |
+| P8 | Modern platform build-out | Pending | Start new modern frontend branch after stable merge/tag. |
 
-## Phase-by-Phase Execution Checklist
+## P7 Completion Checklist (This Iteration)
 
-## P1: Ops and Documentation Alignment
-
-Target outcome:
-- One consistent operator story across local, Docker, and Synology.
-
-Checklist:
-- [x] Confirm all operational docs point to `PORT=9099` and `DB_FILE=/data/color_management.db`.
-- [x] Confirm backup/restore docs match current scripts (`npm run backup`, `npm run restore`).
-- [x] Remove or archive stale docs that describe superseded branch flows or blocked Docker states.
-- [x] Add a single docs entry index (`docs/architecture/README.md`) and keep it updated.
-- [x] Update `docs/CHANGELOG.md` with a docs/status refresh entry.
-
-Gate:
-- [x] No contradictory runtime/deploy instructions across `README.md`, `docs/OPERATIONS.md`, `DEPLOYMENT_CHECKLIST.md`, and architecture docs.
-
-Evidence:
-- `docs/architecture/P1_1_DOC_CONTRACT_MATRIX.md`
-- `docs/architecture/P1_REVIEW_GATE.md`
-
-## P2: Test System Hardening
-
-Target outcome:
-- One command that proves release readiness for local and Docker rehearse path.
-
-Checklist:
-- [x] Add a one-command gate script (`npm run gate:full`) covering:
-  - [x] encoding audit
-  - [x] phase0 smoke
-  - [x] key phase A contract checks
-  - [x] Docker smoke on temporary port
-- [x] Add explicit DB dry-run verification support for copied trio:
-  - [x] `color_management.db`
-  - [x] `color_management.db-wal`
-  - [x] `color_management.db-shm`
-- [x] Add pre-deploy checklist script/doc for operator handoff.
-
-Gate:
-- [x] Gate command passes on developer machine and a clean Docker rehearsal.
-
-Evidence:
-- `docs/architecture/P2_REVIEW_GATE.md`
-
-## P3: Internal Auth Completion
-
-Target outcome:
-- Lightweight internal account system with approval and safe admin operations.
-
-Checklist:
-- [x] Build/finish admin page for:
+- [x] Fixed Docker smoke blocker caused by Windows junction in `backend/uploads`.
+- [x] Added role + password-policy auth model:
+  - [x] `role`
+  - [x] `must_change_password`
+  - [x] `password_changed_at`
+- [x] Added bootstrap super admin:
+  - [x] default account `admin/admin` when no `super_admin` exists
+  - [x] first login requires password change
+- [x] Added `POST /api/auth/change-password`.
+- [x] Added role-based admin APIs:
+  - [x] batch reset password
+  - [x] promote/demote admin
+  - [x] role-guarded account operations
+- [x] Upgraded session handling to HttpOnly cookie with 30-day TTL default.
+- [x] Frontend auth path is cookie-first (no localStorage token persistence).
+- [x] Legacy `x-admin-key` fallback is compatibility-only and disabled by default.
+- [x] Implemented separate login page and protected app route.
+- [x] Added account-management page with:
   - [x] pending approvals
-  - [x] manual user add
-  - [x] password reset
-  - [x] disable/delete account
-- [x] Enforce single active session policy (old session invalidated on re-login).
-- [x] Add simple emergency switches:
-  - [x] temporary auth bypass (maintenance only)
-  - [x] read-only mode
-- [x] Add audit visibility for auth actions (who approved/disabled/reset).
+  - [x] account list + role tags
+  - [x] create/delete/disable/enable
+  - [x] batch reset with secondary confirmation
+  - [x] promote/demote (super admin only)
+- [x] Added dedicated RBAC smoke:
+  - [x] `npm run phaseL:auth-rbac:smoke`
+- [x] Published P7 gate:
+  - [x] `docs/architecture/P7_AUTH_RBAC_REVIEW_GATE.md`
 
-Gate:
-- [x] Register -> approve -> login -> protected write -> audit log flow passes.
+## Verification Snapshot (2026-03-07)
 
-Evidence:
-- `docs/architecture/P3_REVIEW_GATE.md`
+- [x] `npm run phase0:verify`
+- [x] `npm run phaseA:a0:verify`
+- [x] `npm run phaseA:a4:verify`
+- [x] `npm run phaseP3:verify`
+- [x] `npm run phaseP6:verify`
+- [x] `npm run phaseL:auth-rbac:smoke`
+- [x] `npm run gate:full`
 
-## P4: History and Audit UX
+## Remaining Work (P8 Modernization)
 
-Target outcome:
-- Every primary screen shows a simple, readable operation timeline panel.
-
-Checklist:
-- [x] Add bottom scrollable audit panel to main screens (`custom colors`, `artworks`, `mont-marte`).
-- [x] Show `who / when / what` summary lines in plain text style.
-- [x] Add basic filter + pagination for audit timeline.
-- [x] Keep UTF-8 safety for Chinese labels/content.
-
-Gate:
-- [x] Timeline API + UI consistency confirmed on all major write flows.
-
-Evidence:
-- `docs/architecture/P4_REVIEW_GATE.md`
-
-## P5: Obsolete and Duplicate Cleanup
-
-Target outcome:
-- Clean, predictable module boundaries with reduced tech debt.
+Target: keep legacy always available while delivering a modern frontend in controlled slices.
 
 Checklist:
-- [x] Standardize frontend data access to one adapter gateway path.
-- [x] Remove mixed direct network styles (`fetch`, `axios`, `window.api`) from active features.
-- [x] Continue splitting oversized legacy files into orchestrator/domain/ui modules.
-- [x] Archive or delete dead docs and dead code paths with references updated.
-- [x] Keep behavior unchanged while reducing complexity.
+- [ ] Create branch `codex/modern-platform-v1` from latest stable `main`.
+- [x] Publish modernization blueprint: `docs/architecture/P8_MODERN_PLATFORM_BLUEPRINT.md`.
+- [ ] Scaffold `frontend/modern` (`Vue 3 + TypeScript + Vite + Pinia + Vue Router + Element Plus`).
+- [ ] Define shared API contract adapter and parity tests between legacy and modern slices.
+- [ ] Start with one read-only slice, then one controlled write slice.
+- [ ] Keep `/app` (legacy) as production default until cutover gate is approved.
+- [ ] Define go/no-go and rollback playbook for modern cutover.
 
-Gate:
-- [x] No Critical/High regressions in full `code-review-agent` gate.
-
-Current evidence:
-- `npm run phaseP5:verify`
-- `docs/architecture/P5_1_REVIEW_GATE.md`
-- `docs/architecture/P5_2_REVIEW_GATE.md`
-- `docs/architecture/P5_3_REVIEW_GATE.md`
-
-## P6: Modernization (Vue3 Path)
-
-Target outcome:
-- Controlled modernization with clear rollback and objective cutover criteria.
-
-Checklist:
-- [x] Keep legacy as production until pilot parity is proven.
-- [x] Expand pilot from read-only slice to one controlled write slice.
-- [x] Define explicit cutover criteria:
-  - [x] API contract parity
-  - [x] critical user flow parity
-  - [x] performance and stability checks
-- [x] Define rollback triggers and rollback routine before cutover.
-
-Gate:
-- [x] Pilot write slice passes parity and rollback rehearsal before any production cutover decision.
-- [ ] Production enablement decision approved by operator.
-
-Evidence:
-- `npm run phaseP6:verify`
-- `docs/architecture/P6_1_PILOT_DICTIONARY_WRITE_CONTRACT.md`
-- `docs/architecture/P6_1_PILOT_WRITE_RUNBOOK.md`
-- `docs/architecture/P6_1_REVIEW_GATE.md`
-- `docs/architecture/P6_2_CUTOVER_DECISION_PACKAGE.md`
-- `docs/architecture/P6_FULL_REVIEW_GATE.md`
-
-## Standard Routines (Current Baseline)
+## Standard Routines (Current)
 
 Local run:
 1. `npm ci`
 2. `npm start`
-3. Open `http://localhost:9099`
+3. Open `http://localhost:9099` (login page)
+4. Login success redirects to `/app`
 
 Local Docker rehearsal:
 1. `docker build -t stereowood-color-system:<tag> .`
 2. `docker run --rm -d --name sw-test -p 9199:9099 -e NODE_ENV=production -e PORT=9099 -e DB_FILE=/data/color_management.db -v <data>:/data -v <uploads>:/app/backend/uploads -v <backups>:/app/backend/backups stereowood-color-system:<tag>`
-3. Check:
+3. Verify:
    - `http://localhost:9199/health`
    - `http://localhost:9199/api/config`
    - `http://localhost:9199/`
-
-Pilot write rehearsal commands:
-1. `npm run phaseP6:pilot-write-smoke`
-2. `npm run phaseP6:pilot-rollback-rehearsal`
-3. `npm run phaseP6:pilot-write-docker-smoke`
+   - login -> `/app`
 
 Synology deployment routine:
-1. Build and push image tag to your registry.
+1. Build and push image tag to registry.
 2. Pull tag in Synology Container Manager.
-3. Start candidate container on temporary host port (for smoke).
-4. Verify health/API/root.
+3. Start candidate on temporary host port.
+4. Verify login, `/app`, key APIs, and `/health`.
 5. Cut over production port `9099`.
-6. Keep previous known-good tag for rollback.
+6. Keep previous stable image tag for rollback.

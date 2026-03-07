@@ -106,6 +106,7 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${PORT}`;
   const username = `p6docker${Date.now()}`;
   const password = 'pilotpass123';
+  const changedPassword = 'pilotpass456';
   cleanup();
 
   try {
@@ -134,6 +135,8 @@ async function main() {
       'READ_ONLY_MODE=false',
       '-e',
       `INTERNAL_ADMIN_KEY=${ADMIN_KEY}`,
+      '-e',
+      'ALLOW_LEGACY_ADMIN_KEY=true',
       '-v',
       `${DATA_VOL}:/data`,
       '-v',
@@ -184,6 +187,18 @@ async function main() {
       throw new Error(`login failed: ${login.status}`);
     }
     const authHeader = { authorization: `Bearer ${login.data.token}`, 'content-type': 'application/json' };
+    if (!login.data.user || !login.data.user.must_change_password) {
+      throw new Error('expected must_change_password=true on first login');
+    }
+
+    const changePassword = await requestJson(`${baseUrl}/api/auth/change-password`, {
+      method: 'POST',
+      headers: authHeader,
+      body: JSON.stringify({ oldPassword: password, newPassword: changedPassword }),
+    });
+    if (changePassword.status !== 200) {
+      throw new Error(`change-password failed: ${changePassword.status}`);
+    }
 
     const supplierName = `P6 Docker Supplier ${Date.now()}`;
     const supplierUpsert = await requestJson(`${baseUrl}/api/pilot/dictionaries/suppliers/upsert`, {

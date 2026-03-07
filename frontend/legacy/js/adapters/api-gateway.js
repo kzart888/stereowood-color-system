@@ -27,6 +27,13 @@
     });
   }
 
+  function withOptionalAdminKey(adminKey, config = {}) {
+    if (typeof adminKey === 'string' && adminKey.trim() !== '') {
+      return withAdminKey(adminKey, config);
+    }
+    return Object.assign({}, config);
+  }
+
   const apiGateway = {
     config: {
       get: (baseURL) => getClient().get(withBase(baseURL, '/api/config')),
@@ -112,68 +119,88 @@
       registerRequest: (baseURL, payload) => getClient().post(withBase(baseURL, '/api/auth/register-request'), payload),
       login: (baseURL, payload) => getClient().post(withBase(baseURL, '/api/auth/login'), payload),
       logout: (baseURL) => getClient().post(withBase(baseURL, '/api/auth/logout'), {}),
+      changePassword: (baseURL, payload) =>
+        getClient().post(withBase(baseURL, '/api/auth/change-password'), payload),
       me: (baseURL) => getClient().get(withBase(baseURL, '/api/auth/me')),
       listPending: (baseURL, adminKey) =>
-        getClient().get(withBase(baseURL, '/api/auth/admin/pending'), withAdminKey(adminKey)),
+        getClient().get(withBase(baseURL, '/api/auth/admin/pending'), withOptionalAdminKey(adminKey)),
       listAccounts: (baseURL, adminKey, params = {}) =>
         getClient().get(
           withBase(baseURL, '/api/auth/admin/accounts'),
-          withAdminKey(adminKey, { params })
+          withOptionalAdminKey(adminKey, { params })
         ),
       createAccount: (baseURL, adminKey, payload) =>
         getClient().post(
           withBase(baseURL, '/api/auth/admin/accounts'),
           payload,
-          withAdminKey(adminKey)
+          withOptionalAdminKey(adminKey)
         ),
       approveRequest: (baseURL, adminKey, accountId) =>
         getClient().post(
           withBase(baseURL, `/api/auth/admin/requests/${accountId}/approve`),
           {},
-          withAdminKey(adminKey)
+          withOptionalAdminKey(adminKey)
         ),
       rejectRequest: (baseURL, adminKey, accountId, reason) =>
         getClient().post(
           withBase(baseURL, `/api/auth/admin/requests/${accountId}/reject`),
           { reason: reason || null },
-          withAdminKey(adminKey)
+          withOptionalAdminKey(adminKey)
         ),
       resetPassword: (baseURL, adminKey, accountId, password) =>
         getClient().post(
           withBase(baseURL, `/api/auth/admin/accounts/${accountId}/reset-password`),
-          { password },
-          withAdminKey(adminKey)
+          password ? { password } : {},
+          withOptionalAdminKey(adminKey)
+        ),
+      resetPasswordBatch: (baseURL, adminKey, payload) =>
+        getClient().post(
+          withBase(baseURL, '/api/auth/admin/accounts/reset-password-batch'),
+          payload,
+          withOptionalAdminKey(adminKey)
         ),
       disableAccount: (baseURL, adminKey, accountId, reason) =>
         getClient().post(
           withBase(baseURL, `/api/auth/admin/accounts/${accountId}/disable`),
           { reason: reason || null },
-          withAdminKey(adminKey)
+          withOptionalAdminKey(adminKey)
         ),
       enableAccount: (baseURL, adminKey, accountId) =>
         getClient().post(
           withBase(baseURL, `/api/auth/admin/accounts/${accountId}/enable`),
           {},
-          withAdminKey(adminKey)
+          withOptionalAdminKey(adminKey)
         ),
       deleteAccount: (baseURL, adminKey, accountId) =>
         getClient().delete(
           withBase(baseURL, `/api/auth/admin/accounts/${accountId}`),
-          withAdminKey(adminKey)
+          withOptionalAdminKey(adminKey)
         ),
       revokeSessions: (baseURL, adminKey, accountId) =>
         getClient().post(
           withBase(baseURL, `/api/auth/admin/accounts/${accountId}/revoke-sessions`),
           {},
-          withAdminKey(adminKey)
+          withOptionalAdminKey(adminKey)
+        ),
+      promoteAdmin: (baseURL, adminKey, accountId) =>
+        getClient().post(
+          withBase(baseURL, `/api/auth/admin/accounts/${accountId}/promote-admin`),
+          {},
+          withOptionalAdminKey(adminKey)
+        ),
+      demoteAdmin: (baseURL, adminKey, accountId) =>
+        getClient().post(
+          withBase(baseURL, `/api/auth/admin/accounts/${accountId}/demote-admin`),
+          {},
+          withOptionalAdminKey(adminKey)
         ),
       getRuntimeFlags: (baseURL, adminKey) =>
-        getClient().get(withBase(baseURL, '/api/auth/admin/runtime-flags'), withAdminKey(adminKey)),
+        getClient().get(withBase(baseURL, '/api/auth/admin/runtime-flags'), withOptionalAdminKey(adminKey)),
       setRuntimeFlags: (baseURL, adminKey, payload) =>
         getClient().post(
           withBase(baseURL, '/api/auth/admin/runtime-flags'),
           payload,
-          withAdminKey(adminKey)
+          withOptionalAdminKey(adminKey)
         ),
     },
   };

@@ -8,13 +8,14 @@ This document describes the current Express + SQLite contract served by `backend
 - API base path: `/api`
 - Health endpoint: `/health`
 - System config endpoint: `/api/config`
-- Legacy UI static root: `/` served from `frontend/legacy`
+- Login page: `/` and `/login` served from `frontend/legacy/index.html`
+- Legacy UI shell: `/app` served from `frontend/legacy/app.html`
 - Upload static root: `/uploads` served from `backend/uploads`
 
 ## Common Behavior
 - Success responses return JSON objects or arrays.
 - Error responses return JSON with shape `{ "error": "<message>" }`.
-- API routes are unauthenticated by default, but write routes can be protected by `AUTH_ENFORCE_WRITES=true`.
+- API routes are readable by default, while write routes are protected by runtime write guard (`AUTH_ENFORCE_WRITES` / `READ_ONLY_MODE`) and role-based auth where applicable.
 - File upload endpoints expect `multipart/form-data`.
 
 ## Endpoint Groups
@@ -190,39 +191,64 @@ Notes:
 
 If omitted, write flows still work and audit defaults are used.
 
-### Internal Auth (A4)
+### Internal Auth + RBAC (P7 refresh)
 Source: `backend/routes/auth.js` -> `backend/domains/auth/service.js` -> `backend/db/queries/auth.js`
 
+Primary auth mode:
+- HttpOnly cookie session (`sw_session`)
+- Role-based authorization (`super_admin`, `admin`, `user`)
+- Token resolution order: cookie first, then `Authorization: Bearer`, then `x-session-token` (compatibility).
+
+Public auth endpoints:
 - `POST /api/auth/register-request`
-- `GET /api/auth/admin/pending` (requires `x-admin-key`)
-- `GET /api/auth/admin/accounts` (requires `x-admin-key`)
-- `POST /api/auth/admin/accounts` (requires `x-admin-key`)
-- `POST /api/auth/admin/accounts/:id/reset-password` (requires `x-admin-key`)
-- `POST /api/auth/admin/accounts/:id/disable` (requires `x-admin-key`)
-- `POST /api/auth/admin/accounts/:id/enable` (requires `x-admin-key`)
-- `DELETE /api/auth/admin/accounts/:id` (requires `x-admin-key`)
-- `POST /api/auth/admin/accounts/:id/revoke-sessions` (requires `x-admin-key`)
-- `GET /api/auth/admin/runtime-flags` (requires `x-admin-key`)
-- `POST /api/auth/admin/runtime-flags` (requires `x-admin-key`)
-- `POST /api/auth/admin/requests/:id/approve` (requires `x-admin-key`)
-- `POST /api/auth/admin/requests/:id/reject` (requires `x-admin-key`)
 - `POST /api/auth/login`
-- `POST /api/auth/logout` (token required)
-- `GET /api/auth/me` (token required)
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/auth/change-password`
+
+Admin account endpoints (requires admin role session):
+- `GET /api/auth/admin/pending`
+- `GET /api/auth/admin/accounts`
+- `POST /api/auth/admin/accounts`
+- `POST /api/auth/admin/accounts/reset-password-batch`
+- `POST /api/auth/admin/accounts/:id/reset-password`
+- `POST /api/auth/admin/accounts/:id/disable`
+- `POST /api/auth/admin/accounts/:id/enable`
+- `DELETE /api/auth/admin/accounts/:id`
+- `POST /api/auth/admin/accounts/:id/revoke-sessions`
+- `GET /api/auth/admin/runtime-flags`
+- `POST /api/auth/admin/runtime-flags`
+- `POST /api/auth/admin/requests/:id/approve`
+- `POST /api/auth/admin/requests/:id/reject`
+
+Super-admin-only endpoints:
+- `POST /api/auth/admin/accounts/:id/promote-admin`
+- `POST /api/auth/admin/accounts/:id/demote-admin`
+
+Account creation rule:
+- `POST /api/auth/admin/accounts` creates only `user` role accounts.
+- To assign admin role, use `promote-admin` after account creation.
+
+Compatibility fallback:
+- `x-admin-key` + `INTERNAL_ADMIN_KEY` remains available for legacy automation only when `ALLOW_LEGACY_ADMIN_KEY=true` (default is disabled).
+- Session + role is the primary path.
+
+Password/session behavior:
+- Default temporary password for admin-created/reset accounts: `123456`.
+- New/reset accounts enforce first-login password change.
+- `POST /api/auth/change-password` clears `must_change_password`.
+- Login enforces one active session per user; newer login revokes older active sessions.
 
 Write-protection behavior:
-- Runtime flags are initialized from env and can be changed at runtime by admin API:
-  - `authEnforceWrites` (maps to initial `AUTH_ENFORCE_WRITES`)
-  - `readOnlyMode` (maps to initial `READ_ONLY_MODE`)
+- Runtime flags can be changed by admin API:
+  - `authEnforceWrites`
+  - `readOnlyMode`
 - `authEnforceWrites=true`:
-  - write routes require session token (`Authorization: Bearer <token>` or `x-session-token`)
+  - write routes require authenticated session
 - `readOnlyMode=true`:
   - write routes return `503`
   - read routes remain available
-
-Session behavior:
-- Login enforces one active session per user.
-- When user logs in again, previous active sessions for that user are revoked immediately.
+- If `must_change_password=true`, write routes return `403` until password is updated.
 
 ## Config Feature Flags
 From `GET /api/config` -> `features`:

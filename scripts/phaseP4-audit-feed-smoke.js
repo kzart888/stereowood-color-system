@@ -48,7 +48,7 @@ function request(method, endpoint, body = undefined, extraHeaders = {}) {
           } catch {
             // ignore non-json payload
           }
-          resolve({ status: res.statusCode, text, json });
+          resolve({ status: res.statusCode, text, json, headers: res.headers || {} });
         });
       }
     );
@@ -110,8 +110,43 @@ async function main() {
 
     const root = await request('GET', '/');
     assert(root.status === 200, `root page failed: ${root.status}`);
-    assert(root.text.includes('audit-timeline-panel-component'), 'root page missing audit panel mount');
-    assert(root.text.includes('js/components/audit-timeline-panel.js'), 'root page missing audit panel script');
+    assert(root.text.includes('js/login-page.js'), 'root page missing login entry script');
+
+    const firstLogin = await request('POST', '/api/auth/login', {
+      username: 'admin',
+      password: 'admin',
+    });
+    assert(firstLogin.status === 200, `bootstrap admin login failed: ${firstLogin.status}`);
+    assert(firstLogin.json && firstLogin.json.token, 'bootstrap admin login missing token');
+    assert(
+      firstLogin.json.user && firstLogin.json.user.must_change_password === true,
+      'bootstrap admin should require password change'
+    );
+
+    const changedPassword = 'P4AdminStrongPass123';
+    const changePassword = await request(
+      'POST',
+      '/api/auth/change-password',
+      { oldPassword: 'admin', newPassword: changedPassword },
+      { authorization: `Bearer ${firstLogin.json.token}` }
+    );
+    assert(changePassword.status === 200, `bootstrap admin change-password failed: ${changePassword.status}`);
+
+    const appLogin = await request('POST', '/api/auth/login', {
+      username: 'admin',
+      password: changedPassword,
+    });
+    assert(appLogin.status === 200, `admin relogin failed: ${appLogin.status}`);
+    const setCookie = Array.isArray(appLogin.headers['set-cookie'])
+      ? appLogin.headers['set-cookie'][0]
+      : appLogin.headers['set-cookie'] || '';
+    assert(setCookie && setCookie.includes('sw_session='), 'admin relogin missing sw_session cookie');
+    const cookieHeader = setCookie.split(';')[0];
+
+    const appPage = await request('GET', '/app', undefined, { Cookie: cookieHeader });
+    assert(appPage.status === 200, `/app page failed: ${appPage.status}`);
+    assert(appPage.text.includes('audit-timeline-panel-component'), '/app page missing audit panel mount');
+    assert(appPage.text.includes('js/components/audit-timeline-panel.js'), '/app page missing audit panel script');
 
     const panelComponent = fs.readFileSync(
       path.join(__dirname, '..', 'frontend', 'legacy', 'js', 'components', 'audit-timeline-panel.js'),

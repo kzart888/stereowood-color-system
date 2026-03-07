@@ -18,6 +18,8 @@ const { db } = require('./db/index');
 const { initDatabase, runMigrations } = require('./db/migrations');
 const routes = require('./routes');
 const { attachAuthUser } = require('./routes/helpers/auth-session');
+const { AUTH_ROLE } = require('./domains/auth/service');
+const AuthService = require('./domains/auth/service');
 const RuntimeFlags = require('./domains/auth/runtime-flags');
 
 const app = express();
@@ -44,6 +46,9 @@ app.use((req, res, next) => {
 // Uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Attach auth context for both API and web routes.
+app.use(attachAuthUser);
+
 // Optional pilot UI (A7): isolated from legacy production UI and enabled by env.
 const ENABLE_PILOT_UI = process.env.ENABLE_PILOT_UI === 'true';
 const PILOT_DICTIONARY_WRITE = process.env.PILOT_DICTIONARY_WRITE === 'true';
@@ -54,8 +59,18 @@ if (ENABLE_PILOT_UI && fs.existsSync(PILOT_DIR)) {
 
 // Legacy production UI
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend', 'legacy');
-if (fs.existsSync(FRONTEND_DIR)) {
-  app.use('/', express.static(FRONTEND_DIR, { extensions: ['html'] }));
+const LOGIN_HTML = path.join(FRONTEND_DIR, 'index.html');
+const APP_HTML = path.join(FRONTEND_DIR, 'app.html');
+const ACCOUNT_MANAGEMENT_HTML = path.join(FRONTEND_DIR, 'account-management.html');
+
+function requireWebAppSession(req, res, next) {
+  if (!req.authUser) {
+    return res.redirect('/login');
+  }
+  if (req.authUser.mustChangePassword) {
+    return res.redirect('/login?force=1');
+  }
+  return next();
 }
 
 // Ensure upload directory exists
@@ -64,17 +79,48 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Initialize DB
-initDatabase();
-runMigrations();
-
 // Healthcheck
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+if (fs.existsSync(FRONTEND_DIR)) {
+  app.get('/', (req, res) => {
+    if (fs.existsSync(LOGIN_HTML)) {
+      return res.sendFile(LOGIN_HTML);
+    }
+    return res.status(500).json({ error: 'Missing login entry file.' });
+  });
+
+  app.get('/login', (req, res) => {
+    if (fs.existsSync(LOGIN_HTML)) {
+      return res.sendFile(LOGIN_HTML);
+    }
+    return res.status(500).json({ error: 'Missing login entry file.' });
+  });
+
+  app.get('/app', requireWebAppSession, (req, res) => {
+    if (fs.existsSync(APP_HTML)) {
+      return res.sendFile(APP_HTML);
+    }
+    return res.status(500).json({ error: 'Missing app entry file.' });
+  });
+
+  app.get('/account-management', requireWebAppSession, (req, res) => {
+    if (![AUTH_ROLE.SUPER_ADMIN, AUTH_ROLE.ADMIN].includes(req.authUser.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions.' });
+    }
+    if (fs.existsSync(ACCOUNT_MANAGEMENT_HTML)) {
+      return res.sendFile(ACCOUNT_MANAGEMENT_HTML);
+    }
+    return res.status(500).json({ error: 'Missing account management entry file.' });
+  });
+
+  // Serve static assets only; HTML shell routing is explicitly handled above.
+  app.use('/', express.static(FRONTEND_DIR, { index: false }));
+}
+
 // API routes
-app.use('/api', attachAuthUser);
 app.use('/api', routes);
 
 // System config for frontend
@@ -90,6 +136,7 @@ app.get('/api/config', (req, res) => {
       pilotExplorer: ENABLE_PILOT_UI,
       pilotDictionaryWrite: ENABLE_PILOT_UI && PILOT_DICTIONARY_WRITE,
       internalAuth: true,
+      authCookieSession: true,
       authEnforceWrites: RuntimeFlags.isAuthEnforceWrites(),
       readOnlyMode: RuntimeFlags.isReadOnlyMode(),
     },
@@ -145,7 +192,17 @@ function startServer(port, attempt = 0) {
   serverInstance = server;
 }
 
-startServer(DEFAULT_PORT);
+async function initializeAndStart() {
+  initDatabase();
+  await runMigrations();
+  await AuthService.ensureBootstrapSuperAdmin();
+  startServer(DEFAULT_PORT);
+}
+
+initializeAndStart().catch((error) => {
+  console.error('Server initialization failed:', error && error.stack ? error.stack : error);
+  process.exitCode = 1;
+});
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

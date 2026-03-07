@@ -12,7 +12,8 @@ const AppHeaderBar = {
 		montMarteSortMode: { type: String, default: 'time' },
 		globalSearchQuery: { type: String, default: '' },
 		globalSearchResults: { type: Array, default: () => [] },
-		showSearchDropdown: { type: Boolean, default: false }
+		showSearchDropdown: { type: Boolean, default: false },
+		authUser: { type: Object, default: null }
 	},
 	emits: [
 		'update:activetab', // DOM 模板大小写不敏感，统一小写
@@ -26,7 +27,9 @@ const AppHeaderBar = {
 		'search-select',
 		'open-search-dropdown',
 		'close-search-dropdown',
-		'show-help'
+		'show-help',
+		'open-account-management',
+		'logout'
 	],
 	data() {
 		return {
@@ -93,7 +96,15 @@ const AppHeaderBar = {
 	},
 	methods: {
 		setSort(section, mode) { this.$emit('change-sort', section, mode); },
-		setViewMode(mode) { this.$emit('change-artworks-view-mode', mode); }
+		setViewMode(mode) { this.$emit('change-artworks-view-mode', mode); },
+		roleLabel(role) {
+			if (role === 'super_admin') return '超级管理员';
+			if (role === 'admin') return '管理员';
+			return '普通用户';
+		},
+		isAdminRole(role) {
+			return role === 'super_admin' || role === 'admin';
+		}
 		,
 		onSearchKey(e) {
 			if (e.isComposing) return; // 输入法组合中不拦截
@@ -313,6 +324,19 @@ const AppHeaderBar = {
 						<el-icon><QuestionFilled /></el-icon>
 						<span class="text-full">帮助</span>
 					</el-button>
+					<el-dropdown v-if="authUser" trigger="click">
+						<span class="el-dropdown-link sw-user-menu-trigger">
+							{{ authUser.username }}
+							<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+						</span>
+						<template #dropdown>
+							<el-dropdown-menu>
+								<el-dropdown-item disabled>{{ roleLabel(authUser.role) }}</el-dropdown-item>
+								<el-dropdown-item v-if="isAdminRole(authUser.role)" @click="$emit('open-account-management')">账号管理</el-dropdown-item>
+								<el-dropdown-item divided @click="$emit('logout')">退出登录</el-dropdown-item>
+							</el-dropdown-menu>
+						</template>
+					</el-dropdown>
 				</div>
 			</div>
 		</div>

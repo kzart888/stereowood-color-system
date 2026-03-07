@@ -11,7 +11,7 @@ function extractAuditContext(req) {
 
   if (req && req.authUser) {
     return {
-      actorId: String(req.authUser.id),
+      actorId: req.authUser.id !== null && req.authUser.id !== undefined ? String(req.authUser.id) : null,
       actorName: req.authUser.username || null,
       requestId: getHeaderValue(req, 'x-request-id'),
       source: getHeaderValue(req, 'x-source') || 'api',

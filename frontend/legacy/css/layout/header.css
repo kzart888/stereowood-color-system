@@ -177,6 +177,24 @@
     padding-left: 0;
 }
 
+.sw-user-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #1f3b5b;
+    cursor: pointer;
+    padding: 6px 10px;
+    border: 1px solid #d7e0ea;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.sw-user-menu-trigger:hover {
+    border-color: #a6c2e2;
+    color: #0d4f94;
+}
+
 /* Remove any margin from first child */
 .app-header-tools > *:first-child {
     margin-left: 0 !important;

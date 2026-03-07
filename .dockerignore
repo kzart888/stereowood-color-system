@@ -31,6 +31,8 @@ database.db
 uploads/*
 backups/*
 backend/uploads/*
+backend/uploads
+backend/production_db/
 backend/*.db
 backend/*.db-wal
 backend/*.db-shm

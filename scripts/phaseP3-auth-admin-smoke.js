@@ -14,6 +14,7 @@ const dbFile = path.join(tmpRoot, 'color_management.db');
 const adminKey = 'p3-smoke-admin-key';
 const username = `p3_user_${Date.now().toString().slice(-6)}`;
 const password = 'P3smoke-pass-123';
+const changedPassword = 'P3smoke-pass-456';
 const managedUser = `p3_admin_created_${Date.now().toString().slice(-6)}`;
 const managedInitialPassword = 'P3managed-pass-111';
 const managedResetPassword = 'P3managed-pass-222';
@@ -94,6 +95,7 @@ async function main() {
       AUTH_ENFORCE_WRITES: 'true',
       READ_ONLY_MODE: 'false',
       INTERNAL_ADMIN_KEY: adminKey,
+      ALLOW_LEGACY_ADMIN_KEY: 'true',
       SESSION_TTL_HOURS: '12',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -118,8 +120,8 @@ async function main() {
 
     const root = await request('GET', '/');
     assert(root.status === 200, `root page failed: ${root.status}`);
-    assert(root.text.includes('admin-auth-panel-component'), 'root page missing admin auth panel mount');
-    assert(root.text.includes('js/components/admin-auth-panel.js'), 'root page missing admin auth panel script');
+    assert(root.text.includes('js/login-page.js'), 'root page missing login page script');
+    assert(root.text.includes('STEREOWOOD'), 'root page missing system title');
 
     const registration = await request('POST', '/api/auth/register-request', {
       username,
@@ -142,6 +144,15 @@ async function main() {
     const token2 = login2.json.token;
     assert(token1 !== token2, 'second login must issue a new token');
     assert(Number.isInteger(login2.json.revoked_sessions), 'login response missing revoked_sessions');
+    assert(Boolean(login2.json.user && login2.json.user.must_change_password), 'expected must_change_password=true on first login');
+
+    const changePassword = await request(
+      'POST',
+      '/api/auth/change-password',
+      { oldPassword: password, newPassword: changedPassword },
+      { authorization: `Bearer ${token2}` }
+    );
+    assert(changePassword.status === 200, `change-password failed: ${changePassword.status}`);
 
     const staleWrite = await request(
       'POST',

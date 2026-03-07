@@ -1,4 +1,4 @@
-﻿const { db } = require('../index');
+const { db } = require('../index');
 
 function dbRun(sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -30,7 +30,19 @@ function dbAll(sql, params = []) {
 function getAccountByUsername(username) {
   return dbGet(
     `
-    SELECT id, username, password_hash, status, created_at, updated_at, approved_at, disabled_at
+    SELECT
+      id,
+      username,
+      password_hash,
+      role,
+      status,
+      must_change_password,
+      password_changed_at,
+      created_at,
+      updated_at,
+      approved_at,
+      disabled_at,
+      last_login_at
     FROM user_accounts
     WHERE LOWER(username) = LOWER(?)
     `,
@@ -41,7 +53,18 @@ function getAccountByUsername(username) {
 function getAccountById(id) {
   return dbGet(
     `
-    SELECT id, username, status, created_at, updated_at, approved_at, disabled_at, last_login_at
+    SELECT
+      id,
+      username,
+      role,
+      status,
+      must_change_password,
+      password_changed_at,
+      created_at,
+      updated_at,
+      approved_at,
+      disabled_at,
+      last_login_at
     FROM user_accounts
     WHERE id = ?
     `,
@@ -49,11 +72,49 @@ function getAccountById(id) {
   );
 }
 
+function getFirstSuperAdmin() {
+  return dbGet(
+    `
+    SELECT id, username, role, status
+    FROM user_accounts
+    WHERE role = 'super_admin'
+    ORDER BY id ASC
+    LIMIT 1
+    `
+  );
+}
+
+function countSuperAdmins() {
+  return dbGet(
+    `
+    SELECT COUNT(*) AS total
+    FROM user_accounts
+    WHERE role = 'super_admin'
+    `
+  ).then((row) => (row ? row.total : 0));
+}
+
 function createRegistrationRequest({ username, passwordHash }) {
   return dbRun(
     `
-    INSERT INTO user_accounts (username, password_hash, status)
-    VALUES (?, ?, 'pending')
+    INSERT INTO user_accounts (username, password_hash, role, status, must_change_password)
+    VALUES (?, ?, 'user', 'pending', 1)
+    `,
+    [username, passwordHash]
+  );
+}
+
+function createBootstrapSuperAdmin({ username, passwordHash }) {
+  return dbRun(
+    `
+    INSERT INTO user_accounts (
+      username,
+      password_hash,
+      role,
+      status,
+      must_change_password,
+      approved_at
+    ) VALUES (?, ?, 'super_admin', 'approved', 1, CURRENT_TIMESTAMP)
     `,
     [username, passwordHash]
   );
@@ -62,7 +123,7 @@ function createRegistrationRequest({ username, passwordHash }) {
 function listPendingAccounts() {
   return dbAll(
     `
-    SELECT id, username, status, created_at, updated_at
+    SELECT id, username, role, status, must_change_password, created_at, updated_at
     FROM user_accounts
     WHERE status = 'pending'
     ORDER BY created_at ASC
@@ -91,7 +152,10 @@ function listAccounts({ status = 'all', search = '', limit = 20, offset = 0 } = 
     SELECT
       id,
       username,
+      role,
       status,
+      must_change_password,
+      password_changed_at,
       created_at,
       updated_at,
       approved_at,
@@ -136,7 +200,9 @@ function approveAccount(id, approvedBy = null) {
   return dbRun(
     `
     UPDATE user_accounts
-    SET status = 'approved', approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
+    SET status = 'approved',
+        approved_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP,
         approved_by = ?
     WHERE id = ? AND status = 'pending'
     `,
@@ -148,28 +214,40 @@ function rejectAccount(id, disabledBy = null, reason = null) {
   return dbRun(
     `
     UPDATE user_accounts
-    SET status = 'disabled', disabled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
-        disabled_by = ?, disabled_reason = ?
+    SET status = 'disabled',
+        disabled_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP,
+        disabled_by = ?,
+        disabled_reason = ?
     WHERE id = ? AND status = 'pending'
     `,
     [disabledBy, reason, id]
   );
 }
 
-function createAccountByAdmin({ username, passwordHash, status = 'approved', approvedBy = null }) {
+function createAccountByAdmin({
+  username,
+  passwordHash,
+  role = 'user',
+  status = 'approved',
+  approvedBy = null,
+  mustChangePassword = 1,
+}) {
   return dbRun(
     `
     INSERT INTO user_accounts (
       username,
       password_hash,
+      role,
       status,
+      must_change_password,
       approved_by,
       approved_at,
       disabled_by,
       disabled_reason,
       disabled_at
     ) VALUES (
-      ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?,
       CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END,
       CASE WHEN ? = 'disabled' THEN ? ELSE NULL END,
       CASE WHEN ? = 'disabled' THEN ? ELSE NULL END,
@@ -179,7 +257,9 @@ function createAccountByAdmin({ username, passwordHash, status = 'approved', app
     [
       username,
       passwordHash,
+      role,
       status,
+      mustChangePassword ? 1 : 0,
       approvedBy,
       status,
       status,
@@ -195,10 +275,38 @@ function resetPassword(id, passwordHash) {
   return dbRun(
     `
     UPDATE user_accounts
-    SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+    SET password_hash = ?,
+        must_change_password = 1,
+        password_changed_at = NULL,
+        updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
     `,
     [passwordHash, id]
+  );
+}
+
+function changePassword(id, passwordHash) {
+  return dbRun(
+    `
+    UPDATE user_accounts
+    SET password_hash = ?,
+        must_change_password = 0,
+        password_changed_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    `,
+    [passwordHash, id]
+  );
+}
+
+function updateRole(id, role) {
+  return dbRun(
+    `
+    UPDATE user_accounts
+    SET role = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    `,
+    [role, id]
   );
 }
 
@@ -262,7 +370,9 @@ function getActiveSessionByToken(token) {
       s.expires_at,
       s.revoked_at,
       u.username,
-      u.status
+      u.role,
+      u.status,
+      u.must_change_password
     FROM user_sessions s
     JOIN user_accounts u ON u.id = s.user_id
     WHERE s.session_token = ?
@@ -320,7 +430,10 @@ function revokeSessionsByUserId(userId) {
 module.exports = {
   getAccountByUsername,
   getAccountById,
+  getFirstSuperAdmin,
+  countSuperAdmins,
   createRegistrationRequest,
+  createBootstrapSuperAdmin,
   listPendingAccounts,
   listAccounts,
   countAccounts,
@@ -328,6 +441,8 @@ module.exports = {
   rejectAccount,
   createAccountByAdmin,
   resetPassword,
+  changePassword,
+  updateRole,
   disableAccount,
   enableAccount,
   deleteAccount,

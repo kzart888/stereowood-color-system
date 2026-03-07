@@ -72,22 +72,27 @@
       registerRequest: (payload) => getGateway().auth.registerRequest(getBaseURL(), payload),
       login: (payload) => getGateway().auth.login(getBaseURL(), payload),
       logout: () => getGateway().auth.logout(getBaseURL()),
+      changePassword: (payload) => getGateway().auth.changePassword(getBaseURL(), payload),
       me: () => getGateway().auth.me(getBaseURL()),
-      listPending: (adminKey) => getGateway().auth.listPending(getBaseURL(), adminKey),
-      listAccounts: (adminKey, params = {}) => getGateway().auth.listAccounts(getBaseURL(), adminKey, params),
-      createAccount: (adminKey, payload) => getGateway().auth.createAccount(getBaseURL(), adminKey, payload),
-      approveRequest: (adminKey, accountId) => getGateway().auth.approveRequest(getBaseURL(), adminKey, accountId),
-      rejectRequest: (adminKey, accountId, reason) =>
+      listPending: (adminKey = '') => getGateway().auth.listPending(getBaseURL(), adminKey),
+      listAccounts: (adminKey = '', params = {}) => getGateway().auth.listAccounts(getBaseURL(), adminKey, params),
+      createAccount: (adminKey = '', payload) => getGateway().auth.createAccount(getBaseURL(), adminKey, payload),
+      approveRequest: (adminKey = '', accountId) => getGateway().auth.approveRequest(getBaseURL(), adminKey, accountId),
+      rejectRequest: (adminKey = '', accountId, reason) =>
         getGateway().auth.rejectRequest(getBaseURL(), adminKey, accountId, reason),
-      resetPassword: (adminKey, accountId, password) =>
+      resetPassword: (adminKey = '', accountId, password) =>
         getGateway().auth.resetPassword(getBaseURL(), adminKey, accountId, password),
-      disableAccount: (adminKey, accountId, reason) =>
+      resetPasswordBatch: (adminKey = '', payload) =>
+        getGateway().auth.resetPasswordBatch(getBaseURL(), adminKey, payload),
+      disableAccount: (adminKey = '', accountId, reason) =>
         getGateway().auth.disableAccount(getBaseURL(), adminKey, accountId, reason),
-      enableAccount: (adminKey, accountId) => getGateway().auth.enableAccount(getBaseURL(), adminKey, accountId),
-      deleteAccount: (adminKey, accountId) => getGateway().auth.deleteAccount(getBaseURL(), adminKey, accountId),
-      revokeSessions: (adminKey, accountId) => getGateway().auth.revokeSessions(getBaseURL(), adminKey, accountId),
-      getRuntimeFlags: (adminKey) => getGateway().auth.getRuntimeFlags(getBaseURL(), adminKey),
-      setRuntimeFlags: (adminKey, payload) => getGateway().auth.setRuntimeFlags(getBaseURL(), adminKey, payload),
+      enableAccount: (adminKey = '', accountId) => getGateway().auth.enableAccount(getBaseURL(), adminKey, accountId),
+      deleteAccount: (adminKey = '', accountId) => getGateway().auth.deleteAccount(getBaseURL(), adminKey, accountId),
+      revokeSessions: (adminKey = '', accountId) => getGateway().auth.revokeSessions(getBaseURL(), adminKey, accountId),
+      promoteAdmin: (adminKey = '', accountId) => getGateway().auth.promoteAdmin(getBaseURL(), adminKey, accountId),
+      demoteAdmin: (adminKey = '', accountId) => getGateway().auth.demoteAdmin(getBaseURL(), adminKey, accountId),
+      getRuntimeFlags: (adminKey = '') => getGateway().auth.getRuntimeFlags(getBaseURL(), adminKey),
+      setRuntimeFlags: (adminKey = '', payload) => getGateway().auth.setRuntimeFlags(getBaseURL(), adminKey, payload),
     },
     config: {
       get: () => getGateway().config.get(getBaseURL()),

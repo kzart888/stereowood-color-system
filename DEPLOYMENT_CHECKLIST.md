@@ -6,7 +6,8 @@
 
 ## Runtime Contract
 - Backend entry: `backend/server.js`
-- UI root: `/`
+- Login entry: `/` and `/login`
+- Legacy app shell: `/app`
 - Pilot UI root: `/pilot` (enabled only when `ENABLE_PILOT_UI=true`)
 - API base: `/api`
 - Health endpoint: `/health`
@@ -23,6 +24,7 @@
   - `ENABLE_PILOT_UI=false` (default)
   - `PILOT_DICTIONARY_WRITE=false` (default, enable only for pilot-write rehearsal/cutover candidate)
   - `TZ=Asia/Shanghai`
+  - `ALLOW_LEGACY_ADMIN_KEY=false` (recommended default)
 - Volume mappings:
   - `/volume1/docker/stereowood-color-system/data:/data:rw`
   - `/volume1/docker/stereowood-color-system/uploads:/app/backend/uploads:rw`
@@ -52,7 +54,8 @@
    - `GET /api/config` -> `200`
    - `GET /api/custom-colors` -> `200`
    - `GET /api/artworks` -> `200`
-   - root `/` loads correctly
+   - root `/` loads login page
+   - login succeeds and `/app` loads correctly
    - if pilot enabled: `GET /pilot` -> `200`
    - if pilot write enabled:
      - `GET /api/config` has `features.pilotDictionaryWrite=true`
@@ -62,7 +65,7 @@
 
 ## Post-Deployment Verification
 1. `GET /health` returns `200`.
-2. Root page `/` renders legacy UI.
+2. Root `/` renders login page; authenticated session enters `/app`.
 3. API smoke:
    - `/api/custom-colors`
    - `/api/artworks`

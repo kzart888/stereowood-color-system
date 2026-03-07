@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>叠雕画颜色管理系统</title>
+    
+    <!-- 外部依赖 -->
+    <!-- Vue 3.3.4 - 核心框架 (生产版本) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    
+    <!-- Element Plus 2.3.14 - UI组件 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.14/index.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.14/index.full.min.js"></script>
+    
+    <!-- Element Plus Icons - 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue@2.1.0/dist/index.iife.min.js"></script>
+    
+    <!-- Axios 1.4.0 - HTTP请求 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    
+    <!-- 项目样式文件（模块化） -->
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+        <div id="app">
+            <!-- 自定义粘性头 -->
+            <app-header-bar
+                :active-tab="activeTab"
+                :artworks-view-mode="artworksViewMode"
+                :custom-colors-sort-mode="customColorsSortMode"
+                :artworks-sort-mode="artworksSortMode"
+                :mont-marte-sort-mode="montMarteSortMode"
+                :global-search-query="globalSearchQuery"
+                :global-search-results="globalSearchResults"
+                :show-search-dropdown="showSearchDropdown"
+                :auth-user="authUser"
+                @update:activetab="val=>setActiveTabPersist(val)"
+                @change-artworks-view-mode="setArtworksViewMode"
+                @change-sort="setSortMode"
+                @global-search-input="handleGlobalSearchInput"
+                @open-search-dropdown="openSearchDropdown"
+                @close-search-dropdown="closeSearchDropdown"
+                @search-select="handleGlobalSearchSelect"
+                @add-artwork="$refs.artworksRef && $refs.artworksRef.addArtwork && $refs.artworksRef.addArtwork()"
+                @add-custom-color="$refs.customColorsRef && $refs.customColorsRef.openAddDialog && $refs.customColorsRef.openAddDialog()"
+                @add-raw-material="$refs.montMarteRef && $refs.montMarteRef.openDialog && $refs.montMarteRef.openDialog()"
+                @check-duplicates="$refs.customColorsRef && $refs.customColorsRef.runDuplicateCheck && $refs.customColorsRef.runDuplicateCheck()"
+                @show-help="showHelp"
+                @open-account-management="openAccountManagement"
+                @logout="logout"
+            ></app-header-bar>
+
+            <!-- Global Help Dialog -->
+            <el-dialog v-model="showGlobalHelp" title="使用帮助" width="600px">
+                <div v-html="helpContent[activeTab]"></div>
+                <template #footer>
+                    <el-button @click="showGlobalHelp=false">关闭</el-button>
+                </template>
+            </el-dialog>
+
+            <!-- 全局搜索栏（仅作用于作品/方案） -->
+            <!-- 回退阶段暂时移除搜索功能 UI -->
+            <!-- <div class="global-search-bar">
+                <el-input v-model.trim="searchQuery" placeholder="搜索作品编号/名称 / 方案名称" clearable size="large" prefix-icon="Search"></el-input>
+            </div> -->
+
+            <div class="main-container">
+                <div v-show="activeTab==='custom-colors'">
+                    <custom-colors-component ref="customColorsRef" :sort-mode="customColorsSortMode"></custom-colors-component>
+                </div>
+                <div v-show="activeTab==='color-dictionary'">
+                    <color-dictionary-component ref="colorDictionaryRef"></color-dictionary-component>
+                </div>
+                <div v-show="activeTab==='artworks'">
+                    <artworks-component ref="artworksRef" :sort-mode="artworksSortMode"></artworks-component>
+                </div>
+                <div v-show="activeTab==='mont-marte'">
+                    <mont-marte-component ref="montMarteRef" :sort-mode="montMarteSortMode"></mont-marte-component>
+                </div>
+            </div>
+
+            <audit-timeline-panel-component :active-tab="activeTab"></audit-timeline-panel-component>
+        </div>
+
+    <!-- 返回顶部按钮 -->
+        <button id="backToTopBtn" aria-label="返回顶部" title="返回顶部">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                <!-- 横线 -->
+                <rect x="4" y="5" width="16" height="2" rx="1" fill="currentColor" />
+                <!-- 向上箭头 -->
+                <path d="M12 19c-.55 0-1-.45-1-1V9.83l-3.29 3.3a1 1 0 0 1-1.42-1.42l5-5a1 1 0 0 1 1.42 0l5 5a1 1 0 0 1-1.42 1.42L13 9.83V18c0 .55-.45 1-1 1Z" fill="currentColor" />
+            </svg>
+        </button>
+
+    <!-- JavaScript模块加载顺序很重要！ -->
+    
+    <!-- 工具函数 -->
+    <!-- 提供: helpers.formatDate(), helpers.generateColorCode(), helpers.compareNames() -->
+    <script src="js/utils/helpers.js"></script>
+    
+    <!-- 验证函数 -->
+    <!-- 提供: validators.validateColorCode(), validators.validateColorName() -->
+    <script src="js/utils/validators.js"></script>
+
+    <!-- 配方解析与哈希 (计算器步骤) -->
+    <script src="js/utils/formula-parser.js"></script>
+    <!-- Shared formula utilities -->
+    <script src="js/utils/formula-utils.js"></script>
+    <script src="js/modules/formula-matcher.js"></script>
+    <script src="js/modules/ingredient-suggester.js"></script>
+    <script src="js/modules/ui/list-state.js"></script>
+    <script src="js/modules/ui/dialog-guard.js"></script>
+    <script src="js/modules/custom-colors/domain-utils.js"></script>
+    <script src="js/modules/custom-colors/state/component-state-methods.js"></script>
+    <script src="js/modules/custom-colors/domain/component-domain-methods.js"></script>
+    <script src="js/modules/custom-colors/ui/component-swatch-methods.js"></script>
+    <script src="js/modules/custom-colors/ui/component-pure-color-methods.js"></script>
+    <script src="js/modules/custom-colors/ui/component-dialog-methods.js"></script>
+    <script src="js/modules/artworks/artworks-store.js"></script>
+    <script src="js/modules/artworks/scheme-utils.js"></script>
+    <script src="js/modules/artworks/formula-view.js"></script>
+    <script src="js/modules/artworks/scheme-dialog.js"></script>
+    <script src="js/modules/artworks/artworks-api.js"></script>
+    <script src="js/modules/artworks/domain/component-scheme-domain-methods.js"></script>
+    <script src="js/modules/artworks/state/component-scheme-state-methods.js"></script>
+    <script src="js/modules/artworks/ui/component-scheme-dialog-methods.js"></script>
+    <script src="js/modules/mont-marte/dictionary-manager.js"></script>
+    <script src="js/modules/mont-marte/save-workflow.js"></script>
+    <script src="js/modules/custom-colors/component-options.js"></script>
+    <script src="js/modules/artworks/component-options.js"></script>
+    <script src="js/modules/mont-marte/component-options.js"></script>
+    <!-- Message utility for unified notifications -->
+    <script src="js/utils/message.js"></script>
+    <!-- Color converter utility for RGB/CMYK/HEX conversion -->
+    <script src="js/utils/color-converter.js"></script>
+    <script src="js/utils/pure-color-utils.js"></script>
+    <script src="js/utils/custom-color-swatch.js"></script>
+    <!-- Color conversion utilities for HSL/LAB -->
+    <script src="js/utils/colorConversion.js"></script>
+    <!-- Color distance calculations (Delta E) -->
+    <script src="js/utils/colorDistance.js"></script>
+    <!-- Color mapping utilities for grid and wheel -->
+    <script src="js/utils/colorMapping.js"></script>
+    <!-- Pantone color database -->
+    <script src="js/data/pantone-colors.js"></script>
+    <script src="js/data/pantone-colors-full.js"></script>
+    <!-- 计算器状态存储模块 (步骤2) -->
+    <script src="js/modules/calc-store.js"></script>
+    <!-- 配方查重模块 (顺序 + 倍数不敏感) -->
+    <script src="js/modules/duplicate-detector.js"></script>
+    
+    <!-- API封装 -->
+    <!-- 提供: api.categories, api.customColors, api.artworks, api.montMarteColors -->
+    <script src="js/adapters/http-client.js"></script>
+    <script src="js/adapters/api-gateway.js"></script>
+    <script src="js/adapters/conflict-adapter.js"></script>
+    <script src="js/api/api.js"></script>
+    
+    <!-- Vue组件定义 - 必须在app.js之前加载 -->
+    <!-- 头部组件 -->
+    <script src="js/components/app-header-bar.js"></script>
+    <!-- 配方编辑器组件 -->
+    <script src="js/components/formula-editor.js"></script>
+    <!-- 冲突解决组件 -->
+    <script src="js/components/common/ConflictResolver.js"></script>
+    <!-- 通用操作按钮组件 - 已归档 -->
+    <!-- 定义全局变量: CustomColorsComponent -->
+    <script src="js/components/custom-colors.js"></script>
+    
+    <!-- 定义全局变量: ArtworksComponent -->
+    <script src="js/components/artworks.js"></script>
+    
+    <!-- 定义全局变量: MontMarteComponent -->
+    <script src="js/components/mont-marte.js"></script>
+    <!-- 分类管理组件 -->
+    <script src="js/components/category-manager.js"></script>
+    <!-- 自配色字典页面组件 -->
+    <script src="js/components/color-dictionary/color-dictionary-service.js"></script>
+    <script src="js/components/color-dictionary/color-dictionary-list-view.js"></script>
+    <script src="js/components/color-dictionary/color-dictionary-hsl-view.js"></script>
+    <script src="js/components/color-dictionary/color-dictionary-wheel-view.js"></script>
+    <script src="js/components/color-dictionary/color-dictionary-matcher-view.js"></script>
+    <script src="js/components/color-dictionary.js"></script>
+    <script src="js/components/audit-timeline-panel.js"></script>
+    <!-- 计算器浮层组件 (步骤3) -->
+    <script src="js/components/formula-calculator.js"></script>
+    <!-- 缩略图预览工具 -->
+    <script src="js/utils/thumb-preview.js"></script>
+    
+    <!-- Configuration helper for test/production mode -->
+    <script src="js/utils/config-helper.js"></script>
+    
+    <!-- Utility Scripts (keeping only essentials for small team) -->
+    <script src="js/utils/debounce-throttle.js"></script>
+    <script src="js/utils/performance-monitor.js"></script>
+    <script src="js/compat/runtime-bridge.js"></script>
+    
+    <!-- 主应用入口 - 必须最后加载 -->
+    <!-- 创建Vue应用实例，注册组件，挂载到app -->
+    <script src="js/app.js"></script>
+    <script>
+        // 永久显示返回顶部按钮，仅处理点击滚动
+        (function(){
+            const btn = document.getElementById('backToTopBtn');
+            if (!btn) return;
+            btn.addEventListener('click', ()=> window.scrollTo(0,0));
+        })();
+    </script>
+</body>
+</html>

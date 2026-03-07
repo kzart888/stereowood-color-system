@@ -111,6 +111,7 @@ function spawnServer({ port, pilotWriteEnabled }) {
       ENABLE_PILOT_UI: 'true',
       PILOT_DICTIONARY_WRITE: pilotWriteEnabled ? 'true' : 'false',
       INTERNAL_ADMIN_KEY: ADMIN_KEY,
+      ALLOW_LEGACY_ADMIN_KEY: 'true',
       AUTH_ENFORCE_WRITES: 'true',
       READ_ONLY_MODE: 'false',
     },
@@ -179,6 +180,7 @@ async function runFlagOnCheck(port) {
 
     const username = `p6pilot${Date.now()}`;
     const password = 'pilotpass123';
+    const changedPassword = 'pilotpass456';
     trace.username = username;
 
     const register = await request(port, '/api/auth/register-request', {
@@ -211,8 +213,16 @@ async function runFlagOnCheck(port) {
     const token = login.json && login.json.token;
     assert(token, 'login missing token');
     trace.revokedSessions = login.json.revoked_sessions || 0;
+    assert(Boolean(login.json.user && login.json.user.must_change_password), 'expected must_change_password=true on first login');
 
     const authHeaders = { authorization: `Bearer ${token}` };
+    const changePassword = await request(port, '/api/auth/change-password', {
+      method: 'POST',
+      headers: authHeaders,
+      body: { oldPassword: password, newPassword: changedPassword },
+    });
+    assert(changePassword.status === 200, `change-password expected 200, got ${changePassword.status}`);
+
     const supplierName = `P6 Supplier ${Date.now()}`;
     const purchaseUrl = `https://pilot.example/${Date.now()}`;
 

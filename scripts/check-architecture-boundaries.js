@@ -67,10 +67,13 @@ function checkFrontendBoundaryEntry() {
   const missing = requiredFiles.filter((rel) => !fs.existsSync(path.join(repoRoot, rel)));
   assert(missing.length === 0, `Missing frontend boundary files: ${missing.join(', ')}`);
 
-  const indexHtml = read(path.join(repoRoot, 'frontend/legacy/index.html'));
-  assert(indexHtml.includes('js/adapters/http-client.js'), 'index.html missing http-client.js');
-  assert(indexHtml.includes('js/adapters/api-gateway.js'), 'index.html missing api-gateway.js');
-  assert(indexHtml.includes('js/compat/runtime-bridge.js'), 'index.html missing runtime-bridge.js');
+  const appHtml = read(path.join(repoRoot, 'frontend/legacy/app.html'));
+  assert(appHtml.includes('js/adapters/http-client.js'), 'app.html missing http-client.js');
+  assert(appHtml.includes('js/adapters/api-gateway.js'), 'app.html missing api-gateway.js');
+  assert(appHtml.includes('js/compat/runtime-bridge.js'), 'app.html missing runtime-bridge.js');
+
+  const loginHtml = read(path.join(repoRoot, 'frontend/legacy/index.html'));
+  assert(loginHtml.includes('js/login-page.js'), 'index.html missing login-page.js');
 }
 
 function main() {

@@ -14,6 +14,7 @@ const dbFile = path.join(tmpRoot, 'color_management.db');
 const adminKey = 'a4-smoke-admin-key';
 const username = `a4_user_${Date.now().toString().slice(-6)}`;
 const password = 'A4smoke-pass-123';
+const changedPassword = 'A4smoke-pass-456';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -94,6 +95,7 @@ async function main() {
       AUTH_ENFORCE_WRITES: 'true',
       READ_ONLY_MODE: 'false',
       INTERNAL_ADMIN_KEY: adminKey,
+      ALLOW_LEGACY_ADMIN_KEY: 'true',
       SESSION_TTL_HOURS: '12',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -151,6 +153,15 @@ async function main() {
     assert(login.json && login.json.token && login.json.user && login.json.user.id, 'login response missing token/user');
     const token = login.json.token;
     const actorId = String(login.json.user.id);
+    assert(Boolean(login.json.user.must_change_password), 'expected must_change_password=true on first login');
+
+    const changePassword = await request(
+      'POST',
+      '/api/auth/change-password',
+      { oldPassword: password, newPassword: changedPassword },
+      { authorization: `Bearer ${token}` }
+    );
+    assert(changePassword.status === 200, `change-password failed: ${changePassword.status}`);
 
     const readNoAuth = await request('GET', '/api/suppliers');
     assert(readNoAuth.status === 200, `expected read without auth 200, got ${readNoAuth.status}`);

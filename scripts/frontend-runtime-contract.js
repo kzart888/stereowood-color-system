@@ -11,7 +11,8 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const legacyRoot = path.join(repoRoot, 'frontend', 'legacy');
-const indexFile = path.join(legacyRoot, 'index.html');
+const loginFile = path.join(legacyRoot, 'index.html');
+const appFile = path.join(legacyRoot, 'app.html');
 
 function assert(condition, message) {
   if (!condition) {
@@ -35,12 +36,17 @@ function extractScriptSources(html) {
 }
 
 function main() {
-  const html = fs.readFileSync(indexFile, 'utf8');
-  const scriptSources = extractScriptSources(html);
+  const loginHtml = fs.readFileSync(loginFile, 'utf8');
+  const appHtml = fs.readFileSync(appFile, 'utf8');
+  const scriptSources = extractScriptSources(appHtml);
 
   assert(
-    /<meta\s+charset=["']UTF-8["']\s*\/?>/i.test(html),
+    /<meta\s+charset=["']UTF-8["']\s*\/?>/i.test(loginHtml),
     'frontend/legacy/index.html is missing UTF-8 charset meta tag.',
+  );
+  assert(
+    /<meta\s+charset=["']UTF-8["']\s*\/?>/i.test(appHtml),
+    'frontend/legacy/app.html is missing UTF-8 charset meta tag.',
   );
 
   const localScripts = scriptSources
@@ -118,7 +124,9 @@ function main() {
 
   process.stdout.write(
     [
-      `RUNTIME_CONTRACT_INDEX=${path.relative(repoRoot, indexFile).replace(/\\/g, '/')}`,
+      `RUNTIME_CONTRACT_INDEX=${path.relative(repoRoot, appFile).replace(/\\/g, '/')}`,
+      `RUNTIME_CONTRACT_LOGIN=${path.relative(repoRoot, loginFile).replace(/\\/g, '/')}`,
+      `RUNTIME_CONTRACT_APP=${path.relative(repoRoot, appFile).replace(/\\/g, '/')}`,
       `RUNTIME_CONTRACT_LOCAL_SCRIPTS=${localScripts.length}`,
       `RUNTIME_CONTRACT_EXPORTS_CHECKED=${requiredExports.length}`,
       'FRONTEND_RUNTIME_CONTRACT=PASS',

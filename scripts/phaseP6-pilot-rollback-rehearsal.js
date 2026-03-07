@@ -98,6 +98,7 @@ function spawnServer({ dbFile, pilotWriteEnabled, logs }) {
       ENABLE_PILOT_UI: 'true',
       PILOT_DICTIONARY_WRITE: pilotWriteEnabled ? 'true' : 'false',
       INTERNAL_ADMIN_KEY: ADMIN_KEY,
+      ALLOW_LEGACY_ADMIN_KEY: 'true',
       AUTH_ENFORCE_WRITES: 'true',
       READ_ONLY_MODE: 'false',
     },
@@ -119,6 +120,7 @@ async function stopServer(child) {
 async function ensureAuthenticatedToken() {
   const username = `p6rollback${Date.now()}`;
   const password = 'pilotpass123';
+  const changedPassword = 'pilotpass456';
 
   const register = await request('/api/auth/register-request', {
     method: 'POST',
@@ -142,6 +144,15 @@ async function ensureAuthenticatedToken() {
   assert(login.status === 200, `login failed: ${login.status}`);
   const token = login.json && login.json.token;
   assert(token, 'login missing token');
+  assert(Boolean(login.json.user && login.json.user.must_change_password), 'expected must_change_password=true on first login');
+
+  const changePassword = await request('/api/auth/change-password', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}` },
+    body: { oldPassword: password, newPassword: changedPassword },
+  });
+  assert(changePassword.status === 200, `change-password failed: ${changePassword.status}`);
+
   return token;
 }
 
