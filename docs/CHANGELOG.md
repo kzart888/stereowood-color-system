@@ -25,6 +25,13 @@
 - Added P4 verification command: `npm run phaseP4:verify`.
 - Published P4 gate report: `docs/architecture/P4_REVIEW_GATE.md`.
 
+### P5.1 Execution: Network Path Unification
+- Removed direct `/api` `axios/fetch` calls from active legacy feature modules.
+- Removed active `window.api` fallback usage in feature modules/bridge and standardized on `window.apiGateway`.
+- Added static regression scan: `npm run phaseP5:network-scan`.
+- Added P5 verification command: `npm run phaseP5:verify`.
+- Published P5.1 gate report: `docs/architecture/P5_1_REVIEW_GATE.md`.
+
 ## v0.9.9 (2026-03-07)
 ### Documentation and Execution Alignment Refresh
 - Archived completed one-time architecture execution logs into `docs/archive/architecture/2026-03-phase-a-closure/`.

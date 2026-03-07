@@ -36,36 +36,36 @@ const AdminAuthPanelComponent = {
   },
   mounted() {
     this.loadStoredState();
-  },
+    },
   methods: {
     getApi() {
-      if (window.api && window.api.auth) return window.api.auth;
-      if (window.apiGateway && window.apiGateway.auth) {
-        return {
-          registerRequest: (payload) => window.apiGateway.auth.registerRequest(window.location.origin, payload),
-          login: (payload) => window.apiGateway.auth.login(window.location.origin, payload),
-          logout: () => window.apiGateway.auth.logout(window.location.origin),
-          me: () => window.apiGateway.auth.me(window.location.origin),
-          listPending: (adminKey) => window.apiGateway.auth.listPending(window.location.origin, adminKey),
-          listAccounts: (adminKey, params) => window.apiGateway.auth.listAccounts(window.location.origin, adminKey, params),
-          createAccount: (adminKey, payload) => window.apiGateway.auth.createAccount(window.location.origin, adminKey, payload),
-          approveRequest: (adminKey, accountId) => window.apiGateway.auth.approveRequest(window.location.origin, adminKey, accountId),
-          rejectRequest: (adminKey, accountId, reason) =>
-            window.apiGateway.auth.rejectRequest(window.location.origin, adminKey, accountId, reason),
-          resetPassword: (adminKey, accountId, password) =>
-            window.apiGateway.auth.resetPassword(window.location.origin, adminKey, accountId, password),
-          disableAccount: (adminKey, accountId, reason) =>
-            window.apiGateway.auth.disableAccount(window.location.origin, adminKey, accountId, reason),
-          enableAccount: (adminKey, accountId) => window.apiGateway.auth.enableAccount(window.location.origin, adminKey, accountId),
-          deleteAccount: (adminKey, accountId) => window.apiGateway.auth.deleteAccount(window.location.origin, adminKey, accountId),
-          revokeSessions: (adminKey, accountId) =>
-            window.apiGateway.auth.revokeSessions(window.location.origin, adminKey, accountId),
-          getRuntimeFlags: (adminKey) => window.apiGateway.auth.getRuntimeFlags(window.location.origin, adminKey),
-          setRuntimeFlags: (adminKey, payload) =>
-            window.apiGateway.auth.setRuntimeFlags(window.location.origin, adminKey, payload),
-        };
+      const gateway = window.apiGateway || (window.runtimeBridge && window.runtimeBridge.apiGateway) || null;
+      if (!gateway || !gateway.auth) {
+        throw new Error('auth api is unavailable');
       }
-      throw new Error('auth api is unavailable');
+      return {
+        registerRequest: (payload) => gateway.auth.registerRequest(window.location.origin, payload),
+        login: (payload) => gateway.auth.login(window.location.origin, payload),
+        logout: () => gateway.auth.logout(window.location.origin),
+        me: () => gateway.auth.me(window.location.origin),
+        listPending: (adminKey) => gateway.auth.listPending(window.location.origin, adminKey),
+        listAccounts: (adminKey, params) => gateway.auth.listAccounts(window.location.origin, adminKey, params),
+        createAccount: (adminKey, payload) => gateway.auth.createAccount(window.location.origin, adminKey, payload),
+        approveRequest: (adminKey, accountId) => gateway.auth.approveRequest(window.location.origin, adminKey, accountId),
+        rejectRequest: (adminKey, accountId, reason) =>
+          gateway.auth.rejectRequest(window.location.origin, adminKey, accountId, reason),
+        resetPassword: (adminKey, accountId, password) =>
+          gateway.auth.resetPassword(window.location.origin, adminKey, accountId, password),
+        disableAccount: (adminKey, accountId, reason) =>
+          gateway.auth.disableAccount(window.location.origin, adminKey, accountId, reason),
+        enableAccount: (adminKey, accountId) => gateway.auth.enableAccount(window.location.origin, adminKey, accountId),
+        deleteAccount: (adminKey, accountId) => gateway.auth.deleteAccount(window.location.origin, adminKey, accountId),
+        revokeSessions: (adminKey, accountId) =>
+          gateway.auth.revokeSessions(window.location.origin, adminKey, accountId),
+        getRuntimeFlags: (adminKey) => gateway.auth.getRuntimeFlags(window.location.origin, adminKey),
+        setRuntimeFlags: (adminKey, payload) =>
+          gateway.auth.setRuntimeFlags(window.location.origin, adminKey, payload),
+      };
     },
     notify(type, message) {
       if (window.ElementPlus && window.ElementPlus.ElMessage) {
@@ -390,4 +390,3 @@ const AdminAuthPanelComponent = {
     </div>
   `,
 };
-

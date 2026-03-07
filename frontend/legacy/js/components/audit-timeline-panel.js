@@ -42,15 +42,13 @@ const AuditTimelinePanelComponent = {
   },
   methods: {
     getApi() {
-      if (window.api && window.api.history) {
-        return window.api.history;
+      const gateway = window.apiGateway || (window.runtimeBridge && window.runtimeBridge.apiGateway) || null;
+      if (!gateway || !gateway.history || typeof gateway.history.feed !== 'function') {
+        throw new Error('history api is unavailable');
       }
-      if (window.apiGateway && window.apiGateway.history) {
-        return {
-          feed: (params = {}) => window.apiGateway.history.feed(window.location.origin, params),
-        };
-      }
-      throw new Error('history api is unavailable');
+      return {
+        feed: (params = {}) => gateway.history.feed(window.location.origin, params),
+      };
     },
     notify(type, message) {
       if (window.ElementPlus && window.ElementPlus.ElMessage) {

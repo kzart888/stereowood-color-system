@@ -75,6 +75,7 @@ npm run restore
 npm run predeploy:check -- --base-url=http://127.0.0.1:9099
 npm run phaseP3:verify
 npm run phaseP4:verify
+npm run phaseP5:verify
 npm run gate:full
 ```
 

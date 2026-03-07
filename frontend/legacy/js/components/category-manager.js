@@ -308,7 +308,7 @@ const CategoryManagerComponent = {
     methods: {
         getCategoryGateway() {
             const bridge = getRuntimeBridge();
-            const apiGateway = window.apiGateway || bridge.apiGateway || window.api || null;
+            const apiGateway = window.apiGateway || bridge.apiGateway || null;
             if (!apiGateway) {
                 return null;
             }

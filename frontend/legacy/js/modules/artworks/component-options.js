@@ -474,7 +474,7 @@
         if (window.ArtworksApi && typeof window.ArtworksApi.createArtwork === 'function') {
           await window.ArtworksApi.createArtwork({ baseURL: this.baseURL, code, name });
         } else {
-          await axios.post(`${window.location.origin}/api/artworks`, { code, name });
+          throw new Error('ArtworksApi.createArtwork is unavailable');
         }
         msg.success('已创建新作品');
         await this.refreshAll();
@@ -866,10 +866,8 @@
             schemeId: this.schemeForm.id || null,
             formData: fd
           });
-        } else if (this.schemeForm.id) {
-          await axios.put(`${window.location.origin}/api/artworks/${artId}/schemes/${this.schemeForm.id}`, fd);
         } else {
-          await axios.post(`${window.location.origin}/api/artworks/${artId}/schemes`, fd);
+          throw new Error('ArtworksApi.saveScheme is unavailable');
         }
         msg.success(this.schemeForm.id ? '已保存方案修改' : '已新增配色方案');
         await this.refreshAll();
@@ -928,8 +926,7 @@
         if (window.ArtworksApi && typeof window.ArtworksApi.deleteScheme === 'function') {
           await window.ArtworksApi.deleteScheme({ baseURL: this.baseURL, artId: art.id, schemeId: scheme.id });
         } else {
-          const url = `${window.location.origin}/api/artworks/${art.id}/schemes/${scheme.id}`;
-          await axios.delete(url);
+          throw new Error('ArtworksApi.deleteScheme is unavailable');
         }
         msg.success('已删除配色方案');
         await this.refreshAll();
@@ -966,8 +963,7 @@
         if (window.ArtworksApi && typeof window.ArtworksApi.deleteArtwork === 'function') {
           await window.ArtworksApi.deleteArtwork({ baseURL: this.baseURL, artId: art.id });
         } else {
-          const url = `${window.location.origin}/api/artworks/${art.id}`;
-          await axios.delete(url);
+          throw new Error('ArtworksApi.deleteArtwork is unavailable');
         }
         msg.success('已删除作品');
         await this.refreshAll();

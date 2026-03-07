@@ -236,9 +236,13 @@
         
         async loadMontMarteCategories() {
             try {
-                const response = await fetch(`${this.baseURL}/api/mont-marte-categories`);
-                if (!response.ok) throw new Error('Failed to fetch categories');
-                this.montMarteCategories = await response.json();
+                const bridge = window.runtimeBridge || {};
+                const gateway = window.apiGateway || bridge.apiGateway || null;
+                if (!gateway || !gateway.montMarteCategories || typeof gateway.montMarteCategories.getAll !== 'function') {
+                    throw new Error('montMarteCategories gateway is unavailable');
+                }
+                const response = await gateway.montMarteCategories.getAll(this.baseURL);
+                this.montMarteCategories = Array.isArray(response.data) ? response.data : [];
             } catch (error) {
                 console.error('Error loading Mont-Marte categories:', error);
                 msg.error('加载原料分类失败');
@@ -555,24 +559,7 @@
                 const saveWorkflow = this._getSaveWorkflow();
                 const res = saveWorkflow && typeof saveWorkflow.saveColor === 'function'
                     ? await saveWorkflow.saveColor({ baseURL: this.baseURL, form: this.form, editing: this.editing })
-                    : await (async () => {
-                        const fallback = new FormData();
-                        fallback.append('name', this.form.name.trim());
-                        if (this.form.category_id) fallback.append('category_id', this.form.category_id);
-                        if (this.form.supplier_id) fallback.append('supplier_id', this.form.supplier_id);
-                        if (this.form.purchase_link_id) fallback.append('purchase_link_id', this.form.purchase_link_id);
-                        if (this.form.imageFile) fallback.append('image', this.form.imageFile);
-                        if (!this.form.imageFile && this.form.imagePreview && this.editing && this.editing.image_path) {
-                            fallback.append('existingImagePath', this.editing.image_path);
-                        }
-                        if (Number.isInteger(this.form.version)) {
-                            fallback.append('version', this.form.version);
-                        }
-                        if (this.editing) {
-                            return axios.put(`${this.baseURL}/api/mont-marte-colors/${this.form.id}`, fallback);
-                        }
-                        return axios.post(`${this.baseURL}/api/mont-marte-colors`, fallback);
-                    })();
+                    : Promise.reject(new Error('MontMarteSaveWorkflow.saveColor is unavailable'));
 
                 if (this.editing) {
                     const n = res?.data?.updatedReferences || 0;

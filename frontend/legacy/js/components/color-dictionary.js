@@ -21,7 +21,7 @@ function getRuntimeBridge() {
 
 function getApiGateway() {
     const bridge = getRuntimeBridge();
-    return window.apiGateway || bridge.apiGateway || window.api || null;
+    return window.apiGateway || bridge.apiGateway || null;
 }
 
 if (!ColorDictionaryService) {

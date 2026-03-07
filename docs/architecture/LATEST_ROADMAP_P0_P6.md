@@ -124,14 +124,18 @@ Target outcome:
 - Clean, predictable module boundaries with reduced tech debt.
 
 Checklist:
-- [ ] Standardize frontend data access to one adapter gateway path.
-- [ ] Remove mixed direct network styles (`fetch`, `axios`, `window.api`) from active features.
+- [x] Standardize frontend data access to one adapter gateway path.
+- [x] Remove mixed direct network styles (`fetch`, `axios`, `window.api`) from active features.
 - [ ] Continue splitting oversized legacy files into orchestrator/domain/ui modules.
 - [ ] Archive or delete dead docs and dead code paths with references updated.
 - [ ] Keep behavior unchanged while reducing complexity.
 
 Gate:
 - [ ] No Critical/High regressions in full `code-review-agent` gate.
+
+Current evidence:
+- `npm run phaseP5:verify`
+- `docs/architecture/P5_1_REVIEW_GATE.md`
 
 ## P6: Modernization (Vue3 Path)
 

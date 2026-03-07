@@ -34,6 +34,8 @@
     "phaseP3:verify": "npm run phaseP3:auth-admin-smoke && npm run phase0:verify",
     "phaseP4:audit-feed-smoke": "node scripts/phaseP4-audit-feed-smoke.js",
     "phaseP4:verify": "npm run phaseP4:audit-feed-smoke && npm run phase0:verify",
+    "phaseP5:network-scan": "node scripts/phaseP5-network-scan.js",
+    "phaseP5:verify": "npm run phaseP5:network-scan && npm run phase0:verify",
     "predeploy:check": "node scripts/predeploy-check.js",
     "gate:full": "node scripts/gate-full.js"
   },

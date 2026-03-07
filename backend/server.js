@@ -105,7 +105,7 @@ app.use((err, req, res, next) => {
     });
   } else {
     res.status(500).json({
-      error: '服务器内部错误',
+      error: 'Internal server error.',
     });
   }
 });
@@ -113,7 +113,7 @@ app.use((err, req, res, next) => {
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
-    error: `路径不存在: ${req.method} ${req.url}`,
+    error: `Route not found: ${req.method} ${req.url}`,
   });
 });
 

@@ -33,7 +33,7 @@ function getApiGateway() {
             }
         };
     }
-    return window.api || {};
+    return {};
 }
 
 const app = createApp({

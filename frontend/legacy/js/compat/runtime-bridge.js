@@ -13,7 +13,7 @@
 
   window.runtimeBridge = {
     get apiGateway() {
-      return window.apiGateway || window.api || null;
+      return window.apiGateway || null;
     },
     get helpers() {
       return window.helpers || null;

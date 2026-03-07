@@ -1,11 +1,7 @@
 (function (window) {
   function getGateway() {
     const bridge = window.runtimeBridge || {};
-    return bridge.apiGateway || window.apiGateway || window.api || null;
-  }
-
-  function getLegacyApi() {
-    return window.api || null;
+    return bridge.apiGateway || window.apiGateway || null;
   }
 
   function getBaseURL(baseURL) {
@@ -28,14 +24,10 @@
       name: String(options.name || '').trim(),
     };
     const gateway = getGateway();
-    if (gateway && gateway === window.apiGateway && gateway.artworks && typeof gateway.artworks.create === 'function') {
+    if (gateway && gateway.artworks && typeof gateway.artworks.create === 'function') {
       return gateway.artworks.create(baseURL, payload);
     }
-    const legacyApi = getLegacyApi();
-    if (legacyApi && legacyApi.artworks && typeof legacyApi.artworks.create === 'function') {
-      return legacyApi.artworks.create(payload);
-    }
-    return axios.post(`${baseURL}/api/artworks`, payload);
+    throw new Error('Artworks gateway create() is unavailable');
   }
 
   async function saveScheme(options = {}) {
@@ -51,24 +43,16 @@
     const gateway = getGateway();
 
     if (schemeId) {
-      if (gateway && gateway === window.apiGateway && gateway.artworks && typeof gateway.artworks.updateScheme === 'function') {
+      if (gateway && gateway.artworks && typeof gateway.artworks.updateScheme === 'function') {
         return gateway.artworks.updateScheme(baseURL, artId, schemeId, formData);
       }
-      const legacyApi = getLegacyApi();
-      if (legacyApi && legacyApi.artworks && typeof legacyApi.artworks.updateScheme === 'function') {
-        return legacyApi.artworks.updateScheme(artId, schemeId, formData);
-      }
-      return axios.put(`${baseURL}/api/artworks/${artId}/schemes/${schemeId}`, formData);
+      throw new Error('Artworks gateway updateScheme() is unavailable');
     }
 
-    if (gateway && gateway === window.apiGateway && gateway.artworks && typeof gateway.artworks.addScheme === 'function') {
+    if (gateway && gateway.artworks && typeof gateway.artworks.addScheme === 'function') {
       return gateway.artworks.addScheme(baseURL, artId, formData);
     }
-    const legacyApi = getLegacyApi();
-    if (legacyApi && legacyApi.artworks && typeof legacyApi.artworks.addScheme === 'function') {
-      return legacyApi.artworks.addScheme(artId, formData);
-    }
-    return axios.post(`${baseURL}/api/artworks/${artId}/schemes`, formData);
+    throw new Error('Artworks gateway addScheme() is unavailable');
   }
 
   async function deleteScheme(options = {}) {
@@ -79,14 +63,10 @@
       throw new Error('artId and schemeId are required');
     }
     const gateway = getGateway();
-    if (gateway && gateway === window.apiGateway && gateway.artworks && typeof gateway.artworks.deleteScheme === 'function') {
+    if (gateway && gateway.artworks && typeof gateway.artworks.deleteScheme === 'function') {
       return gateway.artworks.deleteScheme(baseURL, artId, schemeId);
     }
-    const legacyApi = getLegacyApi();
-    if (legacyApi && legacyApi.artworks && typeof legacyApi.artworks.deleteScheme === 'function') {
-      return legacyApi.artworks.deleteScheme(artId, schemeId);
-    }
-    return axios.delete(`${baseURL}/api/artworks/${artId}/schemes/${schemeId}`);
+    throw new Error('Artworks gateway deleteScheme() is unavailable');
   }
 
   async function deleteArtwork(options = {}) {
@@ -96,14 +76,10 @@
       throw new Error('artId is required');
     }
     const gateway = getGateway();
-    if (gateway && gateway === window.apiGateway && gateway.artworks && typeof gateway.artworks.remove === 'function') {
+    if (gateway && gateway.artworks && typeof gateway.artworks.remove === 'function') {
       return gateway.artworks.remove(baseURL, artId);
     }
-    const legacyApi = getLegacyApi();
-    if (legacyApi && legacyApi.artworks && typeof legacyApi.artworks.delete === 'function') {
-      return legacyApi.artworks.delete(artId);
-    }
-    return axios.delete(`${baseURL}/api/artworks/${artId}`);
+    throw new Error('Artworks gateway remove() is unavailable');
   }
 
   window.ArtworksApi = {

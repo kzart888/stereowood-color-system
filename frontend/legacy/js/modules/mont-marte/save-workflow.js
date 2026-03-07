@@ -3,6 +3,15 @@
     return String(baseURL || window.location.origin || '').replace(/\/$/, '');
   }
 
+  function getGateway() {
+    const bridge = window.runtimeBridge || {};
+    const gateway = bridge.apiGateway || window.apiGateway || null;
+    if (!gateway || !gateway.montMarteColors) {
+      throw new Error('montMarteColors gateway is unavailable');
+    }
+    return gateway.montMarteColors;
+  }
+
   function appendIfPresent(formData, key, value) {
     if (value === null || value === undefined || value === '') return;
     formData.append(key, value);
@@ -43,16 +52,17 @@
     const form = options.form || {};
     const editing = options.editing || null;
     const formData = buildFormData({ form, editing });
+    const gateway = getGateway();
 
     if (editing) {
       const id = form.id;
       if (!id) {
         throw new Error('form.id is required when editing');
       }
-      return axios.put(`${baseURL}/api/mont-marte-colors/${id}`, formData);
+      return gateway.update(baseURL, id, formData);
     }
 
-    return axios.post(`${baseURL}/api/mont-marte-colors`, formData);
+    return gateway.create(baseURL, formData);
   }
 
   window.MontMarteSaveWorkflow = {
