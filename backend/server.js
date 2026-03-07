@@ -18,6 +18,7 @@ const { db } = require('./db/index');
 const { initDatabase, runMigrations } = require('./db/migrations');
 const routes = require('./routes');
 const { attachAuthUser } = require('./routes/helpers/auth-session');
+const RuntimeFlags = require('./domains/auth/runtime-flags');
 
 const app = express();
 const DEFAULT_PORT = Number.isFinite(Number.parseInt(process.env.PORT, 10))
@@ -86,6 +87,9 @@ app.get('/api/config', (req, res) => {
       artworkManagement: process.env.ENABLE_ARTWORK_MANAGEMENT === 'true',
       montMarte: process.env.ENABLE_MONT_MARTE === 'true',
       pilotExplorer: ENABLE_PILOT_UI,
+      internalAuth: true,
+      authEnforceWrites: RuntimeFlags.isAuthEnforceWrites(),
+      readOnlyMode: RuntimeFlags.isReadOnlyMode(),
     },
   });
 });

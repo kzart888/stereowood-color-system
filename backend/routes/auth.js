@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const AuthService = require('../domains/auth/service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
 const { extractTokenFromRequest } = require('./helpers/auth-session');
@@ -38,6 +38,152 @@ router.get('/auth/admin/pending', async (req, res) => {
   try {
     const pending = await AuthService.listPending(req.get('x-admin-key'));
     return res.json({ pending });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.get('/auth/admin/accounts', async (req, res) => {
+  try {
+    const result = await AuthService.listAccounts(
+      {
+        status: req.query.status,
+        search: req.query.search,
+        page: req.query.page,
+        pageSize: req.query.pageSize,
+      },
+      req.get('x-admin-key')
+    );
+    return res.json(result);
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.post('/auth/admin/accounts', async (req, res) => {
+  try {
+    const account = await AuthService.createAccountByAdmin(
+      {
+        username: req.body.username,
+        password: req.body.password,
+        status: req.body.status,
+      },
+      req.get('x-admin-key'),
+      extractAuditContext(req)
+    );
+    return res.status(201).json({ success: true, account });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.post('/auth/admin/accounts/:id/reset-password', async (req, res) => {
+  try {
+    const id = parsePositiveId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
+    }
+    const result = await AuthService.resetPasswordByAdmin(
+      id,
+      req.body.password,
+      req.get('x-admin-key'),
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.post('/auth/admin/accounts/:id/disable', async (req, res) => {
+  try {
+    const id = parsePositiveId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
+    }
+    const account = await AuthService.disableAccountByAdmin(
+      id,
+      req.body.reason,
+      req.get('x-admin-key'),
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, account });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.post('/auth/admin/accounts/:id/enable', async (req, res) => {
+  try {
+    const id = parsePositiveId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
+    }
+    const account = await AuthService.enableAccountByAdmin(
+      id,
+      req.get('x-admin-key'),
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, account });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.delete('/auth/admin/accounts/:id', async (req, res) => {
+  try {
+    const id = parsePositiveId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
+    }
+    const result = await AuthService.deleteAccountByAdmin(
+      id,
+      req.get('x-admin-key'),
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.post('/auth/admin/accounts/:id/revoke-sessions', async (req, res) => {
+  try {
+    const id = parsePositiveId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: 'Invalid account id.', code: 'AUTH_VALIDATION_ERROR' });
+    }
+    const result = await AuthService.revokeSessionsByAdmin(
+      id,
+      req.get('x-admin-key'),
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.get('/auth/admin/runtime-flags', async (req, res) => {
+  try {
+    const flags = await AuthService.getRuntimeFlags(req.get('x-admin-key'));
+    return res.json({ flags });
+  } catch (error) {
+    return mapAuthError(res, error);
+  }
+});
+
+router.post('/auth/admin/runtime-flags', async (req, res) => {
+  try {
+    const flags = await AuthService.setRuntimeFlags(
+      {
+        authEnforceWrites: req.body.authEnforceWrites,
+        readOnlyMode: req.body.readOnlyMode,
+      },
+      req.get('x-admin-key'),
+      extractAuditContext(req)
+    );
+    return res.json({ success: true, flags });
   } catch (error) {
     return mapAuthError(res, error);
   }
@@ -132,3 +278,4 @@ router.get('/auth/me', async (req, res) => {
 });
 
 module.exports = router;
+

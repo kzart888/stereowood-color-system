@@ -431,6 +431,7 @@ app.component('artworks-component', ArtworksComponent);
 app.component('mont-marte-component', MontMarteComponent);
 if (typeof ColorDictionaryComponent !== 'undefined') app.component('color-dictionary-component', ColorDictionaryComponent);
 if (typeof AppHeaderBar !== 'undefined') app.component('app-header-bar', AppHeaderBar);
+if (typeof AdminAuthPanelComponent !== 'undefined') app.component('admin-auth-panel-component', AdminAuthPanelComponent);
 // 计算器浮层（渲染由全局服务控制）
 if (typeof FormulaCalculatorOverlay !== 'undefined') {
     app.component('formula-calculator-overlay', FormulaCalculatorOverlay);

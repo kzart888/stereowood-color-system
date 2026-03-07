@@ -1,16 +1,11 @@
-﻿function flagEnabled(value) {
-  if (value === true) return true;
-  if (typeof value !== 'string') return false;
-  const normalized = value.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
-}
+const RuntimeFlags = require('../../domains/auth/runtime-flags');
 
 function requireWriteAccess(req, res, next) {
-  if (flagEnabled(process.env.READ_ONLY_MODE)) {
+  if (RuntimeFlags.isReadOnlyMode()) {
     return res.status(503).json({ error: 'System is running in read-only mode.' });
   }
 
-  if (!flagEnabled(process.env.AUTH_ENFORCE_WRITES)) {
+  if (!RuntimeFlags.isAuthEnforceWrites()) {
     return next();
   }
 
@@ -28,3 +23,4 @@ function requireWriteAccess(req, res, next) {
 module.exports = {
   requireWriteAccess,
 };
+

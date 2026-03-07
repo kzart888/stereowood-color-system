@@ -41,7 +41,7 @@ function getAccountByUsername(username) {
 function getAccountById(id) {
   return dbGet(
     `
-    SELECT id, username, status, created_at, updated_at, approved_at, disabled_at
+    SELECT id, username, status, created_at, updated_at, approved_at, disabled_at, last_login_at
     FROM user_accounts
     WHERE id = ?
     `,
@@ -70,6 +70,68 @@ function listPendingAccounts() {
   );
 }
 
+function listAccounts({ status = 'all', search = '', limit = 20, offset = 0 } = {}) {
+  const clauses = [];
+  const params = [];
+
+  if (status && status !== 'all') {
+    clauses.push('status = ?');
+    params.push(status);
+  }
+
+  if (search && String(search).trim() !== '') {
+    clauses.push('LOWER(username) LIKE ?');
+    params.push(`%${String(search).trim().toLowerCase()}%`);
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+
+  return dbAll(
+    `
+    SELECT
+      id,
+      username,
+      status,
+      created_at,
+      updated_at,
+      approved_at,
+      disabled_at,
+      last_login_at
+    FROM user_accounts
+    ${whereClause}
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?
+    `,
+    [...params, limit, offset]
+  );
+}
+
+function countAccounts({ status = 'all', search = '' } = {}) {
+  const clauses = [];
+  const params = [];
+
+  if (status && status !== 'all') {
+    clauses.push('status = ?');
+    params.push(status);
+  }
+
+  if (search && String(search).trim() !== '') {
+    clauses.push('LOWER(username) LIKE ?');
+    params.push(`%${String(search).trim().toLowerCase()}%`);
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+
+  return dbGet(
+    `
+    SELECT COUNT(*) AS total
+    FROM user_accounts
+    ${whereClause}
+    `,
+    params
+  ).then((row) => (row ? row.total : 0));
+}
+
 function approveAccount(id, approvedBy = null) {
   return dbRun(
     `
@@ -91,6 +153,93 @@ function rejectAccount(id, disabledBy = null, reason = null) {
     WHERE id = ? AND status = 'pending'
     `,
     [disabledBy, reason, id]
+  );
+}
+
+function createAccountByAdmin({ username, passwordHash, status = 'approved', approvedBy = null }) {
+  return dbRun(
+    `
+    INSERT INTO user_accounts (
+      username,
+      password_hash,
+      status,
+      approved_by,
+      approved_at,
+      disabled_by,
+      disabled_reason,
+      disabled_at
+    ) VALUES (
+      ?, ?, ?, ?,
+      CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END,
+      CASE WHEN ? = 'disabled' THEN ? ELSE NULL END,
+      CASE WHEN ? = 'disabled' THEN ? ELSE NULL END,
+      CASE WHEN ? = 'disabled' THEN CURRENT_TIMESTAMP ELSE NULL END
+    )
+    `,
+    [
+      username,
+      passwordHash,
+      status,
+      approvedBy,
+      status,
+      status,
+      approvedBy,
+      status,
+      'Created as disabled by admin.',
+      status,
+    ]
+  );
+}
+
+function resetPassword(id, passwordHash) {
+  return dbRun(
+    `
+    UPDATE user_accounts
+    SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    `,
+    [passwordHash, id]
+  );
+}
+
+function disableAccount(id, disabledBy = null, reason = null) {
+  return dbRun(
+    `
+    UPDATE user_accounts
+    SET status = 'disabled',
+        disabled_by = ?,
+        disabled_reason = ?,
+        disabled_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND status != 'disabled'
+    `,
+    [disabledBy, reason, id]
+  );
+}
+
+function enableAccount(id) {
+  return dbRun(
+    `
+    UPDATE user_accounts
+    SET status = 'approved',
+        disabled_by = NULL,
+        disabled_reason = NULL,
+        disabled_at = NULL,
+        approved_at = COALESCE(approved_at, CURRENT_TIMESTAMP),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND status != 'approved'
+    `,
+    [id]
+  );
+}
+
+function deleteAccount(id) {
+  return dbRun(
+    `
+    DELETE FROM user_accounts
+    WHERE id = ?
+    `,
+    [id]
   );
 }
 
@@ -157,16 +306,35 @@ function revokeSessionByToken(token) {
   );
 }
 
+function revokeSessionsByUserId(userId) {
+  return dbRun(
+    `
+    UPDATE user_sessions
+    SET revoked_at = CURRENT_TIMESTAMP
+    WHERE user_id = ? AND revoked_at IS NULL
+    `,
+    [userId]
+  );
+}
+
 module.exports = {
   getAccountByUsername,
   getAccountById,
   createRegistrationRequest,
   listPendingAccounts,
+  listAccounts,
+  countAccounts,
   approveAccount,
   rejectAccount,
+  createAccountByAdmin,
+  resetPassword,
+  disableAccount,
+  enableAccount,
+  deleteAccount,
   createSession,
   getActiveSessionByToken,
   touchSession,
   updateLastLogin,
+  revokeSessionsByUserId,
   revokeSessionByToken,
 };

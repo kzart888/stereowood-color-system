@@ -34,12 +34,16 @@ Prerequisite:
   - `ENABLE_PILOT_UI=false` (default off, A7 pilot feature flag)
 
 ## Auth Mode Notes (A4)
-- If `AUTH_ENFORCE_WRITES=true`:
+- Runtime flags are loaded from env at startup and can be changed live by admin API/panel:
+  - `authEnforceWrites`
+  - `readOnlyMode`
+- If `authEnforceWrites=true`:
   - write APIs require login session token
   - read APIs stay available
-- If `READ_ONLY_MODE=true`:
+- If `readOnlyMode=true`:
   - write APIs return `503`
   - read APIs remain available (maintenance fallback)
+- Login policy is single active session per user. New login revokes older active sessions.
 
 ## Synology Volume Mapping (Current)
 - `/volume1/docker/stereowood-color-system/data:/data:rw`
@@ -68,6 +72,8 @@ Do not back up only `color_management.db` from a live container.
 ```bash
 npm run backup
 npm run restore
+npm run predeploy:check -- --base-url=http://127.0.0.1:9099
+npm run gate:full
 ```
 
 Path behavior:

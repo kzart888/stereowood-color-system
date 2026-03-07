@@ -11,7 +11,21 @@
   }
 
   function request(config) {
-    return getAxios()(config);
+    const nextConfig = Object.assign({}, config || {});
+    const headers = Object.assign({}, nextConfig.headers || {});
+    let token = window.authSessionToken || null;
+    if (!token) {
+      try {
+        token = localStorage.getItem('sw-auth-token') || null;
+      } catch {
+        token = null;
+      }
+    }
+    if (token && !headers.Authorization && !headers.authorization) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    nextConfig.headers = headers;
+    return getAxios()(nextConfig);
   }
 
   function get(url, config) {

@@ -30,6 +30,8 @@
     "phaseA:a5:verify": "npm run phaseA:a5:stale-smoke && npm run phaseA:a5:contract-snapshot && npm run phase0:verify",
     "phaseA:a7:pilot-parity": "node scripts/phaseA-a7-pilot-parity.js",
     "phaseA:a7:verify": "npm run phaseA:a7:pilot-parity && npm run phase0:verify",
+    "phaseP3:auth-admin-smoke": "node scripts/phaseP3-auth-admin-smoke.js",
+    "phaseP3:verify": "npm run phaseP3:auth-admin-smoke && npm run phase0:verify",
     "predeploy:check": "node scripts/predeploy-check.js",
     "gate:full": "node scripts/gate-full.js"
   },

@@ -1,6 +1,7 @@
-﻿const crypto = require('crypto');
+const crypto = require('crypto');
 const authQueries = require('../../db/queries/auth');
 const AuditService = require('../audit/service');
+const RuntimeFlags = require('./runtime-flags');
 
 const AUTH_ERROR = {
   VALIDATION: 'AUTH_VALIDATION_ERROR',
@@ -9,6 +10,7 @@ const AUTH_ERROR = {
   NOT_APPROVED: 'AUTH_NOT_APPROVED',
   INVALID_CREDENTIALS: 'AUTH_INVALID_CREDENTIALS',
   ADMIN_KEY_REQUIRED: 'AUTH_ADMIN_KEY_REQUIRED',
+  INVALID_STATUS: 'AUTH_INVALID_STATUS',
 };
 
 function createAuthError(code, message, statusCode = 400, extra = {}) {
@@ -103,6 +105,7 @@ function sanitizeAccount(account) {
     updated_at: account.updated_at,
     approved_at: account.approved_at || null,
     disabled_at: account.disabled_at || null,
+    last_login_at: account.last_login_at || null,
   };
 }
 
@@ -118,6 +121,33 @@ function requireAdminKey(adminKey) {
   if (!adminKey || adminKey !== configured) {
     throw createAuthError(AUTH_ERROR.ADMIN_KEY_REQUIRED, 'Invalid admin key.', 403);
   }
+}
+
+function parsePage(value, fallback = 1) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed < 1) return fallback;
+  return parsed;
+}
+
+function parsePageSize(value, fallback = 20) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, 100);
+}
+
+function normalizeAdminStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (!normalized) return 'all';
+  if (['all', 'pending', 'approved', 'disabled'].includes(normalized)) {
+    return normalized;
+  }
+  throw createAuthError(AUTH_ERROR.INVALID_STATUS, 'status must be one of all/pending/approved/disabled.', 400);
+}
+
+function parseRuntimeBooleanField(value, name) {
+  if (typeof value === 'boolean') return value;
+  if (value === undefined) return undefined;
+  throw createAuthError(AUTH_ERROR.VALIDATION, `${name} must be a boolean.`, 400);
 }
 
 class AuthService {
@@ -154,6 +184,34 @@ class AuthService {
   async listPending(adminKey) {
     requireAdminKey(adminKey);
     return authQueries.listPendingAccounts();
+  }
+
+  async listAccounts({ status, search, page, pageSize } = {}, adminKey) {
+    requireAdminKey(adminKey);
+    const normalizedStatus = normalizeAdminStatus(status || 'all');
+    const safePage = parsePage(page, 1);
+    const safePageSize = parsePageSize(pageSize, 20);
+    const offset = (safePage - 1) * safePageSize;
+    const safeSearch = String(search || '').trim();
+
+    const [items, total] = await Promise.all([
+      authQueries.listAccounts({
+        status: normalizedStatus,
+        search: safeSearch,
+        limit: safePageSize,
+        offset,
+      }),
+      authQueries.countAccounts({ status: normalizedStatus, search: safeSearch }),
+    ]);
+
+    return {
+      items: items.map((item) => sanitizeAccount(item)),
+      pagination: {
+        page: safePage,
+        pageSize: safePageSize,
+        total,
+      },
+    };
   }
 
   async approveRequest(id, adminKey, context = {}) {
@@ -220,6 +278,7 @@ class AuthService {
     const ttlHours = parseSessionTtlHours();
     const expiresAt = createExpiryIso(ttlHours);
     const token = createToken();
+    const revoked = await authQueries.revokeSessionsByUserId(account.id);
     await authQueries.createSession({ userId: account.id, token, expiresAt });
     await authQueries.updateLastLogin(account.id);
 
@@ -227,8 +286,8 @@ class AuthService {
       entityType: 'user_account',
       entityId: account.id,
       action: 'login',
-      before: null,
-      after: { username: account.username, expires_at: expiresAt },
+      before: { revoked_sessions: revoked.changes || 0 },
+      after: { username: account.username, expires_at: expiresAt, revoked_sessions: revoked.changes || 0 },
       summary: 'User logged in.',
       context: {
         ...context,
@@ -240,6 +299,7 @@ class AuthService {
     return {
       token,
       expires_at: expiresAt,
+      revoked_sessions: revoked.changes || 0,
       user: sanitizeAccount(account),
     };
   }
@@ -287,6 +347,215 @@ class AuthService {
       },
       expires_at: session.expires_at,
     };
+  }
+
+  async createAccountByAdmin({ username, password, status }, adminKey, context = {}) {
+    requireAdminKey(adminKey);
+    const normalizedUsername = normalizeUsername(username);
+    validateUsername(normalizedUsername);
+    validatePassword(password);
+
+    const normalizedStatus = normalizeAdminStatus(status || 'approved');
+    if (!['approved', 'disabled'].includes(normalizedStatus)) {
+      throw createAuthError(AUTH_ERROR.INVALID_STATUS, 'admin create supports approved/disabled status only.', 400);
+    }
+
+    const existing = await authQueries.getAccountByUsername(normalizedUsername);
+    if (existing) {
+      throw createAuthError(AUTH_ERROR.DUPLICATE, 'username already exists.', 409);
+    }
+
+    const passwordHash = await hashPassword(password);
+    const result = await authQueries.createAccountByAdmin({
+      username: normalizedUsername,
+      passwordHash,
+      status: normalizedStatus,
+      approvedBy: context.actorId || null,
+    });
+
+    const created = await authQueries.getAccountById(result.lastID);
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'user_account',
+      entityId: result.lastID,
+      action: 'admin_create',
+      before: null,
+      after: sanitizeAccount(created),
+      summary: 'Admin created account.',
+      context,
+    });
+
+    return sanitizeAccount(created);
+  }
+
+  async resetPasswordByAdmin(id, password, adminKey, context = {}) {
+    requireAdminKey(adminKey);
+    validatePassword(password);
+    const existing = await authQueries.getAccountById(id);
+    if (!existing) {
+      throw createAuthError(AUTH_ERROR.NOT_FOUND, 'Account not found.', 404);
+    }
+
+    const passwordHash = await hashPassword(password);
+    await authQueries.resetPassword(id, passwordHash);
+    const revokeResult = await authQueries.revokeSessionsByUserId(id);
+    const updated = await authQueries.getAccountById(id);
+
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'user_account',
+      entityId: id,
+      action: 'password_reset',
+      before: sanitizeAccount(existing),
+      after: { ...sanitizeAccount(updated), revoked_sessions: revokeResult.changes || 0 },
+      summary: 'Admin reset account password.',
+      context,
+    });
+
+    return {
+      account: sanitizeAccount(updated),
+      revoked_sessions: revokeResult.changes || 0,
+    };
+  }
+
+  async disableAccountByAdmin(id, reason, adminKey, context = {}) {
+    requireAdminKey(adminKey);
+    const existing = await authQueries.getAccountById(id);
+    if (!existing) {
+      throw createAuthError(AUTH_ERROR.NOT_FOUND, 'Account not found.', 404);
+    }
+
+    const result = await authQueries.disableAccount(id, context.actorId || null, reason || null);
+    if (result.changes === 0) {
+      const latest = await authQueries.getAccountById(id);
+      return sanitizeAccount(latest);
+    }
+
+    const revokeResult = await authQueries.revokeSessionsByUserId(id);
+    const updated = await authQueries.getAccountById(id);
+
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'user_account',
+      entityId: id,
+      action: 'disable',
+      before: sanitizeAccount(existing),
+      after: { ...sanitizeAccount(updated), revoked_sessions: revokeResult.changes || 0 },
+      summary: 'Admin disabled account.',
+      context,
+    });
+
+    return sanitizeAccount(updated);
+  }
+
+  async enableAccountByAdmin(id, adminKey, context = {}) {
+    requireAdminKey(adminKey);
+    const existing = await authQueries.getAccountById(id);
+    if (!existing) {
+      throw createAuthError(AUTH_ERROR.NOT_FOUND, 'Account not found.', 404);
+    }
+
+    const result = await authQueries.enableAccount(id);
+    if (result.changes === 0) {
+      const latest = await authQueries.getAccountById(id);
+      return sanitizeAccount(latest);
+    }
+
+    const updated = await authQueries.getAccountById(id);
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'user_account',
+      entityId: id,
+      action: 'enable',
+      before: sanitizeAccount(existing),
+      after: sanitizeAccount(updated),
+      summary: 'Admin enabled account.',
+      context,
+    });
+
+    return sanitizeAccount(updated);
+  }
+
+  async deleteAccountByAdmin(id, adminKey, context = {}) {
+    requireAdminKey(adminKey);
+    if (context.actorId && String(context.actorId) === String(id)) {
+      throw createAuthError(AUTH_ERROR.VALIDATION, 'Admin cannot delete own account.', 400);
+    }
+
+    const existing = await authQueries.getAccountById(id);
+    if (!existing) {
+      throw createAuthError(AUTH_ERROR.NOT_FOUND, 'Account not found.', 404);
+    }
+
+    await authQueries.revokeSessionsByUserId(id);
+    const result = await authQueries.deleteAccount(id);
+    if (result.changes === 0) {
+      throw createAuthError(AUTH_ERROR.NOT_FOUND, 'Account not found.', 404);
+    }
+
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'user_account',
+      entityId: id,
+      action: 'delete',
+      before: sanitizeAccount(existing),
+      after: null,
+      summary: 'Admin deleted account.',
+      context,
+    });
+
+    return { deleted: true, id };
+  }
+
+  async revokeSessionsByAdmin(id, adminKey, context = {}) {
+    requireAdminKey(adminKey);
+    const existing = await authQueries.getAccountById(id);
+    if (!existing) {
+      throw createAuthError(AUTH_ERROR.NOT_FOUND, 'Account not found.', 404);
+    }
+
+    const result = await authQueries.revokeSessionsByUserId(id);
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'user_account',
+      entityId: id,
+      action: 'session_revoke',
+      before: sanitizeAccount(existing),
+      after: { revoked_sessions: result.changes || 0 },
+      summary: 'Admin revoked user sessions.',
+      context,
+    });
+
+    return { revoked_sessions: result.changes || 0 };
+  }
+
+  async getRuntimeFlags(adminKey) {
+    requireAdminKey(adminKey);
+    return RuntimeFlags.getFlags();
+  }
+
+  async setRuntimeFlags(nextFlags, adminKey, context = {}) {
+    requireAdminKey(adminKey);
+    const patch = {};
+
+    const enforceWrites = parseRuntimeBooleanField(nextFlags.authEnforceWrites, 'authEnforceWrites');
+    const readOnlyMode = parseRuntimeBooleanField(nextFlags.readOnlyMode, 'readOnlyMode');
+
+    if (enforceWrites === undefined && readOnlyMode === undefined) {
+      throw createAuthError(AUTH_ERROR.VALIDATION, 'At least one runtime flag must be provided.', 400);
+    }
+
+    if (enforceWrites !== undefined) patch.authEnforceWrites = enforceWrites;
+    if (readOnlyMode !== undefined) patch.readOnlyMode = readOnlyMode;
+
+    const before = RuntimeFlags.getFlags();
+    const after = RuntimeFlags.setFlags(patch);
+
+    await AuditService.recordEntityChangeSafe({
+      entityType: 'user_account',
+      entityId: context.actorId || null,
+      action: 'runtime_flags_update',
+      before,
+      after,
+      summary: 'Admin updated runtime write-access flags.',
+      context,
+    });
+
+    return after;
   }
 
   mapError(error) {

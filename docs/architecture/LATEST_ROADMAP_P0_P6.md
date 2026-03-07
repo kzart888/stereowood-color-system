@@ -29,7 +29,7 @@ Your goals are reasonable and are preserved in this roadmap:
 | P0 | Branch and baseline decision | Completed | Phase A merged posture confirmed; Docker rehearsal recovered and passing. |
 | P1 | Ops/document alignment | Completed | Contract matrix, archive cleanup, and P1 gate are published. |
 | P2 | Test system hardening | Completed | Full one-command gate, Docker smoke automation, strict dry-run mode, and predeploy checker are published. |
-| P3 | Internal auth completion | Partially complete | Backend foundation exists; admin workflow UI and ops toggles need completion. |
+| P3 | Internal auth completion | Completed | Admin account workflows, single-session policy, runtime switches, and P3 gate are passing. |
 | P4 | History/audit UX | Partially complete | Backend audit/history events exist; bottom timeline panel UX not finished. |
 | P5 | Obsolete/duplicate cleanup | In progress | Major split done; mixed network paths and residual dead docs/code still remain. |
 | P6 | Modernization (Vue3 path) | Planned | Pilot path exists; expand only when compatibility gates pass. |
@@ -85,18 +85,21 @@ Target outcome:
 
 Checklist:
 - [ ] Build/finish admin page for:
-  - [ ] pending approvals
-  - [ ] manual user add
-  - [ ] password reset
-  - [ ] disable/delete account
-- [ ] Enforce single active session policy (old session invalidated on re-login).
-- [ ] Add simple emergency switches:
-  - [ ] temporary auth bypass (maintenance only)
-  - [ ] read-only mode
-- [ ] Add audit visibility for auth actions (who approved/disabled/reset).
+  - [x] pending approvals
+  - [x] manual user add
+  - [x] password reset
+  - [x] disable/delete account
+- [x] Enforce single active session policy (old session invalidated on re-login).
+- [x] Add simple emergency switches:
+  - [x] temporary auth bypass (maintenance only)
+  - [x] read-only mode
+- [x] Add audit visibility for auth actions (who approved/disabled/reset).
 
 Gate:
-- [ ] Register -> approve -> login -> protected write -> audit log flow passes.
+- [x] Register -> approve -> login -> protected write -> audit log flow passes.
+
+Evidence:
+- `docs/architecture/P3_REVIEW_GATE.md`
 
 ## P4: History and Audit UX
 

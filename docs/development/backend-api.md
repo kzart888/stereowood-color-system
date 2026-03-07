@@ -1,6 +1,6 @@
 # Backend API Overview
 
-Last updated: 2026-02-08
+Last updated: 2026-03-07
 
 This document describes the current Express + SQLite contract served by `backend/server.js`.
 
@@ -154,6 +154,7 @@ Allowed `entityType`:
 - `purchase_link`
 - `category`
 - `mont_marte_category`
+- `user_account`
 
 Response shape:
 - `{ entityType, entityId, events: [...] }`
@@ -175,6 +176,15 @@ Source: `backend/routes/auth.js` -> `backend/domains/auth/service.js` -> `backen
 
 - `POST /api/auth/register-request`
 - `GET /api/auth/admin/pending` (requires `x-admin-key`)
+- `GET /api/auth/admin/accounts` (requires `x-admin-key`)
+- `POST /api/auth/admin/accounts` (requires `x-admin-key`)
+- `POST /api/auth/admin/accounts/:id/reset-password` (requires `x-admin-key`)
+- `POST /api/auth/admin/accounts/:id/disable` (requires `x-admin-key`)
+- `POST /api/auth/admin/accounts/:id/enable` (requires `x-admin-key`)
+- `DELETE /api/auth/admin/accounts/:id` (requires `x-admin-key`)
+- `POST /api/auth/admin/accounts/:id/revoke-sessions` (requires `x-admin-key`)
+- `GET /api/auth/admin/runtime-flags` (requires `x-admin-key`)
+- `POST /api/auth/admin/runtime-flags` (requires `x-admin-key`)
 - `POST /api/auth/admin/requests/:id/approve` (requires `x-admin-key`)
 - `POST /api/auth/admin/requests/:id/reject` (requires `x-admin-key`)
 - `POST /api/auth/login`
@@ -182,11 +192,18 @@ Source: `backend/routes/auth.js` -> `backend/domains/auth/service.js` -> `backen
 - `GET /api/auth/me` (token required)
 
 Write-protection behavior:
-- `AUTH_ENFORCE_WRITES=true`:
+- Runtime flags are initialized from env and can be changed at runtime by admin API:
+  - `authEnforceWrites` (maps to initial `AUTH_ENFORCE_WRITES`)
+  - `readOnlyMode` (maps to initial `READ_ONLY_MODE`)
+- `authEnforceWrites=true`:
   - write routes require session token (`Authorization: Bearer <token>` or `x-session-token`)
-- `READ_ONLY_MODE=true`:
+- `readOnlyMode=true`:
   - write routes return `503`
   - read routes remain available
+
+Session behavior:
+- Login enforces one active session per user.
+- When user logs in again, previous active sessions for that user are revoked immediately.
 
 ## Error Behavior Notes
 - Validation issues generally return `400`.

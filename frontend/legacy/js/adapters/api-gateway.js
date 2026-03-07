@@ -21,6 +21,12 @@
     return Object.assign({}, params || {}, { _: Date.now() });
   }
 
+  function withAdminKey(adminKey, config = {}) {
+    return Object.assign({}, config, {
+      headers: Object.assign({}, config.headers || {}, { 'x-admin-key': adminKey }),
+    });
+  }
+
   const apiGateway = {
     config: {
       get: (baseURL) => getClient().get(withBase(baseURL, '/api/config')),
@@ -87,6 +93,74 @@
       listPurchaseLinks: (baseURL) => getClient().get(withBase(baseURL, '/api/purchase-links')),
       upsertPurchaseLink: (baseURL, url) =>
         getClient().post(withBase(baseURL, '/api/purchase-links/upsert'), { url }),
+    },
+    auth: {
+      registerRequest: (baseURL, payload) => getClient().post(withBase(baseURL, '/api/auth/register-request'), payload),
+      login: (baseURL, payload) => getClient().post(withBase(baseURL, '/api/auth/login'), payload),
+      logout: (baseURL) => getClient().post(withBase(baseURL, '/api/auth/logout'), {}),
+      me: (baseURL) => getClient().get(withBase(baseURL, '/api/auth/me')),
+      listPending: (baseURL, adminKey) =>
+        getClient().get(withBase(baseURL, '/api/auth/admin/pending'), withAdminKey(adminKey)),
+      listAccounts: (baseURL, adminKey, params = {}) =>
+        getClient().get(
+          withBase(baseURL, '/api/auth/admin/accounts'),
+          withAdminKey(adminKey, { params })
+        ),
+      createAccount: (baseURL, adminKey, payload) =>
+        getClient().post(
+          withBase(baseURL, '/api/auth/admin/accounts'),
+          payload,
+          withAdminKey(adminKey)
+        ),
+      approveRequest: (baseURL, adminKey, accountId) =>
+        getClient().post(
+          withBase(baseURL, `/api/auth/admin/requests/${accountId}/approve`),
+          {},
+          withAdminKey(adminKey)
+        ),
+      rejectRequest: (baseURL, adminKey, accountId, reason) =>
+        getClient().post(
+          withBase(baseURL, `/api/auth/admin/requests/${accountId}/reject`),
+          { reason: reason || null },
+          withAdminKey(adminKey)
+        ),
+      resetPassword: (baseURL, adminKey, accountId, password) =>
+        getClient().post(
+          withBase(baseURL, `/api/auth/admin/accounts/${accountId}/reset-password`),
+          { password },
+          withAdminKey(adminKey)
+        ),
+      disableAccount: (baseURL, adminKey, accountId, reason) =>
+        getClient().post(
+          withBase(baseURL, `/api/auth/admin/accounts/${accountId}/disable`),
+          { reason: reason || null },
+          withAdminKey(adminKey)
+        ),
+      enableAccount: (baseURL, adminKey, accountId) =>
+        getClient().post(
+          withBase(baseURL, `/api/auth/admin/accounts/${accountId}/enable`),
+          {},
+          withAdminKey(adminKey)
+        ),
+      deleteAccount: (baseURL, adminKey, accountId) =>
+        getClient().delete(
+          withBase(baseURL, `/api/auth/admin/accounts/${accountId}`),
+          withAdminKey(adminKey)
+        ),
+      revokeSessions: (baseURL, adminKey, accountId) =>
+        getClient().post(
+          withBase(baseURL, `/api/auth/admin/accounts/${accountId}/revoke-sessions`),
+          {},
+          withAdminKey(adminKey)
+        ),
+      getRuntimeFlags: (baseURL, adminKey) =>
+        getClient().get(withBase(baseURL, '/api/auth/admin/runtime-flags'), withAdminKey(adminKey)),
+      setRuntimeFlags: (baseURL, adminKey, payload) =>
+        getClient().post(
+          withBase(baseURL, '/api/auth/admin/runtime-flags'),
+          payload,
+          withAdminKey(adminKey)
+        ),
     },
   };
 

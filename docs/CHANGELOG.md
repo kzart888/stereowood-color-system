@@ -11,6 +11,14 @@
 - Added strict DB dry-run mode support: `npm run phaseA:a3:db-dryrun:strict`.
 - Published P2 gate report: `docs/architecture/P2_REVIEW_GATE.md`.
 
+### P3 Execution: Internal Auth Completion
+- Added admin account-management APIs under `/api/auth/admin/*` (list/add/reset/disable/enable/delete/revoke sessions).
+- Enforced per-user single-session login policy.
+- Added runtime write-mode switches (`authEnforceWrites`, `readOnlyMode`) with admin API control.
+- Added legacy internal auth/admin panel (`frontend/legacy/js/components/admin-auth-panel.js`).
+- Added P3 verification command: `npm run phaseP3:verify`.
+- Published P3 gate report: `docs/architecture/P3_REVIEW_GATE.md`.
+
 ## v0.9.9 (2026-03-07)
 ### Documentation and Execution Alignment Refresh
 - Archived completed one-time architecture execution logs into `docs/archive/architecture/2026-03-phase-a-closure/`.
