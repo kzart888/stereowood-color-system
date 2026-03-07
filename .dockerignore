@@ -75,6 +75,7 @@ backup/
 backups/
 *-backup-*.js
 *backup*.js
+!scripts/backup.js
 
 # Windows null device
 nul

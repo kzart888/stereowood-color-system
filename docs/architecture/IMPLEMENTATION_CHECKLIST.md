@@ -1,6 +1,6 @@
 # Architecture Upgrade Implementation Checklist (Phase A)
 
-Last updated: 2026-02-08  
+Last updated: 2026-03-07  
 Scope: Execute replanned Phase A from `docs/architecture/PHASE_A_BLUEPRINT.md`
 
 ## Working Rules
@@ -129,3 +129,12 @@ Gate:
 - [x] No open Critical/High findings.
 - [x] `npm run phase0:verify` pass.
 - [x] Merge recommendation documented.
+
+## 2026-03-07 Verification Refresh
+- [x] `npm run phase0:verify`
+- [x] `npm run phaseA:a1:verify`
+- [x] `npm run phaseA:a3:verify`
+- [x] `npm run phaseA:a4:verify`
+- [x] `npm run phaseA:a5:verify`
+- [x] `npm run phaseA:a7:verify`
+- [ ] Docker daemon health check (`docker info`) still failing with local Desktop API 500 and needs operator-level remediation.

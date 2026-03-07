@@ -101,6 +101,6 @@ Scope: stabilize runtime/deploy/encoding contract before deletion or modular ref
   - `npm run audit:encoding` passes
 
 ## Current Batch Status
-- Started Batch A (contract alignment + tooling setup): in progress
-- Completed in this run: P0-02, P0-03, P0-04, P0-05, P0-06, P0-06A, P0-08, P0-09, P0-10, P0-11
-- Next immediate step: follow `docs/refactor/IMPLEMENTATION_CHECKLIST.md` and start Phase 1 inventory/cleanup batches
+- Batch A (contract alignment + tooling setup): completed
+- Completed items: P0-02, P0-03, P0-04, P0-05, P0-06, P0-06A, P0-08, P0-09, P0-10, P0-11
+- Follow-up source of truth: `docs/refactor/IMPLEMENTATION_CHECKLIST.md` (legacy stabilization) and `docs/architecture/IMPLEMENTATION_CHECKLIST.md` (architecture phase)

@@ -6,6 +6,9 @@
 3. Open `http://localhost:9099`.
 4. If `9099` is occupied, backend auto-increments to next port. Use the printed port in terminal.
 
+Prerequisite:
+- Node.js 20.x LTS.
+
 ## Runtime Endpoints
 - Health: `/health`
 - API root: `/api`
@@ -66,6 +69,13 @@ Do not back up only `color_management.db` from a live container.
 npm run backup
 npm run restore
 ```
+
+Path behavior:
+- `DB_FILE` controls which SQLite file is backed up/restored.
+- `BACKUP_DIR` controls backup folder (optional override).
+- Defaults:
+  - local: repo `backups/`
+  - container: `/app/backend/backups` when available
 
 ## Troubleshooting
 1. If server fails to start, check whether port `9099` is already in use.

@@ -27,6 +27,8 @@ npm start
 
 # If port 9099 is busy, choose a free port:
 PORT=9199 npm start
+# PowerShell:
+$env:PORT=9199; npm start
 
 # (Optional) Free an existing process on Linux/macOS:
 fuser -k 9099/tcp
@@ -55,9 +57,19 @@ http://localhost:9099/health
 
 ## System Requirements
 
-- Node.js >=14.0.0
+- Node.js 20.x LTS (recommended)
 - Windows/Mac/Linux
 - Port 9099 available (override with `PORT=xxxx` if needed)
+
+## Maintenance
+
+```bash
+# Create DB backup set (.db + sidecars if present)
+npm run backup
+
+# Restore from backup set (interactive)
+npm run restore
+```
 
 ## Version
 

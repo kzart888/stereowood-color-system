@@ -97,15 +97,19 @@ function closeDb(db) {
 
 async function main() {
   assert(fs.existsSync(sourceDb), `Missing source DB: ${sourceDb}`);
-  assert(fs.existsSync(sourceWal), `Missing source WAL: ${sourceWal}`);
-  assert(fs.existsSync(sourceShm), `Missing source SHM: ${sourceShm}`);
+  const hasSourceWal = fs.existsSync(sourceWal);
+  const hasSourceShm = fs.existsSync(sourceShm);
 
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-a3-db-dryrun-'));
   const copiedDb = path.join(tmpRoot, 'color_management.db');
 
   fs.copyFileSync(sourceDb, copiedDb);
-  fs.copyFileSync(sourceWal, `${copiedDb}-wal`);
-  fs.copyFileSync(sourceShm, `${copiedDb}-shm`);
+  if (hasSourceWal) {
+    fs.copyFileSync(sourceWal, `${copiedDb}-wal`);
+  }
+  if (hasSourceShm) {
+    fs.copyFileSync(sourceShm, `${copiedDb}-shm`);
+  }
 
   const backendEntry = path.join(__dirname, '..', 'backend', 'server.js');
   const child = spawn(process.execPath, [backendEntry], {
@@ -172,6 +176,8 @@ async function main() {
         [
           `A3_DB_DRYRUN_PORT=${PORT}`,
           `A3_DB_DRYRUN_COPY=${copiedDb}`,
+          `A3_SOURCE_WAL_PRESENT=${hasSourceWal}`,
+          `A3_SOURCE_SHM_PRESENT=${hasSourceShm}`,
           'A3_MIGRATION_AUDIT_TABLES=OK',
           'A3_MIGRATION_HISTORY_COLUMNS=OK',
           'A3_DB_DRYRUN=PASS',

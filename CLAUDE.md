@@ -9,7 +9,8 @@ Repository guidance for coding agents working on this project.
 - API base: `/api`.
 - Health endpoint: `/health`.
 - Default port: `9099`.
-- Current plan source of truth: `docs/refactor/IMPLEMENTATION_CHECKLIST.md`.
+- Current architecture execution source: `docs/architecture/IMPLEMENTATION_CHECKLIST.md`.
+- Legacy stabilization baseline: `docs/refactor/IMPLEMENTATION_CHECKLIST.md`.
 - Historical legacy plan is archived at `archives/phase1-legacy-cleanup-2026-02-06/REFACTORING_PLAN.md`.
 
 ## Working Rules
@@ -30,6 +31,9 @@ npm start
 npm run dev
 ```
 
+Runtime prerequisite:
+- Node.js 20.x LTS.
+
 ## Maintenance Commands
 
 ```bash
@@ -48,5 +52,6 @@ docker run -d --name stereowood -p 9099:9099 -e NODE_ENV=production -e DB_FILE=/
 ## Notes
 
 - SQLite DB should remain untracked.
-- Legacy component extraction work is phased and documented in `docs/refactor/`.
-- Vue3 migration remains deferred until Phase 5 decision is approved.
+- Legacy stabilization work is documented in `docs/refactor/`.
+- Architecture Phase A outcomes and gates are documented in `docs/architecture/`.
+- Vue modernization is pilot-first (`/pilot`) and remains feature-flagged.

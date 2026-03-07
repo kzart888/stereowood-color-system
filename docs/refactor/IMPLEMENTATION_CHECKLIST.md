@@ -1,6 +1,6 @@
 # Refactor Implementation Checklist (Phase 4+)
 
-Last updated: 2026-02-07  
+Last updated: 2026-03-07  
 Baseline:
 - Phase 0 stabilization completed in `50954e8`
 - Phase 1 obsolete cleanup completed in `9bc5c5f`
@@ -226,8 +226,8 @@ Choose a suitable modernization path after legacy stabilization.
 - [x] Keep deterministic Docker builds (`npm ci --omit=dev` + lockfile in git).
 - [x] Ensure runtime DB files remain untracked.
 
-## Current Next Actions (Architecture Replan)
-1. Confirm batch sequencing and scope in `docs/architecture/PHASE_A_BLUEPRINT.md`.
-2. Execute checklist items from `docs/architecture/IMPLEMENTATION_CHECKLIST.md` starting at A3.
-3. Keep dependency boundaries aligned with `docs/architecture/MODULE_MAP.md`.
-4. Run `code-review-agent` gate after each batch and full gate at A8.
+## Current Next Actions (Post-Phase-A)
+1. Treat this checklist as closed baseline for stabilization work.
+2. Use `docs/architecture/IMPLEMENTATION_CHECKLIST.md` as the active execution source.
+3. Track remaining medium/low debt from `docs/architecture/PHASE_A_REVIEW_GATE.md`.
+4. Prepare Phase B plan (admin UI completion, audit timeline UI, further dedup/deletion) on top of `architecture-upgrade`.

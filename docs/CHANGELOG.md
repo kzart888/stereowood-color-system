@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.9.8 (2026-02-11)
+### Legacy Stabilization Closure (Phase 0-5)
+- Stabilized production contract on legacy UI + Express + SQLite.
+- Standardized runtime contract (`/`, `/api`, `/health`, port `9099`, `DB_FILE=/data/color_management.db`).
+- Completed phased cleanup/dedup/modular boundary work with review gates in `docs/refactor/`.
+- Added encoding and smoke verification scripts (`npm run phase0:verify`).
+
+### Architecture Upgrade Branch (Phase A Complete)
+- Completed Phase A batches A0-A8 on `architecture-upgrade`.
+- Added backend foundation for auth, audit, history timeline, and conflict contract unification.
+- Added pilot UI slice (`/pilot`, feature-flagged by `ENABLE_PILOT_UI=true`).
+- Published final gate with merge recommendation: `docs/architecture/PHASE_A_REVIEW_GATE.md`.
+
 ## v0.8.2 (2025-01-03)
 ### Major Codebase Cleanup
 - **Removed 35+ redundant files** across frontend, backend, and documentation
