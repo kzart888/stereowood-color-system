@@ -2,6 +2,13 @@
 
 Purpose: practical execution plan after Phase A merge prep, with explicit infra and feature tracks.
 
+## Current Status Snapshot (2026-03-07)
+
+- [x] `codex/checklist-kickoff` merged into `architecture-upgrade`.
+- [x] `architecture-upgrade` fast-forward merged into `main`.
+- [x] Non-Docker verification gates passed on `architecture-upgrade` and `main`.
+- [ ] Local Docker daemon still blocked by host virtualization state (`hasNoVirtualization=true`).
+
 ## Track 1: Local Docker Remediation (Host)
 
 ### Goal
@@ -34,17 +41,17 @@ Restore local Docker daemon health to re-enable image rehearsal.
 Promote checklist hardening and Phase A baseline to `main`.
 
 ### Checklist
-- [ ] Merge `codex/checklist-kickoff` -> `architecture-upgrade`.
-- [ ] Re-run full non-Docker gate on `architecture-upgrade`:
-  - [ ] `npm run phase0:verify`
-  - [ ] `npm run phaseA:a1:verify`
-  - [ ] `npm run phaseA:a3:verify`
-  - [ ] `npm run phaseA:a4:verify`
-  - [ ] `npm run phaseA:a5:verify`
-  - [ ] `npm run phaseA:a7:verify`
-- [ ] Merge `architecture-upgrade` -> `main` (fast-forward expected).
-- [ ] Re-run minimum gate on `main`:
-  - [ ] `npm run phase0:verify`
+- [x] Merge `codex/checklist-kickoff` -> `architecture-upgrade`.
+- [x] Re-run full non-Docker gate on `architecture-upgrade`:
+  - [x] `npm run phase0:verify`
+  - [x] `npm run phaseA:a1:verify`
+  - [x] `npm run phaseA:a3:verify`
+  - [x] `npm run phaseA:a4:verify`
+  - [x] `npm run phaseA:a5:verify`
+  - [x] `npm run phaseA:a7:verify`
+- [x] Merge `architecture-upgrade` -> `main` (fast-forward expected).
+- [x] Re-run minimum gate on `main`:
+  - [x] `npm run phase0:verify`
 - [ ] After Docker host remediation, run one Docker smoke on `main`.
 
 ## Track 3: Phase B Planning (Post-Merge)
