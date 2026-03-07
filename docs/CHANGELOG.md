@@ -19,6 +19,12 @@
 - Added P3 verification command: `npm run phaseP3:verify`.
 - Published P3 gate report: `docs/architecture/P3_REVIEW_GATE.md`.
 
+### P4 Execution: History and Audit UX
+- Added paginated/filterable feed API: `GET /api/history/feed`.
+- Added legacy bottom audit timeline panel for active tabs with `who / when / what` lines.
+- Added P4 verification command: `npm run phaseP4:verify`.
+- Published P4 gate report: `docs/architecture/P4_REVIEW_GATE.md`.
+
 ## v0.9.9 (2026-03-07)
 ### Documentation and Execution Alignment Refresh
 - Archived completed one-time architecture execution logs into `docs/archive/architecture/2026-03-phase-a-closure/`.

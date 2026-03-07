@@ -58,6 +58,11 @@
       listPurchaseLinks: () => getGateway().dictionaries.listPurchaseLinks(getBaseURL()),
       upsertPurchaseLink: (url) => getGateway().dictionaries.upsertPurchaseLink(getBaseURL(), url),
     },
+    history: {
+      feed: (params = {}) => getGateway().history.feed(getBaseURL(), params),
+      timeline: (entityType, entityId, limit = 50) =>
+        getGateway().history.timeline(getBaseURL(), entityType, entityId, limit),
+    },
     auth: {
       registerRequest: (payload) => getGateway().auth.registerRequest(getBaseURL(), payload),
       login: (payload) => getGateway().auth.login(getBaseURL(), payload),

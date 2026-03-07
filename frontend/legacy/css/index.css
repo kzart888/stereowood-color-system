@@ -28,6 +28,7 @@
 @import './components/category-manager.css';  /* 分类管理对话框 */
 @import './components/color-dictionary.css';  /* 自配色字典页面 */
 @import './components/admin-auth-panel.css';  /* 内部账号与管理面板 */
+@import './components/audit-timeline-panel.css';  /* 底部审计时间线 */
 
 /* === 4. 工具样式 === */
 @import './utilities/helpers.css';        /* 辅助类 */

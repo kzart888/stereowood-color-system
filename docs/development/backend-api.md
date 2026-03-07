@@ -143,6 +143,7 @@ Notes:
 ### History Timeline (A3)
 Source: `backend/routes/history.js` -> `backend/domains/history/service.js` -> `backend/db/queries/audit-events.js`
 
+- `GET /api/history/feed?tab=<scope>&page=<n>&pageSize=<n>&actor=<q>&action=<q>&entityType=<type>&entityId=<id>`
 - `GET /api/history/:entityType/:entityId?limit=<n>`
 
 Allowed `entityType`:
@@ -158,10 +159,13 @@ Allowed `entityType`:
 
 Response shape:
 - `{ entityType, entityId, events: [...] }`
+- Feed endpoint returns:
+  - `{ items: [...], pagination: { page, pageSize, total, totalPages }, filters: {...} }`
 
 Notes:
 - Timeline events are additive and do not change existing endpoint payloads.
 - `limit` is optional (default `50`, max `200`).
+- Feed `tab` supports `custom-colors`, `artworks`, `mont-marte`, `all`.
 
 ## Optional Audit Context Headers
 - `x-actor-id`

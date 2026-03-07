@@ -94,6 +94,12 @@
       upsertPurchaseLink: (baseURL, url) =>
         getClient().post(withBase(baseURL, '/api/purchase-links/upsert'), { url }),
     },
+    history: {
+      feed: (baseURL, params = {}) =>
+        getClient().get(withBase(baseURL, '/api/history/feed'), { params }),
+      timeline: (baseURL, entityType, entityId, limit = 50) =>
+        getClient().get(withBase(baseURL, `/api/history/${entityType}/${entityId}`), { params: { limit } }),
+    },
     auth: {
       registerRequest: (baseURL, payload) => getClient().post(withBase(baseURL, '/api/auth/register-request'), payload),
       login: (baseURL, payload) => getClient().post(withBase(baseURL, '/api/auth/login'), payload),

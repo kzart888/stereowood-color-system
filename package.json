@@ -32,6 +32,8 @@
     "phaseA:a7:verify": "npm run phaseA:a7:pilot-parity && npm run phase0:verify",
     "phaseP3:auth-admin-smoke": "node scripts/phaseP3-auth-admin-smoke.js",
     "phaseP3:verify": "npm run phaseP3:auth-admin-smoke && npm run phase0:verify",
+    "phaseP4:audit-feed-smoke": "node scripts/phaseP4-audit-feed-smoke.js",
+    "phaseP4:verify": "npm run phaseP4:audit-feed-smoke && npm run phase0:verify",
     "predeploy:check": "node scripts/predeploy-check.js",
     "gate:full": "node scripts/gate-full.js"
   },

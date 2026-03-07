@@ -26,6 +26,10 @@ function getApiGateway() {
             dictionaries: {
                 listSuppliers: () => directGateway.dictionaries.listSuppliers(baseURL),
                 listPurchaseLinks: () => directGateway.dictionaries.listPurchaseLinks(baseURL)
+            },
+            history: {
+                feed: (params = {}) => directGateway.history.feed(baseURL, params),
+                timeline: (entityType, entityId, limit = 50) => directGateway.history.timeline(baseURL, entityType, entityId, limit)
             }
         };
     }
@@ -432,6 +436,7 @@ app.component('mont-marte-component', MontMarteComponent);
 if (typeof ColorDictionaryComponent !== 'undefined') app.component('color-dictionary-component', ColorDictionaryComponent);
 if (typeof AppHeaderBar !== 'undefined') app.component('app-header-bar', AppHeaderBar);
 if (typeof AdminAuthPanelComponent !== 'undefined') app.component('admin-auth-panel-component', AdminAuthPanelComponent);
+if (typeof AuditTimelinePanelComponent !== 'undefined') app.component('audit-timeline-panel-component', AuditTimelinePanelComponent);
 // 计算器浮层（渲染由全局服务控制）
 if (typeof FormulaCalculatorOverlay !== 'undefined') {
     app.component('formula-calculator-overlay', FormulaCalculatorOverlay);

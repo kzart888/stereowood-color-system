@@ -18,6 +18,15 @@ function dbAll(sql, params = []) {
   });
 }
 
+function dbGet(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row || null);
+    });
+  });
+}
+
 async function insertAuditEvent(payload) {
   const result = await dbRun(
     `
@@ -113,8 +122,88 @@ async function getEntityTimeline(entityType, entityId, limit = 50) {
   );
 }
 
+function buildFeedWhereClause(filters = {}) {
+  const clauses = [];
+  const params = [];
+
+  if (Array.isArray(filters.entityTypes) && filters.entityTypes.length > 0) {
+    clauses.push(`entity_type IN (${filters.entityTypes.map(() => '?').join(', ')})`);
+    params.push(...filters.entityTypes);
+  }
+
+  if (filters.entityType) {
+    clauses.push('entity_type = ?');
+    params.push(filters.entityType);
+  }
+
+  if (Number.isInteger(filters.entityId) && filters.entityId > 0) {
+    clauses.push('entity_id = ?');
+    params.push(filters.entityId);
+  }
+
+  if (filters.actorQuery) {
+    clauses.push('(LOWER(COALESCE(actor_name, "")) LIKE ? OR LOWER(COALESCE(actor_id, "")) LIKE ?)');
+    params.push(filters.actorQuery, filters.actorQuery);
+  }
+
+  if (filters.actionQuery) {
+    clauses.push('LOWER(action) LIKE ?');
+    params.push(filters.actionQuery);
+  }
+
+  return {
+    whereClause: clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '',
+    params,
+  };
+}
+
+async function listFeed({ filters = {}, limit = 20, offset = 0 } = {}) {
+  const safeLimit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
+  const safeOffset = Number.isInteger(offset) && offset >= 0 ? offset : 0;
+  const { whereClause, params } = buildFeedWhereClause(filters);
+
+  return dbAll(
+    `
+    SELECT
+      id,
+      audit_event_id,
+      entity_type,
+      entity_id,
+      action,
+      before_data,
+      after_data,
+      change_summary,
+      actor_id,
+      actor_name,
+      request_id,
+      source,
+      created_at
+    FROM entity_change_events
+    ${whereClause}
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?
+    `,
+    [...params, safeLimit, safeOffset]
+  );
+}
+
+async function countFeed(filters = {}) {
+  const { whereClause, params } = buildFeedWhereClause(filters);
+  const row = await dbGet(
+    `
+    SELECT COUNT(*) AS total
+    FROM entity_change_events
+    ${whereClause}
+    `,
+    params
+  );
+  return row ? row.total : 0;
+}
+
 module.exports = {
   insertAuditEvent,
   insertEntityChangeEvent,
   getEntityTimeline,
+  listFeed,
+  countFeed,
 };

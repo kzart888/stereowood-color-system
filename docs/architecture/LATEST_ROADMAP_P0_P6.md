@@ -30,7 +30,7 @@ Your goals are reasonable and are preserved in this roadmap:
 | P1 | Ops/document alignment | Completed | Contract matrix, archive cleanup, and P1 gate are published. |
 | P2 | Test system hardening | Completed | Full one-command gate, Docker smoke automation, strict dry-run mode, and predeploy checker are published. |
 | P3 | Internal auth completion | Completed | Admin account workflows, single-session policy, runtime switches, and P3 gate are passing. |
-| P4 | History/audit UX | Partially complete | Backend audit/history events exist; bottom timeline panel UX not finished. |
+| P4 | History/audit UX | Completed | Feed API + bottom timeline panel shipped with filters/pagination and UTF-8 label checks. |
 | P5 | Obsolete/duplicate cleanup | In progress | Major split done; mixed network paths and residual dead docs/code still remain. |
 | P6 | Modernization (Vue3 path) | Planned | Pilot path exists; expand only when compatibility gates pass. |
 
@@ -107,13 +107,16 @@ Target outcome:
 - Every primary screen shows a simple, readable operation timeline panel.
 
 Checklist:
-- [ ] Add bottom scrollable audit panel to main screens (`custom colors`, `artworks`, `mont-marte`).
-- [ ] Show `who / when / what` summary lines in plain text style.
-- [ ] Add basic filter + pagination for audit timeline.
-- [ ] Keep UTF-8 safety for Chinese labels/content.
+- [x] Add bottom scrollable audit panel to main screens (`custom colors`, `artworks`, `mont-marte`).
+- [x] Show `who / when / what` summary lines in plain text style.
+- [x] Add basic filter + pagination for audit timeline.
+- [x] Keep UTF-8 safety for Chinese labels/content.
 
 Gate:
-- [ ] Timeline API + UI consistency confirmed on all major write flows.
+- [x] Timeline API + UI consistency confirmed on all major write flows.
+
+Evidence:
+- `docs/architecture/P4_REVIEW_GATE.md`
 
 ## P5: Obsolete and Duplicate Cleanup
 
