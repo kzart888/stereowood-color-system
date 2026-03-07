@@ -14,7 +14,13 @@ Purpose: practical execution plan after Phase A merge prep, with explicit infra 
 ### Goal
 Restore local Docker daemon health to re-enable image rehearsal.
 
+Prerequisite:
+- Use an elevated (Run as Administrator) PowerShell session for Windows feature checks/changes.
+
 ### Checklist
+- [ ] Check feature state (admin PowerShell):
+  - [ ] `dism /online /Get-FeatureInfo /FeatureName:VirtualMachinePlatform`
+  - [ ] `dism /online /Get-FeatureInfo /FeatureName:Microsoft-Windows-Subsystem-Linux`
 - [ ] Confirm BIOS virtualization is enabled (Intel VT-x / AMD-V).
 - [ ] Enable required Windows features:
   - [ ] Virtual Machine Platform

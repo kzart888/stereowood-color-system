@@ -29,6 +29,7 @@ Passed before/around merge:
   - Docker Desktop engine remains stopped.
   - `docker info` fails with server API 500.
   - Docker backend log indicates `hasNoVirtualization=true`.
+  - Windows feature inspection via `dism` failed with `Error: 740` (administrator elevation required).
 
 ## Follow-up
 
