@@ -3,6 +3,9 @@
 Date: 2026-02-11  
 Status: Ready for rehearsal/cutover
 
+> Update (2026-03-07): Controlled pilot write rehearsal is documented in
+> `docs/architecture/P6_1_PILOT_WRITE_RUNBOOK.md`.
+
 ## Objective
 Deploy pilot UI safely without changing legacy production behavior.
 

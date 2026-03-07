@@ -46,7 +46,20 @@ async function attachAuthUser(req, res, next) {
   }
 }
 
+function requireAuthenticatedSession(req, res, next) {
+  if (req.authUser) {
+    return next();
+  }
+
+  if (req.authInvalid) {
+    return res.status(401).json({ error: 'Invalid or expired session.' });
+  }
+
+  return res.status(401).json({ error: 'Authentication required.' });
+}
+
 module.exports = {
   extractTokenFromRequest,
   attachAuthUser,
+  requireAuthenticatedSession,
 };

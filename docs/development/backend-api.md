@@ -140,6 +140,21 @@ Source: `backend/routes/dictionaries.js` -> `backend/services/DictionaryService.
 Notes:
 - Route handlers are thin; validation and conflict checks are in service/query layers.
 
+### Pilot Dictionaries (P6 controlled write slice)
+Source: `backend/routes/pilot-dictionaries.js` -> `backend/services/DictionaryService.js`
+
+- `POST /api/pilot/dictionaries/suppliers/upsert`
+- `DELETE /api/pilot/dictionaries/suppliers/:id`
+- `POST /api/pilot/dictionaries/purchase-links/upsert`
+
+Access rules:
+- Endpoints are available only when both flags are on:
+  - `ENABLE_PILOT_UI=true`
+  - `PILOT_DICTIONARY_WRITE=true`
+- Endpoints require authenticated session token.
+- Runtime write guard still applies (`readOnlyMode` can block writes with `503`).
+- When flag is off, endpoints return `404`.
+
 ### History Timeline (A3)
 Source: `backend/routes/history.js` -> `backend/domains/history/service.js` -> `backend/db/queries/audit-events.js`
 
@@ -208,6 +223,13 @@ Write-protection behavior:
 Session behavior:
 - Login enforces one active session per user.
 - When user logs in again, previous active sessions for that user are revoked immediately.
+
+## Config Feature Flags
+From `GET /api/config` -> `features`:
+- `pilotExplorer`: pilot UI availability (`ENABLE_PILOT_UI`).
+- `pilotDictionaryWrite`: pilot dictionary write availability (`ENABLE_PILOT_UI && PILOT_DICTIONARY_WRITE`).
+- `authEnforceWrites`: runtime write auth enforcement.
+- `readOnlyMode`: runtime read-only switch.
 
 ## Error Behavior Notes
 - Validation issues generally return `400`.

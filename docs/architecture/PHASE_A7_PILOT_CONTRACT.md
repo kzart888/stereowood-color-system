@@ -4,6 +4,9 @@ Date: 2026-02-11
 Status: Active for Batch A7  
 Pilot slice: `Color Dictionary Read-Only Explorer` (`/pilot`)
 
+> Update (2026-03-07): P6 extends this baseline with a controlled write slice.
+> See `docs/architecture/P6_1_PILOT_DICTIONARY_WRITE_CONTRACT.md`.
+
 ## Purpose
 Keep legacy production runtime stable while validating a modernized, read-only pilot slice behind the same API contract.
 

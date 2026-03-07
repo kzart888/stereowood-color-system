@@ -31,8 +31,8 @@ Your goals are reasonable and are preserved in this roadmap:
 | P2 | Test system hardening | Completed | Full one-command gate, Docker smoke automation, strict dry-run mode, and predeploy checker are published. |
 | P3 | Internal auth completion | Completed | Admin account workflows, single-session policy, runtime switches, and P3 gate are passing. |
 | P4 | History/audit UX | Completed | Feed API + bottom timeline panel shipped with filters/pagination and UTF-8 label checks. |
-| P5 | Obsolete/duplicate cleanup | In progress | Major split done; mixed network paths and residual dead docs/code still remain. |
-| P6 | Modernization (Vue3 path) | Planned | Pilot path exists; expand only when compatibility gates pass. |
+| P5 | Obsolete/duplicate cleanup | Completed | Network path unification + oversized module decomposition + conservative archive pass completed with gates. |
+| P6 | Modernization (Vue3 path) | In progress (Gate-ready) | Pilot write slice implemented and rehearsed; cutover decision package published. |
 
 ## Phase-by-Phase Execution Checklist
 
@@ -84,7 +84,7 @@ Target outcome:
 - Lightweight internal account system with approval and safe admin operations.
 
 Checklist:
-- [ ] Build/finish admin page for:
+- [x] Build/finish admin page for:
   - [x] pending approvals
   - [x] manual user add
   - [x] password reset
@@ -126,16 +126,18 @@ Target outcome:
 Checklist:
 - [x] Standardize frontend data access to one adapter gateway path.
 - [x] Remove mixed direct network styles (`fetch`, `axios`, `window.api`) from active features.
-- [ ] Continue splitting oversized legacy files into orchestrator/domain/ui modules.
-- [ ] Archive or delete dead docs and dead code paths with references updated.
-- [ ] Keep behavior unchanged while reducing complexity.
+- [x] Continue splitting oversized legacy files into orchestrator/domain/ui modules.
+- [x] Archive or delete dead docs and dead code paths with references updated.
+- [x] Keep behavior unchanged while reducing complexity.
 
 Gate:
-- [ ] No Critical/High regressions in full `code-review-agent` gate.
+- [x] No Critical/High regressions in full `code-review-agent` gate.
 
 Current evidence:
 - `npm run phaseP5:verify`
 - `docs/architecture/P5_1_REVIEW_GATE.md`
+- `docs/architecture/P5_2_REVIEW_GATE.md`
+- `docs/architecture/P5_3_REVIEW_GATE.md`
 
 ## P6: Modernization (Vue3 Path)
 
@@ -143,16 +145,25 @@ Target outcome:
 - Controlled modernization with clear rollback and objective cutover criteria.
 
 Checklist:
-- [ ] Keep legacy as production until pilot parity is proven.
-- [ ] Expand pilot from read-only slice to one controlled write slice.
-- [ ] Define explicit cutover criteria:
-  - [ ] API contract parity
-  - [ ] critical user flow parity
-  - [ ] performance and stability checks
-- [ ] Define rollback triggers and rollback routine before cutover.
+- [x] Keep legacy as production until pilot parity is proven.
+- [x] Expand pilot from read-only slice to one controlled write slice.
+- [x] Define explicit cutover criteria:
+  - [x] API contract parity
+  - [x] critical user flow parity
+  - [x] performance and stability checks
+- [x] Define rollback triggers and rollback routine before cutover.
 
 Gate:
-- [ ] Pilot write slice passes parity and rollback rehearsal before any production cutover decision.
+- [x] Pilot write slice passes parity and rollback rehearsal before any production cutover decision.
+- [ ] Production enablement decision approved by operator.
+
+Evidence:
+- `npm run phaseP6:verify`
+- `docs/architecture/P6_1_PILOT_DICTIONARY_WRITE_CONTRACT.md`
+- `docs/architecture/P6_1_PILOT_WRITE_RUNBOOK.md`
+- `docs/architecture/P6_1_REVIEW_GATE.md`
+- `docs/architecture/P6_2_CUTOVER_DECISION_PACKAGE.md`
+- `docs/architecture/P6_FULL_REVIEW_GATE.md`
 
 ## Standard Routines (Current Baseline)
 
@@ -168,6 +179,11 @@ Local Docker rehearsal:
    - `http://localhost:9199/health`
    - `http://localhost:9199/api/config`
    - `http://localhost:9199/`
+
+Pilot write rehearsal commands:
+1. `npm run phaseP6:pilot-write-smoke`
+2. `npm run phaseP6:pilot-rollback-rehearsal`
+3. `npm run phaseP6:pilot-write-docker-smoke`
 
 Synology deployment routine:
 1. Build and push image tag to your registry.

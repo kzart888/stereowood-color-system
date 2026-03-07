@@ -274,788 +274,14 @@
         }
     },
     
-    methods: {
-        // Category management
-        async handleCategoriesUpdated() {
-            // Reload categories and colors after changes
-            await this.globalData.loadCategories();
-            await this.globalData.loadCustomColors();
-            this.getMsg().success('分类已更新');
-        },
-        
-        // Pagination methods
-        goToPage(page) {
-            if (this._listState && typeof this._listState.goToPage === 'function') {
-                this._listState.goToPage(page);
-                return;
-            }
-            if (page === '...') return;
-            if (page < 1 || page > this.totalPages) return;
-            this.currentPage = page;
-            this.$nextTick(() => {
-                const container = this.$el.querySelector('.color-cards-grid');
-                if (container) {
-                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-            try { localStorage.setItem('sw-colors-page', page); } catch(e) {}
-        },
-        
-        onItemsPerPageChange() {
-            if (this._listState && typeof this._listState.onItemsPerPageChange === 'function') {
-                this._listState.onItemsPerPageChange();
-                return;
-            }
-            this.currentPage = 1;
-            try { localStorage.setItem('sw-colors-items-per-page', this.itemsPerPage); } catch(e) {}
-        },
-        
-        restorePaginationState() {
-            if (this._listState && typeof this._listState.restorePaginationState === 'function') {
-                this._listState.restorePaginationState();
-                return;
-            }
-            try {
-                const savedPage = localStorage.getItem('sw-colors-page');
-                const savedItems = localStorage.getItem('sw-colors-items-per-page');
-                
-                if (savedItems) {
-                    this.itemsPerPage = parseInt(savedItems);
-                }
-                
-                if (savedPage) {
-                    const page = parseInt(savedPage);
-                    if (page <= this.totalPages) {
-                        this.currentPage = page;
-                    }
-                }
-            } catch(e) {}
-        },
-        
-        // Update pagination based on app config
-        updatePaginationFromConfig() {
-            if (this._listState && typeof this._listState.updatePaginationFromConfig === 'function') {
-                this._listState.updatePaginationFromConfig();
-                return;
-            }
-            if (this.globalData && this.globalData.appConfig && this.globalData.appConfig.value) {
-                const config = this.globalData.appConfig.value;
-                
-                // Get saved items per page preference
-                let savedItems = null;
-                try {
-                    const saved = localStorage.getItem('sw-colors-items-per-page');
-                    if (saved) savedItems = parseInt(saved);
-                } catch(e) {}
-                
-                // Use ConfigHelper to determine items per page
-                this.itemsPerPage = window.ConfigHelper.getItemsPerPage(
-                    config, 
-                    'custom-colors', 
-                    savedItems
-                );
-            }
-        },
-        
-        // Card selection methods
-        toggleColorSelection(colorId, event) {
-            if (this._listState && typeof this._listState.toggleSelection === 'function') {
-                this._listState.toggleSelection(colorId, event || window.event);
-                return;
-            }
-            if (event && typeof event.stopPropagation === 'function') {
-                event.stopPropagation();
-            }
-            this.selectedColorId = this.selectedColorId === colorId ? null : colorId;
-        },
-        
-        clearSelection() {
-            if (this._listState && typeof this._listState.clearSelection === 'function') {
-                this._listState.clearSelection();
-                return;
-            }
-            this.selectedColorId = null;
-        },
-        
-        handleGlobalClick(event) {
-            if (this._listState && typeof this._listState.handleGlobalClick === 'function') {
-                this._listState.handleGlobalClick(event);
-                return;
-            }
-            // Clear selection if clicking outside the cards
-            if (!event.target.closest('.artwork-bar')) {
-                this.clearSelection();
-            }
-        },
-        
-        handleEscKey(event) {
-            if (this._listState && typeof this._listState.handleEscKey === 'function') {
-                this._listState.handleEscKey(event);
-                return;
-            }
-            // Only clear selection if ESC is pressed and no input is focused
-            if (event.key === 'Escape') {
-                // Check if any input, textarea, or select is focused
-                const activeElement = document.activeElement;
-                const isInputFocused = activeElement && (
-                    activeElement.tagName === 'INPUT' ||
-                    activeElement.tagName === 'TEXTAREA' ||
-                    activeElement.tagName === 'SELECT' ||
-                    activeElement.classList.contains('el-input__inner')
-                );
-                
-                // Clear selection only if no input is focused
-                if (!isInputFocused && this.selectedColorId !== null) {
-                    this.clearSelection();
-                    event.preventDefault();
-                }
-            }
-        },
-        
-        // Helper to get message service
-        getMsg() {
-            if (window.msg) return window.msg;
-            if (!window.__swMsgNoop) {
-                const noop = () => {};
-                window.__swMsgNoop = {
-                    success: noop,
-                    error: noop,
-                    warning: noop,
-                    info: noop
-                };
-            }
-            return window.__swMsgNoop;
-        },
-        
-        setColorItemRef(color) {
-            return (el) => {
-                if (el) this._colorItemRefs.set(color.color_code, el); 
-                else this._colorItemRefs.delete(color.color_code);
-            };
-        },
-        
-        usageGroups(color) {
-            if (!color) return [];
-            const code = color.color_code;
-            if (!code) return [];
-            const artworks = (this.globalData.artworks?.value) || [];
-            const groups = [];
-            artworks.forEach(a => {
-                (a.schemes || []).forEach(s => {
-                    const layers = [];
-                    (s.layers || []).forEach(l => {
-                        if (l.colorCode === code) {
-                            const num = Number(l.layer);
-                            if (Number.isFinite(num)) layers.push(num);
-                        }
-                    });
-                    if (layers.length) {
-                        layers.sort((x,y)=>x-y);
-                        const schemeName = s.name || s.scheme_name || '-';
-                        const header = `${this.$helpers.formatArtworkTitle(a)}-[${schemeName}]`;
-                        const suffix = layers.map(n=>`(${n})`).join('');
-                        groups.push({
-                            display: header + suffix,
-                            artworkId: a.id,
-                            schemeId: s.id,
-                            layers: layers.slice(),
-                            colorCode: code,
-                            schemeName
-                        });
-                    }
-                });
-            });
-            return groups;
-        },
-        
-        categoryName(color) {
-            const cat = this.categories.find(c => c.id === color.category_id);
-            if (cat) return cat.name;
-            const prefix = (color.color_code || '').substring(0,2).toUpperCase();
-            const byPrefix = this.categories.find(c => c.code === prefix);
-            return byPrefix ? byPrefix.name : '其他';
-        },
-        
-
-        resolveColorSwatch(color, options = {}) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.resolveColorSwatch === 'function') {
-                return window.CustomColorsDomainUtils.resolveColorSwatch(color, {
-                    ...options,
-                    baseURL: options.baseURL || this.baseURL || window.location.origin,
-                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-                        ? this.$helpers.buildUploadURL
-                        : undefined
-                });
-            }
-            if (!color || !window.CustomColorSwatch) {
-                return null;
-            }
-            const baseURL = options.baseURL || this.baseURL || window.location.origin;
-            const resolver = window.CustomColorSwatch.resolveSwatch;
-            if (typeof resolver !== 'function') {
-                return null;
-            }
-            const buildURL = this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-                ? this.$helpers.buildUploadURL
-                : ((base, path) => `${base.replace(/\/$/, '')}/uploads/${path}`);
-            return resolver(color, {
-                baseURL,
-                buildURL,
-                includeColorConcentrate: !!options.includeColorConcentrate,
-                forceOriginal: !!options.forceOriginal
-            });
-        },
-
-        getSwatchStyle(color, options = {}) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getSwatchStyle === 'function') {
-                return window.CustomColorsDomainUtils.getSwatchStyle(color, {
-                    ...options,
-                    baseURL: options.baseURL || this.baseURL || window.location.origin,
-                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-                        ? this.$helpers.buildUploadURL
-                        : undefined
-                });
-            }
-            const swatch = this.resolveColorSwatch(color, options);
-            if (!swatch) return {};
-            if (swatch.type === 'image') {
-                return {};
-            }
-            return swatch.style || {};
-        },
-
-        swatchIsImage(color, options = {}) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchIsImage === 'function') {
-                return window.CustomColorsDomainUtils.swatchIsImage(color, {
-                    ...options,
-                    baseURL: options.baseURL || this.baseURL || window.location.origin,
-                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-                        ? this.$helpers.buildUploadURL
-                        : undefined
-                });
-            }
-            const swatch = this.resolveColorSwatch(color, options);
-            return !!(swatch && swatch.type === 'image' && swatch.imageUrl);
-        },
-
-        swatchIsEmpty(color, options = {}) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchIsEmpty === 'function') {
-                return window.CustomColorsDomainUtils.swatchIsEmpty(color, {
-                    ...options,
-                    baseURL: options.baseURL || this.baseURL || window.location.origin,
-                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-                        ? this.$helpers.buildUploadURL
-                        : undefined
-                });
-            }
-            const swatch = this.resolveColorSwatch(color, options);
-            return !swatch || swatch.type === 'empty';
-        },
-
-        swatchThumbnailClass(color, options = {}) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.swatchThumbnailClass === 'function') {
-                return window.CustomColorsDomainUtils.swatchThumbnailClass(color, {
-                    ...options,
-                    baseURL: options.baseURL || this.baseURL || window.location.origin,
-                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-                        ? this.$helpers.buildUploadURL
-                        : undefined
-                });
-            }
-            return { 'no-image': this.swatchIsEmpty(color, options) };
-        },
-
-        getSwatchImage(color, options = {}) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getSwatchImage === 'function') {
-                return window.CustomColorsDomainUtils.getSwatchImage(color, {
-                    ...options,
-                    baseURL: options.baseURL || this.baseURL || window.location.origin,
-                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-                        ? this.$helpers.buildUploadURL
-                        : undefined
-                });
-            }
-            const swatch = this.resolveColorSwatch(color, options);
-            return swatch && swatch.type === 'image' ? swatch.imageUrl : null;
-        },
-
-        previewColorSwatch(event, color, options = {}) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.previewColorSwatch === 'function') {
-                const handled = window.CustomColorsDomainUtils.previewColorSwatch(event, color, {
-                    ...options,
-                    baseURL: options.baseURL || this.baseURL || window.location.origin,
-                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
-                        ? this.$helpers.buildUploadURL
-                        : undefined,
-                    thumbPreview: this.$thumbPreview,
-                    pureColorUtils: window.PureColorUtils
-                });
-                if (handled) return;
-            }
-            const swatch = this.resolveColorSwatch(color, options);
-            if (!swatch || !this.$thumbPreview) {
-                return;
-            }
-            if (swatch.type === 'image' && swatch.imageUrl) {
-                this.$thumbPreview.show(event, swatch.imageUrl);
-                return;
-            }
-            const hex = swatch && swatch.hex ? swatch.hex : (swatch && swatch.style && (swatch.style.background || swatch.style.backgroundColor));
-            if (hex && window.PureColorUtils && typeof window.PureColorUtils.createSolidSwatchDataUrl === 'function') {
-                const dataUrl = window.PureColorUtils.createSolidSwatchDataUrl(hex);
-                this.$thumbPreview.show(event, dataUrl);
-            }
-        },
-
-        normalizePantoneCode(value) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.normalizePantoneCode === 'function') {
-                return window.CustomColorsDomainUtils.normalizePantoneCode(value, {
-                    normalizePantoneCode: (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode)
-                });
-            }
-            const helperFn = (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode);
-            if (typeof helperFn === 'function') {
-                return helperFn(value);
-            }
-            if (value === null || value === undefined) {
-                return null;
-            }
-            const raw = String(value).trim();
-            if (!raw) {
-                return null;
-            }
-            let code = raw.replace(/^PANTON(E)?\s+/i, '');
-            code = code.replace(/\s+/g, ' ').trim();
-            const suffixMatch = code.match(/^(.*?)(\s+)?([cCuU])$/);
-            if (suffixMatch) {
-                const base = suffixMatch[1].trim();
-                const suffix = suffixMatch[3].toUpperCase();
-                const baseCompact = base.replace(/\s+/g, '');
-                if (/^\d+[A-Z]?$/i.test(baseCompact)) {
-                    return `${baseCompact.toUpperCase()}${suffix}`;
-                }
-                return `${base} ${suffix}`.replace(/\s+/g, ' ').trim();
-            }
-            return code;
-        },
-
-        handleImageChange(file) {
-            this.form.imageFile = file.raw;
-            if (this.form.imagePreview) {
-                URL.revokeObjectURL(this.form.imagePreview);
-            }
-            this.form.imagePreview = URL.createObjectURL(file.raw);
-            this.resetPureColorState({ markCleared: true });
-        },
-        
-        clearImage() {
-            this.form.imageFile = null;
-            if (this.form.imagePreview) {
-                URL.revokeObjectURL(this.form.imagePreview);
-                this.form.imagePreview = null;
-            }
-            this.resetPureColorState({ markCleared: true });
-        },
-        
-        // Keep pure-color flags aligned with image actions
-        resetPureColorState({ markCleared = false } = {}) {
-            if (!this.form) return;
-            this.form.pureColor = null;
-            this.form.pureColorCleared = !!markCleared;
-        },
-        
-        // Standardize hex for downstream modules
-        normalizeHexValue(hex) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.normalizeHexValue === 'function') {
-                return window.CustomColorsDomainUtils.normalizeHexValue(hex, {
-                    customColorSwatch: window.CustomColorSwatch,
-                    colorConverter: window.ColorConverter
-                });
-            }
-            if (!hex) return null;
-            const swatch = window.CustomColorSwatch;
-            if (swatch && typeof swatch.normalizeHex === 'function') {
-                return swatch.normalizeHex(hex);
-            }
-            if (window.ColorConverter && typeof window.ColorConverter.formatHex === 'function') {
-                return window.ColorConverter.formatHex(hex);
-            }
-            const trimmed = String(hex).trim();
-            if (!trimmed) return null;
-            return trimmed.startsWith('#') ? trimmed.toUpperCase() : ('#' + trimmed.toUpperCase());
-        },
-        
-        // Hydrate dialog state from backend pure-color fields
-        buildPureColorStateFromExisting(color) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.buildPureColorStateFromExisting === 'function') {
-                return window.CustomColorsDomainUtils.buildPureColorStateFromExisting(color, {
-                    customColorSwatch: window.CustomColorSwatch,
-                    colorConverter: window.ColorConverter,
-                    pureColorUtils: window.PureColorUtils
-                });
-            }
-            if (!color) return null;
-            const hex = this.normalizeHexValue(color.pure_hex_color);
-            if (!hex) return null;
-            const converter = window.ColorConverter;
-            let rgb = null;
-            if ([color.pure_rgb_r, color.pure_rgb_g, color.pure_rgb_b].every(v => v !== null && v !== undefined)) {
-                rgb = {
-                    r: Number(color.pure_rgb_r),
-                    g: Number(color.pure_rgb_g),
-                    b: Number(color.pure_rgb_b)
-                };
-            } else if (converter && typeof converter.hexToRgb === 'function') {
-                const converted = converter.hexToRgb(hex);
-                if (converted) {
-                    rgb = {
-                        r: Number(converted.r),
-                        g: Number(converted.g),
-                        b: Number(converted.b)
-                    };
-                }
-            }
-            let cmyk = null;
-            if (converter && rgb && typeof converter.rgbToCmyk === 'function') {
-                cmyk = converter.rgbToCmyk(rgb.r, rgb.g, rgb.b);
-            }
-            const previewDataUrl = window.PureColorUtils && typeof window.PureColorUtils.createSolidSwatchDataUrl === 'function'
-                ? window.PureColorUtils.createSolidSwatchDataUrl(hex)
-                : null;
-            return {
-                hex,
-                rgb,
-                cmyk,
-                generatedAt: color.pure_generated_at || null,
-                previewDataUrl
-            };
-        },
-        
-        // Prefer original upload but gracefully fall back to existing previews
-        async resolveImageFileForProcessing() {
-            if (this.form && this.form.imageFile) {
-                return this.form.imageFile;
-            }
-            if (this.form && this.form.imagePreview) {
-                const fetched = await this.fetchImageAsFile(this.form.imagePreview);
-                if (fetched) {
-                    return fetched;
-                }
-            }
-            if (this.editingColor && this.editingColor.image_path) {
-                const imageUrl = this.$helpers.buildUploadURL(this.baseURL, this.editingColor.image_path);
-                const fetched = await this.fetchImageAsFile(imageUrl);
-                if (fetched) {
-                    return fetched;
-                }
-            }
-            return null;
-        },
-        
-        // Copy computed averages into user-visible color fields
-        applyPureColorToFormFields(pureColor, { silent = false } = {}) {
-            if (!pureColor) return;
-            const converter = window.ColorConverter;
-            let rgb = pureColor.rgb;
-            if ((!rgb || rgb.r == null || rgb.g == null || rgb.b == null) && converter && typeof converter.hexToRgb === 'function' && pureColor.hex) {
-                const converted = converter.hexToRgb(pureColor.hex);
-                if (converted) {
-                    rgb = { r: Number(converted.r), g: Number(converted.g), b: Number(converted.b) };
-                }
-            }
-            if (rgb) {
-                this.form.rgb_r = Math.round(rgb.r);
-                this.form.rgb_g = Math.round(rgb.g);
-                this.form.rgb_b = Math.round(rgb.b);
-            }
-            let cmyk = pureColor.cmyk;
-            if ((!cmyk || cmyk.c == null) && converter && rgb && typeof converter.rgbToCmyk === 'function') {
-                cmyk = converter.rgbToCmyk(Math.round(rgb.r), Math.round(rgb.g), Math.round(rgb.b));
-            }
-            if (cmyk) {
-                this.form.cmyk_c = Math.round(cmyk.c);
-                this.form.cmyk_m = Math.round(cmyk.m);
-                this.form.cmyk_y = Math.round(cmyk.y);
-                this.form.cmyk_k = Math.round(cmyk.k);
-            }
-            let resolvedHex = pureColor.hex;
-            if (!resolvedHex && converter && rgb && typeof converter.rgbToHex === 'function') {
-                resolvedHex = converter.rgbToHex(Math.round(rgb.r), Math.round(rgb.g), Math.round(rgb.b));
-            }
-            if (resolvedHex) {
-                this.form.hex_color = this.normalizeHexValue(resolvedHex);
-            }
-            if (!silent) {
-                const msg = this.getMsg();
-                msg.success('已根据平均色填充颜色值');
-            }
-        },
-        
-        // Generate and persist the averaged swatch backing all calculations
-        async computePureColor({ silent = false, force = false } = {}) {
-            if (this.computingPureColor && !force) {
-                return this.form.pureColor;
-            }
-            const msg = this.getMsg();
-            const utils = window.PureColorUtils;
-            if (!utils || typeof utils.computeAverageColorFromFile !== 'function') {
-                msg.error('平均色工具未加载');
-                return null;
-            }
-            const imageFile = await this.resolveImageFileForProcessing();
-            if (!imageFile) {
-                msg.warning('请先上传颜色样本');
-                return null;
-            }
-            this.computingPureColor = true;
-            try {
-                const result = await utils.computeAverageColorFromFile(imageFile);
-                const converter = window.ColorConverter;
-                let rgb = null;
-                if (result.rgb && typeof result.rgb === 'object') {
-                    rgb = {
-                        r: Math.round(result.rgb.r),
-                        g: Math.round(result.rgb.g),
-                        b: Math.round(result.rgb.b)
-                    };
-                }
-                const hex = this.normalizeHexValue(result.hex || (converter && rgb && typeof converter.rgbToHex === 'function' ? converter.rgbToHex(rgb.r, rgb.g, rgb.b) : null));
-                if (!hex) {
-                    throw new Error('无法生成有效的平均色 HEX 值');
-                }
-                let cmyk = null;
-                if (result.cmyk && typeof result.cmyk === 'object') {
-                    cmyk = {
-                        c: Number(result.cmyk.c),
-                        m: Number(result.cmyk.m),
-                        y: Number(result.cmyk.y),
-                        k: Number(result.cmyk.k)
-                    };
-                } else if (converter && rgb && typeof converter.rgbToCmyk === 'function') {
-                    cmyk = converter.rgbToCmyk(rgb.r, rgb.g, rgb.b);
-                }
-                const previewDataUrl = result.previewDataUrl || (utils.createSolidSwatchDataUrl ? utils.createSolidSwatchDataUrl(hex) : null);
-                const pureColor = {
-                    hex,
-                    rgb,
-                    cmyk,
-                    previewDataUrl,
-                    generatedAt: new Date().toISOString()
-                };
-                this.form.pureColor = pureColor;
-                this.form.pureColorCleared = false;
-                this.applyPureColorToFormFields(pureColor, { silent: true });
-                if (!silent) {
-                    msg.success('平均色已计算');
-                }
-                return pureColor;
-            } catch (error) {
-                console.warn('computePureColor failed:', error);
-                msg.error('计算平均色失败');
-                return null;
-            } finally {
-                this.computingPureColor = false;
-            }
-        },
-        
-        // Shared gate that reuses cached pure color when possible
-        async ensurePureColor({ silent = false, force = false } = {}) {
-            if (this.hasPureColor && !force) {
-                return this.form.pureColor;
-            }
-            return await this.computePureColor({ silent, force });
-        },
-        
-        // Manual reset keeps persisted metadata aligned with the dialog
-        clearPureColor() {
-            if (!this.hasPureColor && !this.form.pureColorCleared) {
-                return;
-            }
-            this.resetPureColorState({ markCleared: true });
-            const msg = this.getMsg();
-            msg.success('已清除平均色');
-        },
-        
-        // Reuse the global preview layer to inspect the averaged swatch
-        openPurePreview(event) {
-            if (!this.hasPureColor || !this.form.pureColor || !this.form.pureColor.previewDataUrl) {
-                return;
-            }
-            if (!this.$thumbPreview) return;
-            this.$thumbPreview.show(event, this.form.pureColor.previewDataUrl);
-        },
-        
-        async fetchImageAsFile(imageUrl) {
-            try {
-                const response = await fetch(imageUrl);
-                const blob = await response.blob();
-                return new File([blob], 'image.jpg', { type: blob.type });
-            } catch (error) {
-                // Error fetching image - silently handle
-                return null;
-            }
-        },
-        
-        async extractColorFromImage() {
-            const pureColor = await this.ensurePureColor({ silent: true });
-            if (!pureColor) {
-                return;
-            }
-            this.applyPureColorToFormFields(pureColor, { silent: false });
-        },
-        
-        clearColorValues() {
-            const msg = this.getMsg();
-            this.form.rgb_r = null;
-            this.form.rgb_g = null;
-            this.form.rgb_b = null;
-            this.form.cmyk_c = null;
-            this.form.cmyk_m = null;
-            this.form.cmyk_y = null;
-            this.form.cmyk_k = null;
-            this.form.hex_color = null;
-            this.form.pantone_coated = null;
-            this.form.pantone_uncoated = null;
-            msg.success('色值已清除');
-        },
-        
-        async findPantoneMatch() {
-            const msg = this.getMsg();
-            const pureColor = await this.ensurePureColor({ silent: true });
-            if (!pureColor) {
-                return;
-            }
-            this.applyPureColorToFormFields(pureColor, { silent: true });
-
-            if (this.form.rgb_r === null || this.form.rgb_g === null || this.form.rgb_b === null) {
-                msg.warning('请先生成平均色以获取 RGB 值');
-                return;
-            }
-
-            try {
-                const rgb = {
-                    r: parseInt(this.form.rgb_r, 10),
-                    g: parseInt(this.form.rgb_g, 10),
-                    b: parseInt(this.form.rgb_b, 10)
-                };
-
-                if (!ColorConverter || typeof ColorConverter.isValidRGB !== 'function' || !ColorConverter.isValidRGB(rgb.r, rgb.g, rgb.b)) {
-                    msg.error('平均色 RGB 值无效');
-                    return;
-                }
-
-                let coatedMatch = null;
-                let uncoatedMatch = null;
-
-                if (window.PantoneHelper) {
-                    coatedMatch = window.PantoneHelper.findClosest(rgb, 'coated');
-                    uncoatedMatch = window.PantoneHelper.findClosest(rgb, 'uncoated');
-                } else if (ColorConverter && typeof ColorConverter.findClosestPantone === 'function') {
-                    const fullDb = window.PANTONE_COLORS_FULL || [];
-                    const coatedDb = fullDb.filter ? fullDb.filter(p => p.type === 'coated') : [];
-                    const uncoatedDb = fullDb.filter ? fullDb.filter(p => p.type === 'uncoated') : [];
-                    coatedMatch = ColorConverter.findClosestPantone(rgb, coatedDb.length ? coatedDb : fullDb);
-                    uncoatedMatch = ColorConverter.findClosestPantone(rgb, uncoatedDb.length ? uncoatedDb : fullDb);
-                }
-
-                if (coatedMatch) {
-                    const cleanName = this.normalizePantoneCode(coatedMatch.name) || coatedMatch.name;
-                    this.form.pantone_coated = cleanName;
-                }
-                if (uncoatedMatch) {
-                    const cleanName = this.normalizePantoneCode(uncoatedMatch.name) || uncoatedMatch.name;
-                    this.form.pantone_uncoated = cleanName;
-                }
-
-                const coatedDisplay = coatedMatch ? (this.normalizePantoneCode(coatedMatch.name) || coatedMatch.name) : '无';
-                const uncoatedDisplay = uncoatedMatch ? (this.normalizePantoneCode(uncoatedMatch.name) || uncoatedMatch.name) : '无';
-                msg.success(`已匹配潘通色号：${coatedDisplay} / ${uncoatedDisplay}`);
-            } catch (error) {
-                console.warn('findPantoneMatch failed:', error);
-                msg.error('匹配潘通色号失败');
-            }
-        },
-        
-        openAddDialog() {
-            this.editingColor = null;
-            
-            // Reset auto-sync flag for new dialog
-            this.autoSyncDisabled = false;
-            
-            if (this.activeCategory !== 'all') {
-                const categoryId = parseInt(this.activeCategory);
-                this.form.category_id = categoryId;
-                // For ES category, don't auto-generate code
-                if (categoryId === this.esCategoryId) {
-                    this.form.color_code = '';
-                } else {
-                    this.generateColorCode(categoryId);
-                }
-            } else {
-                this.form.category_id = '';
-                this.form.color_code = '';
-            }
-            
-            this.form.formula = '';
-            this.form.imageFile = null;
-            this.form.imagePreview = null;
-            
-            // Clear color fields
-            this.form.rgb_r = null;
-            this.form.rgb_g = null;
-            this.form.rgb_b = null;
-            this.form.cmyk_c = null;
-            this.form.cmyk_m = null;
-            this.form.cmyk_y = null;
-            this.form.cmyk_k = null;
-            this.form.hex_color = null;
-            this.form.pantone_coated = null;
-            this.form.pantone_uncoated = null;
-            
-            this.resetPureColorState({ markCleared: false });
-            this.computingPureColor = false;
-            
-            this.showAddDialog = true;
-        },
-        
-        editColor(color) {
-            this.editingColor = color;
-            
-            // Disable auto-sync for editing (user has control)
-            this.autoSyncDisabled = true;
-            
-            const prefix = color.color_code.substring(0, 2).toUpperCase();
-            const matchedCategory = this.categories.find(cat => cat.code === prefix);
-            
-            const imagePreview = color.image_path ? this.$helpers.buildUploadURL(this.baseURL, color.image_path) : null;
-            const pureColorState = this.buildPureColorStateFromExisting(color);
-            
-            this.form = {
-                category_id: color.category_id, // Use the actual category_id from database
-                color_code: color.color_code,
-                formula: color.formula,
-                imageFile: null,
-                imagePreview,
-                // Load color values
-                rgb_r: color.rgb_r,
-                rgb_g: color.rgb_g,
-                rgb_b: color.rgb_b,
-                cmyk_c: color.cmyk_c,
-                cmyk_m: color.cmyk_m,
-                cmyk_y: color.cmyk_y,
-                cmyk_k: color.cmyk_k,
-                hex_color: color.hex_color,
-                pantone_coated: this.normalizePantoneCode(color.pantone_coated) || color.pantone_coated,
-                pantone_uncoated: this.normalizePantoneCode(color.pantone_uncoated) || color.pantone_uncoated,
-                pureColor: pureColorState,
-                pureColorCleared: false
-            };
-            
-            this.computingPureColor = false;
-            this.showAddDialog = true;
-        },
-        
-
+    methods: Object.assign(
+        {},
+        window.CustomColorsStateMethods || {},
+        window.CustomColorsDomainMethods || {},
+        window.CustomColorsSwatchMethods || {},
+        window.CustomColorsPureColorMethods || {},
+        window.CustomColorsDialogMethods || {},
+        {
         async saveColor() {
             const msg = this.getMsg();
             const valid = await this.$refs.formRef.validate().catch(() => false);
@@ -1151,181 +377,7 @@
                 this.saving = false;
             }
         },
-        
-        resetForm() {
-            this.editingColor = null;
-            this.form = {
-                category_id: '',
-                color_code: '',
-                formula: '',
-                imageFile: null,
-                imagePreview: null,
-                rgb_r: null,
-                rgb_g: null,
-                rgb_b: null,
-                cmyk_c: null,
-                cmyk_m: null,
-                cmyk_y: null,
-                cmyk_k: null,
-                hex_color: null,
-                pantone_coated: null,
-                pantone_uncoated: null,
-                pureColor: null,
-                pureColorCleared: false
-            };
-            this.computingPureColor = false;
-            if (this.$refs.formRef) {
-                this.$refs.formRef.resetFields();
-            }
-            if (this._dialogGuard && typeof this._dialogGuard.clearSnapshot === 'function') {
-                this._dialogGuard.clearSnapshot();
-            } else {
-                this._originalColorFormSnapshot = null;
-            }
-            this._unbindEsc();
-        },
-        
 
-        // Other methods remain the same...
-        onOpenColorDialog() {
-            this.initForm();
-            if (this._dialogGuard && typeof this._dialogGuard.setSnapshot === 'function') {
-                this._dialogGuard.setSnapshot(this._normalizedColorForm());
-                this._dialogGuard.bindEsc(() => this.attemptCloseAddDialog());
-            } else {
-                this._originalColorFormSnapshot = JSON.stringify(this._normalizedColorForm());
-                this._bindEscForDialog();
-            }
-        },
-        
-        _normalizedColorForm() {
-            return {
-                category_id: this.form.category_id || '',
-                color_code: this.form.color_code || '',
-                formula: this.form.formula || '',
-                imagePreview: this.form.imagePreview ? '1' : ''
-            };
-        },
-        
-        _isColorFormDirty() {
-            if (this._dialogGuard && typeof this._dialogGuard.isDirty === 'function') {
-                return this._dialogGuard.isDirty(this._normalizedColorForm());
-            }
-            if (!this._originalColorFormSnapshot) return false;
-            return JSON.stringify(this._normalizedColorForm()) !== this._originalColorFormSnapshot;
-        },
-        
-        async attemptCloseAddDialog() {
-            if (this._isColorFormDirty()) {
-                try {
-                    await ElementPlus.ElMessageBox.confirm('检测到未保存的修改，确认丢弃吗？', '未保存的修改', {
-                        confirmButtonText: '丢弃修改',
-                        cancelButtonText: '继续编辑',
-                        type: 'warning'
-                    });
-                } catch(e) { return; }
-            }
-            this.showAddDialog = false;
-        },
-        
-        _bindEscForDialog() {
-            if (this._dialogGuard && typeof this._dialogGuard.bindEsc === 'function') {
-                this._dialogGuard.bindEsc(() => this.attemptCloseAddDialog());
-                return;
-            }
-            this._unbindEsc();
-            this._escHandler = (e) => {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    this.attemptCloseAddDialog();
-                }
-            };
-            document.addEventListener('keydown', this._escHandler);
-        },
-        
-        _unbindEsc() {
-            if (this._dialogGuard && typeof this._dialogGuard.unbindEsc === 'function') {
-                this._dialogGuard.unbindEsc();
-                return;
-            }
-            if (this._escHandler) {
-                document.removeEventListener('keydown', this._escHandler);
-                this._escHandler = null;
-            }
-        },
-        
-        onColorCodeInput(value) {
-            const msg = this.getMsg();
-            if (this.editingColor) return;
-            
-            // Skip auto-sync if disabled (user has made manual changes)
-            if (this.autoSyncDisabled) return;
-            
-            const esId = this.esCategoryId;
-            if (esId && this.form.category_id === esId) return;
-            if (!value) return;
-            
-            const firstChar = value.charAt(0);
-            const esTriggers = ['酒','沙','红','黑','蓝']; // Triggers for ES (色精)
-            if (esId && esTriggers.includes(firstChar)) {
-                if (this.form.category_id !== esId) {
-                    this.form.category_id = esId;
-                    msg.info('已自动识别为 色精');
-                    // Disable further auto-sync after first automation
-                    this.autoSyncDisabled = true;
-                }
-                return;
-            }
-            
-            if (value.length >= 2) {
-                const prefix = value.substring(0, 2).toUpperCase();
-                const matchedCategory = this.categories.find(cat => cat.code === prefix);
-                
-                if (matchedCategory) {
-                    if (this.form.category_id !== matchedCategory.id) {
-                        this.form.category_id = matchedCategory.id;
-                        msg.info(`已自动切换到 ${matchedCategory.name}`);
-                        // Disable further auto-sync after first automation
-                        this.autoSyncDisabled = true;
-                    }
-                }
-                // No auto-switch for unrecognized prefixes
-            }
-        },
-        
-        initForm() {
-            const esId = this.esCategoryId;
-            if (!this.editingColor && this.form.category_id && this.form.category_id !== esId) {
-                this.generateColorCode(this.form.category_id);
-            }
-        },
-        
-        onCategoryChange(categoryId) {
-            // Skip auto-sync if disabled (user has made manual changes)
-            if (this.autoSyncDisabled) return;
-            
-            const esId = this.esCategoryId;
-            
-            if (!this.editingColor && categoryId && categoryId !== esId) {
-                this.generateColorCode(categoryId);
-                // Disable further auto-sync after first automation
-                this.autoSyncDisabled = true;
-            } else if (categoryId === esId) {
-                this.form.color_code = '';
-                // Also disable auto-sync when user selects 色精
-                this.autoSyncDisabled = true;
-            }
-        },
-        
-        generateColorCode(categoryId) {
-            const esId = this.esCategoryId;
-            if (!categoryId || categoryId === esId) return;
-            const code = helpers.generateColorCode(this.categories, this.customColors, categoryId);
-            if (code) {
-                this.form.color_code = code;
-            }
-        },
-        
         async deleteColor(color) {
             const msg = this.getMsg();
             const ok = await this.$helpers.doubleDangerConfirm({
@@ -1354,26 +406,12 @@
                 }
             }
         },
-        
-        isColorReferenced(color) {
-            if (!color) return false;
-            const code = color.color_code;
-            const artworks = this.globalData.artworks?.value || [];
-            for (const artwork of artworks) {
-                for (const s of (artwork.schemes||[])) {
-                    for (const l of (s.layers||[])) {
-                        if (l.colorCode === code) return true;
-                    }
-                }
-            }
-            return false;
-        },
-        
+
         viewHistory(color) {
             const msg = this.getMsg();
             msg.info('历史功能待实现');
         },
-        
+
         focusCustomColor(code) {
             if (this.activeCategory !== 'all') this.activeCategory = 'all';
             
@@ -1406,7 +444,7 @@
                 }
             });
         },
-        
+
         handleVersionConflict(conflictData, formData) {
             this.conflictData = conflictData;
             this.pendingFormData = formData;
@@ -1414,46 +452,7 @@
         },
         
         // Helper method to get CMYK color as RGB string
-        getCMYKColor(c, m, y, k) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getCMYKColor === 'function') {
-                return window.CustomColorsDomainUtils.getCMYKColor(c, m, y, k, {
-                    colorConverter: window.ColorConverter
-                });
-            }
-            if (window.ColorConverter) {
-                const rgb = window.ColorConverter.cmykToRgb(c, m, y, k);
-                return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-            }
-            return '#f5f5f5';
-        },
-        
-        // Helper method to get Pantone swatch style
-        getPantoneSwatchStyle(pantoneCode) {
-            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getPantoneSwatchStyle === 'function') {
-                return window.CustomColorsDomainUtils.getPantoneSwatchStyle(pantoneCode, {
-                    pantoneHelper: window.PantoneHelper,
-                    normalizePantoneCode: (this.$helpers && this.$helpers.normalizePantoneCode) || (window.helpers && window.helpers.normalizePantoneCode)
-                });
-            }
-            if (!pantoneCode || !window.PantoneHelper) {
-                return { background: '#f5f5f5', border: '1px dashed #ccc' };
-            }
 
-            const normalized = this.normalizePantoneCode(pantoneCode) || pantoneCode;
-            let color = window.PantoneHelper.getColorByName(normalized);
-            if (!color && normalized !== pantoneCode) {
-                color = window.PantoneHelper.getColorByName(pantoneCode);
-            }
-            if (color && color.rgb) {
-                return { 
-                    background: `rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`,
-                    border: '1px solid rgba(0, 0, 0, 0.15)'
-                };
-            }
-            return { background: '#f5f5f5', border: '1px dashed #ccc' };
-        },
-        
-        // Duplicate check method
         runDuplicateCheck(focusSignature=null, preferredKeepId=null) {
             const msg = this.getMsg();
             if(!window.duplicateDetector) { 
@@ -1495,6 +494,7 @@
         // Users should navigate to 自配色字典 from the main navigation
         
         // Keep all duplicates
+
         keepAllDuplicates(){
             this.showDuplicateDialog=false;
             const notifier = this.getMsg();
@@ -1502,6 +502,7 @@
         },
         
         // Perform duplicate deletion - original from v0.5.6
+
         async performDuplicateDeletion(){
             if(this.deletionPending) return;
             const notifier = this.getMsg();
@@ -1528,6 +529,7 @@
         },
         
         // Confirm force merge - original from v0.5.6
+
         async confirmForceMerge(){
             if(this.mergingPending || this.deletionPending) return;
             const notifier = this.getMsg();
@@ -1545,6 +547,7 @@
         },
         
         // Execute force merge - original from v0.5.6
+
         async executeForceMerge(payload){
             if(this.mergingPending) return;
             const notifier = this.getMsg();
@@ -1569,6 +572,7 @@
         },
         
         // Print color palette
+
         printColorPalette() {
             const msg = this.getMsg();
             msg.info('正在准备打印，请稍候...');
@@ -1581,6 +585,7 @@
         },
         
         // Create print window
+
         createPrintWindow() {
             const printContent = this.generatePrintHTML();
             
@@ -1597,6 +602,7 @@
         },
         
         // Generate print HTML
+
         generatePrintHTML() {
             const colorCount = (this.globalData.customColors?.value || []).length;
             const groupCount = this.paletteGroups.length;
@@ -1758,7 +764,8 @@
 </html>`;
             return html;
         }
-    },
+        }
+    ),
     
     // Watch for category changes to reset pagination
     watch: {

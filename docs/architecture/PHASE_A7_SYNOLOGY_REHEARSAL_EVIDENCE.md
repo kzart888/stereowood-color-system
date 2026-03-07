@@ -35,3 +35,9 @@ Scope: pilot slice deployment/rehearsal evidence for `/pilot` + read-only contra
 ## Conclusion
 - Pilot parity and Docker rehearsal passed.
 - Synology rehearsal workflow is documented and aligned with prior confirmed Synology deployment process.
+
+## P6 Extension Note (2026-03-07)
+- Controlled write rehearsal is now covered by:
+  - `docs/architecture/P6_1_REVIEW_GATE.md`
+  - `docs/architecture/P6_1_PILOT_WRITE_RUNBOOK.md`
+  - `docs/architecture/P6_2_CUTOVER_DECISION_PACKAGE.md`

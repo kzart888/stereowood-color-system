@@ -46,6 +46,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Optional pilot UI (A7): isolated from legacy production UI and enabled by env.
 const ENABLE_PILOT_UI = process.env.ENABLE_PILOT_UI === 'true';
+const PILOT_DICTIONARY_WRITE = process.env.PILOT_DICTIONARY_WRITE === 'true';
 const PILOT_DIR = path.join(__dirname, '..', 'frontend', 'pilot');
 if (ENABLE_PILOT_UI && fs.existsSync(PILOT_DIR)) {
   app.use('/pilot', express.static(PILOT_DIR, { extensions: ['html'] }));
@@ -87,6 +88,7 @@ app.get('/api/config', (req, res) => {
       artworkManagement: process.env.ENABLE_ARTWORK_MANAGEMENT === 'true',
       montMarte: process.env.ENABLE_MONT_MARTE === 'true',
       pilotExplorer: ENABLE_PILOT_UI,
+      pilotDictionaryWrite: ENABLE_PILOT_UI && PILOT_DICTIONARY_WRITE,
       internalAuth: true,
       authEnforceWrites: RuntimeFlags.isAuthEnforceWrites(),
       readOnlyMode: RuntimeFlags.isReadOnlyMode(),

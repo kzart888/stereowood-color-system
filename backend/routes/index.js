@@ -18,6 +18,7 @@ router.use(require('./categories'));
 router.use(require('./mont-marte-categories'));
 router.use(require('./auth'));
 router.use(require('./dictionaries'));
+router.use(require('./pilot-dictionaries'));
 router.use(require('./mont-marte-colors'));
 router.use(require('./custom-colors'));
 router.use(require('./artworks'));

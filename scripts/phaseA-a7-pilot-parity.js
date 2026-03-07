@@ -105,7 +105,7 @@ async function runChecks(base) {
   ['mode', 'testModeItemsPerPage', 'features'].forEach((key) =>
     assert(Object.prototype.hasOwnProperty.call(config.json, key), `/api/config missing ${key}`),
   );
-  ['formulaCalculator', 'artworkManagement', 'montMarte', 'pilotExplorer'].forEach((key) =>
+  ['formulaCalculator', 'artworkManagement', 'montMarte', 'pilotExplorer', 'pilotDictionaryWrite'].forEach((key) =>
     assert(
       config.json.features && Object.prototype.hasOwnProperty.call(config.json.features, key),
       `/api/config.features missing ${key}`,

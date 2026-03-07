@@ -32,6 +32,32 @@
 - Added P5 verification command: `npm run phaseP5:verify`.
 - Published P5.1 gate report: `docs/architecture/P5_1_REVIEW_GATE.md`.
 
+### P5.2/P5.3 Execution: Modular Decomposition + Conservative Archive
+- Split `custom-colors` options into orchestrator/domain/state/ui modules and reduced orchestrator size substantially.
+- Split `artworks` options into orchestrator + scheme domain/state/dialog modules and reduced orchestrator size substantially.
+- Updated legacy script load order for extracted module files.
+- Archived completed Phase 0-4 refactor logs to `docs/archive/refactor/2026-03-07-phase0-4-history/`.
+- Archived stale one-time architecture refresh log to `docs/archive/architecture/2026-03-phase-a-closure/`.
+- Published:
+  - `docs/architecture/P5_2_REVIEW_GATE.md`
+  - `docs/architecture/P5_3_REVIEW_GATE.md`
+
+### P6.1/P6.2 Execution: Pilot Write Expansion + Decision Package
+- Added pilot-only dictionary write endpoints under `/api/pilot/dictionaries/*` with auth-session requirement.
+- Added new pilot feature flag: `PILOT_DICTIONARY_WRITE` (default off) and config surface `features.pilotDictionaryWrite`.
+- Extended pilot UI with internal login and controlled dictionary write panel.
+- Added verification scripts:
+  - `npm run phaseP6:pilot-write-smoke`
+  - `npm run phaseP6:pilot-rollback-rehearsal`
+  - `npm run phaseP6:pilot-write-docker-smoke`
+  - `npm run phaseP6:verify`
+- Published:
+  - `docs/architecture/P6_1_PILOT_DICTIONARY_WRITE_CONTRACT.md`
+  - `docs/architecture/P6_1_PILOT_WRITE_RUNBOOK.md`
+  - `docs/architecture/P6_1_REVIEW_GATE.md`
+  - `docs/architecture/P6_2_CUTOVER_DECISION_PACKAGE.md`
+  - `docs/architecture/P6_FULL_REVIEW_GATE.md`
+
 ## v0.9.9 (2026-03-07)
 ### Documentation and Execution Alignment Refresh
 - Archived completed one-time architecture execution logs into `docs/archive/architecture/2026-03-phase-a-closure/`.

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -9,8 +9,8 @@
 <body>
   <main id="pilot-app" class="pilot-app">
     <header class="pilot-header">
-      <h1>A7 Pilot: Color Dictionary Read-Only Explorer</h1>
-      <p>该页面仅用于现代化迁移试点验证，不替代 legacy 生产 UI。</p>
+      <h1>A7 Pilot: Dictionary Read + Controlled Write</h1>
+      <p>该页面用于现代化迁移试点验证，不替代 legacy 生产 UI。</p>
     </header>
 
     <section class="pilot-card">
@@ -21,6 +21,62 @@
     <section class="pilot-card">
       <h2>接口统计</h2>
       <ul id="endpoint-summary" class="kv-list"></ul>
+    </section>
+
+    <section class="pilot-card">
+      <h2>试点登录（写入需要）</h2>
+      <form id="auth-form" class="pilot-form">
+        <label>
+          用户名
+          <input id="auth-username" type="text" autocomplete="username" placeholder="例如 pilot_user">
+        </label>
+        <label>
+          密码
+          <input id="auth-password" type="password" autocomplete="current-password" placeholder="至少 8 位">
+        </label>
+        <div class="form-actions">
+          <button id="auth-login" type="submit">登录</button>
+          <button id="auth-logout" type="button" class="secondary">登出</button>
+        </div>
+      </form>
+      <div id="auth-status" class="status-note">未登录</div>
+    </section>
+
+    <section class="pilot-card">
+      <h2>Dictionary 写入试点（受开关控制）</h2>
+      <div id="write-disabled-note" class="status-note warning" hidden>当前环境未开启 `PILOT_DICTIONARY_WRITE`，仅可读。</div>
+
+      <form id="supplier-form" class="pilot-form">
+        <label>
+          新增/更新 Supplier
+          <input id="supplier-name" type="text" placeholder="输入供应商名称">
+        </label>
+        <div class="form-actions">
+          <button type="submit">Supplier Upsert</button>
+        </div>
+      </form>
+
+      <form id="purchase-link-form" class="pilot-form">
+        <label>
+          新增/更新 Purchase Link
+          <input id="purchase-link-url" type="text" placeholder="输入采购链接 URL">
+        </label>
+        <div class="form-actions">
+          <button type="submit">Purchase Link Upsert</button>
+        </div>
+      </form>
+
+      <form id="supplier-delete-form" class="pilot-form">
+        <label>
+          删除 Supplier（仅未被引用）
+          <select id="supplier-delete-id"></select>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="danger">删除 Supplier</button>
+        </div>
+      </form>
+
+      <div id="write-status" class="status-note">等待操作</div>
     </section>
 
     <section class="pilot-card">

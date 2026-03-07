@@ -58,6 +58,11 @@
       listPurchaseLinks: () => getGateway().dictionaries.listPurchaseLinks(getBaseURL()),
       upsertPurchaseLink: (url) => getGateway().dictionaries.upsertPurchaseLink(getBaseURL(), url),
     },
+    pilotDictionaries: {
+      upsertSupplier: (name) => getGateway().pilotDictionaries.upsertSupplier(getBaseURL(), name),
+      deleteSupplier: (id) => getGateway().pilotDictionaries.deleteSupplier(getBaseURL(), id),
+      upsertPurchaseLink: (url) => getGateway().pilotDictionaries.upsertPurchaseLink(getBaseURL(), url),
+    },
     history: {
       feed: (params = {}) => getGateway().history.feed(getBaseURL(), params),
       timeline: (entityType, entityId, limit = 50) =>

@@ -13,7 +13,7 @@ const TAG = process.env.DOCKER_SMOKE_TAG || 'stereowood-color-system:gate-full';
 const PORT = Number.parseInt(process.env.DOCKER_SMOKE_PORT || '9299', 10);
 const CONTAINER = process.env.DOCKER_SMOKE_CONTAINER || 'sw-gate-full-smoke';
 const BUILD_IF_MISSING = String(process.env.DOCKER_SMOKE_BUILD_IF_MISSING || 'true').toLowerCase() !== 'false';
-const FORCE_BUILD = String(process.env.DOCKER_SMOKE_FORCE_BUILD || 'false').toLowerCase() === 'true';
+const FORCE_BUILD = String(process.env.DOCKER_SMOKE_FORCE_BUILD || 'true').toLowerCase() === 'true';
 
 const volumeSuffix = `${Date.now()}`;
 const DATA_VOL = `sw-gate-data-${volumeSuffix}`;
@@ -183,4 +183,3 @@ async function main() {
 }
 
 main();
-

@@ -32,6 +32,7 @@ Prerequisite:
   - `SESSION_TTL_HOURS=12`
   - `INTERNAL_ADMIN_KEY=<set-strong-secret-before-using-admin-approval>`
   - `ENABLE_PILOT_UI=false` (default off, A7 pilot feature flag)
+  - `PILOT_DICTIONARY_WRITE=false` (default off, P6 controlled write flag)
 
 ## Auth Mode Notes (A4)
 - Runtime flags are loaded from env at startup and can be changed live by admin API/panel:
@@ -76,6 +77,7 @@ npm run predeploy:check -- --base-url=http://127.0.0.1:9099
 npm run phaseP3:verify
 npm run phaseP4:verify
 npm run phaseP5:verify
+npm run phaseP6:verify
 npm run gate:full
 ```
 

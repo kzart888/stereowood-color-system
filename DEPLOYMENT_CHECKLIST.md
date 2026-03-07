@@ -21,6 +21,7 @@
   - `PORT=9099`
   - `DB_FILE=/data/color_management.db`
   - `ENABLE_PILOT_UI=false` (default)
+  - `PILOT_DICTIONARY_WRITE=false` (default, enable only for pilot-write rehearsal/cutover candidate)
   - `TZ=Asia/Shanghai`
 - Volume mappings:
   - `/volume1/docker/stereowood-color-system/data:/data:rw`
@@ -53,6 +54,9 @@
    - `GET /api/artworks` -> `200`
    - root `/` loads correctly
    - if pilot enabled: `GET /pilot` -> `200`
+   - if pilot write enabled:
+     - `GET /api/config` has `features.pilotDictionaryWrite=true`
+     - `npm run phaseP6:pilot-write-smoke` passes against candidate-equivalent config
 4. Stop candidate container.
 5. Cut over production container to candidate image using unchanged env and volumes.
 
@@ -66,6 +70,7 @@
    - `/api/categories`
 4. No new browser console blocking errors.
 5. If pilot was enabled for rehearsal/cutover, verify `/pilot` is functional.
+6. If pilot write was enabled, verify dictionary writes and audit feed with operator account.
 
 ## Rollback
 1. Start previous known-good image tag with identical env and volumes.

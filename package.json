@@ -36,6 +36,10 @@
     "phaseP4:verify": "npm run phaseP4:audit-feed-smoke && npm run phase0:verify",
     "phaseP5:network-scan": "node scripts/phaseP5-network-scan.js",
     "phaseP5:verify": "npm run phaseP5:network-scan && npm run phase0:verify",
+    "phaseP6:pilot-write-smoke": "node scripts/phaseP6-pilot-write-smoke.js",
+    "phaseP6:pilot-rollback-rehearsal": "node scripts/phaseP6-pilot-rollback-rehearsal.js",
+    "phaseP6:pilot-write-docker-smoke": "node scripts/phaseP6-pilot-write-docker-smoke.js",
+    "phaseP6:verify": "npm run phaseP6:pilot-write-smoke && npm run phaseP6:pilot-rollback-rehearsal && npm run phaseP6:pilot-write-docker-smoke && npm run phase0:verify",
     "predeploy:check": "node scripts/predeploy-check.js",
     "gate:full": "node scripts/gate-full.js"
   },

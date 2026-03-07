@@ -7,12 +7,16 @@
 ## Current Sources of Truth
 
 1. Legacy stabilization history and gates:
+   - `docs/refactor/README.md`
    - `docs/refactor/IMPLEMENTATION_CHECKLIST.md`
    - `docs/refactor/PHASE5_REVIEW_GATE.md`
 2. Architecture upgrade plan and gates:
-   - `docs/architecture/IMPLEMENTATION_CHECKLIST.md`
-   - `docs/architecture/PHASE_A_REVIEW_GATE.md`
    - `docs/architecture/LATEST_ROADMAP_P0_P6.md`
+   - `docs/architecture/README.md`
+   - `docs/architecture/P5_2_REVIEW_GATE.md`
+   - `docs/architecture/P5_3_REVIEW_GATE.md`
+   - `docs/architecture/P6_1_REVIEW_GATE.md`
+   - `docs/architecture/P6_2_CUTOVER_DECISION_PACKAGE.md`
 3. Deployment and operations:
    - `DEPLOYMENT_CHECKLIST.md`
    - `docs/OPERATIONS.md`
@@ -27,9 +31,8 @@
   - `DB_FILE`
   - `BACKUP_DIR`
 
-## Next Focus (Phase B Planning)
+## Next Focus
 
-1. Complete internal auth UX (admin page + approval/reset flows).
-2. Add bottom timeline/audit panel UX for all key write surfaces.
-3. Continue deletion/dedup pass for mixed network access and compatibility fallbacks.
-4. Keep pilot modernization path gated and reversible.
+1. Operator decision on pilot-write production enablement using `docs/architecture/P6_2_CUTOVER_DECISION_PACKAGE.md`.
+2. Keep `PILOT_DICTIONARY_WRITE=false` by default until explicit go-live approval.
+3. Prepare next modernization slice (post-P6) under legacy-safe parallel rollout rules.

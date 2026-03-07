@@ -94,6 +94,14 @@
       upsertPurchaseLink: (baseURL, url) =>
         getClient().post(withBase(baseURL, '/api/purchase-links/upsert'), { url }),
     },
+    pilotDictionaries: {
+      upsertSupplier: (baseURL, name) =>
+        getClient().post(withBase(baseURL, '/api/pilot/dictionaries/suppliers/upsert'), { name }),
+      deleteSupplier: (baseURL, id) =>
+        getClient().delete(withBase(baseURL, `/api/pilot/dictionaries/suppliers/${id}`)),
+      upsertPurchaseLink: (baseURL, url) =>
+        getClient().post(withBase(baseURL, '/api/pilot/dictionaries/purchase-links/upsert'), { url }),
+    },
     history: {
       feed: (baseURL, params = {}) =>
         getClient().get(withBase(baseURL, '/api/history/feed'), { params }),
