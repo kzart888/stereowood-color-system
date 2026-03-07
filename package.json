@@ -9,14 +9,17 @@
     "backup": "node scripts/backup.js",
     "restore": "node scripts/restore.js",
     "smoke:phase0": "node scripts/phase0-smoke.js",
+    "smoke:docker": "node scripts/docker-smoke.js",
     "smoke:contract": "node scripts/api-contract-smoke.js",
     "audit:encoding": "node scripts/encoding-audit.js",
+    "audit:docs-contract": "node scripts/docs-contract-check.js",
     "audit:frontend-contract": "node scripts/frontend-runtime-contract.js",
     "audit:boundaries": "node scripts/check-architecture-boundaries.js",
     "phase0:verify": "npm run audit:encoding && npm run smoke:phase0",
     "phaseA:a0:verify": "npm run phase0:verify && npm run audit:frontend-contract && npm run smoke:contract",
     "phaseA:a1:verify": "npm run phaseA:a0:verify && npm run audit:boundaries",
     "phaseA:a3:db-dryrun": "node scripts/phaseA-a3-db-dryrun.js",
+    "phaseA:a3:db-dryrun:strict": "node scripts/phaseA-a3-db-dryrun.js --strict-trio",
     "phaseA:a3:api-smoke": "node scripts/phaseA-a3-api-smoke.js",
     "phaseA:a3:verify": "npm run phaseA:a3:db-dryrun && npm run phaseA:a3:api-smoke && npm run phase0:verify",
     "phaseA:a4:auth-smoke": "node scripts/phaseA-a4-auth-smoke.js",
@@ -26,7 +29,9 @@
     "phaseA:a5:contract-snapshot": "node scripts/phaseA-a5-conflict-contract.js",
     "phaseA:a5:verify": "npm run phaseA:a5:stale-smoke && npm run phaseA:a5:contract-snapshot && npm run phase0:verify",
     "phaseA:a7:pilot-parity": "node scripts/phaseA-a7-pilot-parity.js",
-    "phaseA:a7:verify": "npm run phaseA:a7:pilot-parity && npm run phase0:verify"
+    "phaseA:a7:verify": "npm run phaseA:a7:pilot-parity && npm run phase0:verify",
+    "predeploy:check": "node scripts/predeploy-check.js",
+    "gate:full": "node scripts/gate-full.js"
   },
   "keywords": [
     "color-management",

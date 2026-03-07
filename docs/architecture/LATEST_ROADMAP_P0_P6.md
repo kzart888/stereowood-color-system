@@ -27,8 +27,8 @@ Your goals are reasonable and are preserved in this roadmap:
 | Phase | Title | Status | Notes |
 |---|---|---|---|
 | P0 | Branch and baseline decision | Completed | Phase A merged posture confirmed; Docker rehearsal recovered and passing. |
-| P1 | Ops/document alignment | In progress | Most contract fixes exist; final doc cleanup/indexing still needed. |
-| P2 | Test system hardening | In progress | Core verify scripts exist; full one-command local+docker gate still missing. |
+| P1 | Ops/document alignment | Completed | Contract matrix, archive cleanup, and P1 gate are published. |
+| P2 | Test system hardening | Completed | Full one-command gate, Docker smoke automation, strict dry-run mode, and predeploy checker are published. |
 | P3 | Internal auth completion | Partially complete | Backend foundation exists; admin workflow UI and ops toggles need completion. |
 | P4 | History/audit UX | Partially complete | Backend audit/history events exist; bottom timeline panel UX not finished. |
 | P5 | Obsolete/duplicate cleanup | In progress | Major split done; mixed network paths and residual dead docs/code still remain. |
@@ -42,14 +42,18 @@ Target outcome:
 - One consistent operator story across local, Docker, and Synology.
 
 Checklist:
-- [ ] Confirm all operational docs point to `PORT=9099` and `DB_FILE=/data/color_management.db`.
-- [ ] Confirm backup/restore docs match current scripts (`npm run backup`, `npm run restore`).
+- [x] Confirm all operational docs point to `PORT=9099` and `DB_FILE=/data/color_management.db`.
+- [x] Confirm backup/restore docs match current scripts (`npm run backup`, `npm run restore`).
 - [x] Remove or archive stale docs that describe superseded branch flows or blocked Docker states.
 - [x] Add a single docs entry index (`docs/architecture/README.md`) and keep it updated.
 - [x] Update `docs/CHANGELOG.md` with a docs/status refresh entry.
 
 Gate:
-- [ ] No contradictory runtime/deploy instructions across `README.md`, `docs/OPERATIONS.md`, `DEPLOYMENT_CHECKLIST.md`, and architecture docs.
+- [x] No contradictory runtime/deploy instructions across `README.md`, `docs/OPERATIONS.md`, `DEPLOYMENT_CHECKLIST.md`, and architecture docs.
+
+Evidence:
+- `docs/architecture/P1_1_DOC_CONTRACT_MATRIX.md`
+- `docs/architecture/P1_REVIEW_GATE.md`
 
 ## P2: Test System Hardening
 
@@ -57,19 +61,22 @@ Target outcome:
 - One command that proves release readiness for local and Docker rehearse path.
 
 Checklist:
-- [ ] Add a one-command gate script (example: `npm run gate:full`) covering:
-  - [ ] encoding audit
-  - [ ] phase0 smoke
-  - [ ] key phase A contract checks
-  - [ ] Docker smoke on temporary port
-- [ ] Add explicit DB dry-run verification for copied trio:
-  - [ ] `color_management.db`
-  - [ ] `color_management.db-wal`
-  - [ ] `color_management.db-shm`
-- [ ] Add pre-deploy checklist script/doc for operator handoff.
+- [x] Add a one-command gate script (`npm run gate:full`) covering:
+  - [x] encoding audit
+  - [x] phase0 smoke
+  - [x] key phase A contract checks
+  - [x] Docker smoke on temporary port
+- [x] Add explicit DB dry-run verification support for copied trio:
+  - [x] `color_management.db`
+  - [x] `color_management.db-wal`
+  - [x] `color_management.db-shm`
+- [x] Add pre-deploy checklist script/doc for operator handoff.
 
 Gate:
-- [ ] Gate command passes on developer machine and a clean Docker rehearsal.
+- [x] Gate command passes on developer machine and a clean Docker rehearsal.
+
+Evidence:
+- `docs/architecture/P2_REVIEW_GATE.md`
 
 ## P3: Internal Auth Completion
 

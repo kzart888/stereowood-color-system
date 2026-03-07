@@ -1,7 +1,7 @@
 # Agent Notes
 
 - Last updated: 2026-03-07
-- Active branch baseline for modernization work: `architecture-upgrade` (Phase A complete).
+- Active branch baseline for modernization work: `main` (Phase A merged and aligned).
 - Current production baseline: legacy UI served by backend (`/` on port `9099`).
 
 ## Current Sources of Truth
@@ -12,6 +12,7 @@
 2. Architecture upgrade plan and gates:
    - `docs/architecture/IMPLEMENTATION_CHECKLIST.md`
    - `docs/architecture/PHASE_A_REVIEW_GATE.md`
+   - `docs/architecture/LATEST_ROADMAP_P0_P6.md`
 3. Deployment and operations:
    - `DEPLOYMENT_CHECKLIST.md`
    - `docs/OPERATIONS.md`

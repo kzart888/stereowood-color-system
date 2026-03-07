@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased (2026-03-07, P1/P2)
+### P1/P2 Execution: Docs Alignment + Test Hardening
+- Added docs/runtime contract audit matrix and P1 review gate.
+- Archived obsolete top-level legacy plan docs under `docs/archive/legacy-plans/2026-03-top-level/`.
+- Added automated docs contract checker: `npm run audit:docs-contract`.
+- Added one-command full gate: `npm run gate:full`.
+- Added Docker smoke automation: `npm run smoke:docker`.
+- Added predeploy checklist automation: `npm run predeploy:check`.
+- Added strict DB dry-run mode support: `npm run phaseA:a3:db-dryrun:strict`.
+- Published P2 gate report: `docs/architecture/P2_REVIEW_GATE.md`.
+
 ## v0.9.9 (2026-03-07)
 ### Documentation and Execution Alignment Refresh
 - Archived completed one-time architecture execution logs into `docs/archive/architecture/2026-03-phase-a-closure/`.

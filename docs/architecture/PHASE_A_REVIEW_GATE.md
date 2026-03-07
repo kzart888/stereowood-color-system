@@ -26,7 +26,7 @@ Scope: Full-repo final gate for Phase A (`architecture-upgrade` branch)
    - File: `package.json`
    - Evidence: `npm audit --omit=dev` reports 5 high vulnerabilities through transitive `sqlite3` toolchain (`node-gyp`/`tar`), already documented in prior phases.
 2. Some historical docs still reference archived dialog-era implementation details.
-   - Files: `docs/COLOR_DICTIONARY_IMPLEMENTATION.md`, `docs/COLOR_PALETTE_UI_REDESIGN.md`
+   - Files: `docs/archive/legacy-plans/2026-03-top-level/COLOR_DICTIONARY_IMPLEMENTATION.md`, `docs/archive/legacy-plans/2026-03-top-level/COLOR_PALETTE_UI_REDESIGN.md`
    - Impact: documentation noise only; no active runtime/deploy impact.
 
 ## Open Questions / Assumptions

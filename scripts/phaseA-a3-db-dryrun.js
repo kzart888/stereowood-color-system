@@ -9,10 +9,18 @@ const PORT = Number.parseInt(process.env.A3_DB_DRYRUN_PORT || process.env.PORT |
 const START_TIMEOUT_MS = 30000;
 const POLL_INTERVAL_MS = 500;
 
-const sourceDir = path.join(__dirname, '..', 'backend', 'production_db', 'data');
-const sourceDb = path.join(sourceDir, 'color_management.db');
-const sourceWal = path.join(sourceDir, 'color_management.db-wal');
-const sourceShm = path.join(sourceDir, 'color_management.db-shm');
+const sourceDir = process.env.A3_DB_SOURCE_DIR
+  ? path.resolve(process.env.A3_DB_SOURCE_DIR)
+  : path.join(__dirname, '..', 'backend', 'production_db', 'data');
+const sourceDb = process.env.A3_DB_SOURCE_FILE
+  ? path.resolve(process.env.A3_DB_SOURCE_FILE)
+  : path.join(sourceDir, 'color_management.db');
+const sourceWal = `${sourceDb}-wal`;
+const sourceShm = `${sourceDb}-shm`;
+const strictTrioFromEnv =
+  String(process.env.A3_DB_STRICT_TRIO || 'false').trim().toLowerCase() === 'true' ||
+  String(process.env.A3_DB_STRICT_TRIO || '').trim() === '1';
+const strictTrio = strictTrioFromEnv || process.argv.includes('--strict-trio');
 
 function assert(condition, message) {
   if (!condition) {
@@ -99,6 +107,10 @@ async function main() {
   assert(fs.existsSync(sourceDb), `Missing source DB: ${sourceDb}`);
   const hasSourceWal = fs.existsSync(sourceWal);
   const hasSourceShm = fs.existsSync(sourceShm);
+  if (strictTrio) {
+    assert(hasSourceWal, `A3 strict trio enabled but WAL is missing: ${sourceWal}`);
+    assert(hasSourceShm, `A3 strict trio enabled but SHM is missing: ${sourceShm}`);
+  }
 
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-a3-db-dryrun-'));
   const copiedDb = path.join(tmpRoot, 'color_management.db');
@@ -109,6 +121,10 @@ async function main() {
   }
   if (hasSourceShm) {
     fs.copyFileSync(sourceShm, `${copiedDb}-shm`);
+  }
+  if (strictTrio) {
+    assert(fs.existsSync(`${copiedDb}-wal`), 'Strict trio copy check failed for WAL sidecar.');
+    assert(fs.existsSync(`${copiedDb}-shm`), 'Strict trio copy check failed for SHM sidecar.');
   }
 
   const backendEntry = path.join(__dirname, '..', 'backend', 'server.js');
@@ -175,7 +191,9 @@ async function main() {
       process.stdout.write(
         [
           `A3_DB_DRYRUN_PORT=${PORT}`,
+          `A3_DB_SOURCE=${sourceDb}`,
           `A3_DB_DRYRUN_COPY=${copiedDb}`,
+          `A3_DB_STRICT_TRIO=${strictTrio}`,
           `A3_SOURCE_WAL_PRESENT=${hasSourceWal}`,
           `A3_SOURCE_SHM_PRESENT=${hasSourceShm}`,
           'A3_MIGRATION_AUDIT_TABLES=OK',
