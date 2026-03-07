@@ -137,4 +137,8 @@ Gate:
 - [x] `npm run phaseA:a4:verify`
 - [x] `npm run phaseA:a5:verify`
 - [x] `npm run phaseA:a7:verify`
-- [ ] Docker daemon health check (`docker info`) still failing with local Desktop API 500 and needs operator-level remediation.
+- [x] Docker daemon health check and local rehearsal recovered on Windows (2026-03-07); smoke checks passed on `http://localhost:9199` for `/health`, `/api/config`, `/api/custom-colors`, `/api/artworks`, and `/`.
+
+## Post-Phase-A Forward Plan
+- [x] Completed one-time merge/premerge execution logs have been archived under `docs/archive/architecture/2026-03-phase-a-closure/`.
+- [x] Current roadmap and execution checklist moved to `docs/architecture/LATEST_ROADMAP_P0_P6.md`.

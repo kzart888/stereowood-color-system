@@ -1,0 +1,22 @@
+# Architecture Docs Index
+
+Last updated: 2026-03-07
+
+## Active (Current Source of Truth)
+- `docs/architecture/LATEST_ROADMAP_P0_P6.md` - consolidated future work roadmap and execution checklist.
+- `docs/architecture/IMPLEMENTATION_CHECKLIST.md` - Phase A implementation history and gate completion.
+- `docs/architecture/PHASE_A_BLUEPRINT.md` - original Phase A architecture blueprint.
+- `docs/architecture/MODULE_MAP.md` - module boundaries and target ownership map.
+- `docs/architecture/decisions/README.md` - architecture decision record index.
+
+## Active (Evidence and Contracts)
+- `docs/architecture/PHASE_A_REVIEW_GATE.md`
+- `docs/architecture/PHASE_A7_PILOT_CONTRACT.md`
+- `docs/architecture/PHASE_A7_PILOT_RUNBOOK.md`
+- `docs/architecture/PHASE_A7_SYNOLOGY_REHEARSAL_EVIDENCE.md`
+
+## Archived (Completed One-Time Execution Logs)
+- `docs/archive/architecture/2026-03-phase-a-closure/README.md`
+
+Note:
+- If a doc conflicts with `docs/architecture/LATEST_ROADMAP_P0_P6.md`, follow the roadmap doc.

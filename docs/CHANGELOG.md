@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.9 (2026-03-07)
+### Documentation and Execution Alignment Refresh
+- Archived completed one-time architecture execution logs into `docs/archive/architecture/2026-03-phase-a-closure/`.
+- Added architecture docs index: `docs/architecture/README.md`.
+- Published consolidated future roadmap/checklist: `docs/architecture/LATEST_ROADMAP_P0_P6.md`.
+- Updated Phase A implementation checklist to reflect recovered local Docker rehearsal status.
+
 ## v0.9.8 (2026-02-11)
 ### Legacy Stabilization Closure (Phase 0-5)
 - Stabilized production contract on legacy UI + Express + SQLite.
