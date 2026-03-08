@@ -111,6 +111,21 @@
     throw new Error('Artworks gateway addSchemeAsset() is unavailable');
   }
 
+  async function getSchemeAssetPreview(options = {}) {
+    const baseURL = getBaseURL(options.baseURL);
+    const artId = options.artId;
+    const schemeId = options.schemeId;
+    const assetId = options.assetId;
+    if (!artId || !schemeId || !assetId) {
+      throw new Error('artId, schemeId and assetId are required');
+    }
+    const gateway = getGateway();
+    if (gateway && gateway.artworks && typeof gateway.artworks.getSchemeAssetPreview === 'function') {
+      return gateway.artworks.getSchemeAssetPreview(baseURL, artId, schemeId, assetId);
+    }
+    throw new Error('Artworks gateway getSchemeAssetPreview() is unavailable');
+  }
+
   async function deleteSchemeAsset(options = {}) {
     const baseURL = getBaseURL(options.baseURL);
     const artId = options.artId;
@@ -162,6 +177,7 @@
     deleteScheme,
     deleteArtwork,
     listSchemeAssets,
+    getSchemeAssetPreview,
     addSchemeAsset,
     deleteSchemeAsset,
     reorderSchemeAssets,

@@ -171,6 +171,10 @@
     table-layout: fixed;
 }
 
+.mapping-table td {
+    vertical-align: top;
+}
+
 .layer-table th,
 .layer-table td {
     border: 1px solid #ddd;
@@ -207,14 +211,32 @@
 }
 
 /* 层号输入框样式 */
-.layer-cell .el-input-number {
+.layer-cell .el-input-number,
+.layer-number-input {
     width: 60px;
 }
 
-.layer-cell .el-input-number .el-input__wrapper {
+.layer-cell .el-input-number .el-input__wrapper,
+.layer-number-input .el-input__wrapper {
     width: 60px;
     padding-left: 6px;
     padding-right: 36px;
+}
+
+.layer-input-cell {
+    display: grid;
+    grid-template-rows: auto 18px;
+    justify-items: center;
+    align-items: start;
+    row-gap: 4px;
+    min-height: 54px;
+}
+
+.layer-dup-indicator {
+    min-height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* 重复标记 - 改为内联显示 */
@@ -233,26 +255,27 @@
 
 /* 方案名称输入框样式 */
 .scheme-name-input {
-    width: 200px !important;
-    display: inline-block;
+    width: 220px !important;
+    max-width: 220px;
 }
 
 .scheme-name-input .el-input__wrapper {
-    width: 200px;
-    margin: 0 6px;
+    width: 220px;
 }
 
 .scheme-bracket-end {
-    margin-left: 20px;
+    margin-left: 0;
 }
 
 /* 颜色代码单元格样式 */
 .color-code-cell {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    width: auto;
-    min-width: 200px;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    max-width: 520px;
+    align-items: flex-start;
 }
 
 /* 颜色选项内容样式 */
@@ -558,23 +581,37 @@
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr) auto;
     gap: 10px;
-    align-items: center;
+    align-items: start;
+}
+
+.scheme-related-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
 }
 
 .scheme-related-name {
-    font-size: 12px;
-    color: var(--sw-text-secondary);
+    font-size: 13px;
+    color: var(--sw-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.scheme-related-sub {
+    font-size: 12px;
+    color: var(--sw-text-muted);
+    line-height: 1.25;
+}
+
 .scheme-related-actions {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-end;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 146px;
 }
 
 .scheme-related-actions .el-button + .el-button {
@@ -600,28 +637,31 @@
 }
 
 .inline-scheme-name {
-    display: inline-flex;
+    display: grid;
+    grid-template-columns: max-content max-content 220px max-content auto;
     align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
+    column-gap: 6px;
+    row-gap: 4px;
     width: 100%;
 }
 
 .mapping-table th:nth-child(2),
 .mapping-table td:nth-child(2) {
-    min-width: 170px;
+    width: calc(100% - 188px);
+    min-width: 0;
 }
 
 .mapping-table th:nth-child(3),
 .mapping-table td:nth-child(3) {
-    width: 78px;
+    width: 100px;
 }
 
 .mapping-action-btn {
-    width: 30px !important;
-    height: 30px !important;
-    border-radius: 6px !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
     padding: 0 !important;
+    margin: 0 !important;
 }
 
 .add-button-container {
@@ -634,6 +674,91 @@
     font-size: 12px;
     color: var(--sw-text-muted);
     line-height: 1.35;
+}
+
+.mapping-formula-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 4px;
+    width: 100%;
+}
+
+.mapping-formula-chips .mf-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 8px;
+    background: #f0f2f5;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--sw-text-secondary);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.asset-preview-dialog .el-dialog__body {
+    padding-top: 12px;
+}
+
+.asset-preview-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--sw-text-secondary);
+}
+
+.asset-preview-loading {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--sw-text-muted);
+}
+
+.asset-preview-body {
+    min-height: 120px;
+}
+
+.asset-preview-text {
+    margin: 0;
+    max-height: 420px;
+    overflow: auto;
+    background: #f8f9fb;
+    border: 1px solid #e6e8ed;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: "Cascadia Mono", "Consolas", monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.asset-preview-table-wrap {
+    max-height: 420px;
+    overflow: auto;
+    border: 1px solid #e6e8ed;
+    border-radius: 8px;
+}
+
+.asset-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.asset-preview-table td {
+    border: 1px solid #eceef3;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--sw-text-secondary);
+    vertical-align: top;
+    white-space: nowrap;
 }
 
 

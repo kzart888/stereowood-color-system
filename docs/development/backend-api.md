@@ -58,6 +58,7 @@ Source: `backend/routes/artworks.js` -> `backend/services/ArtworkService.js` -> 
 - `PUT /api/artworks/:artworkId/schemes/:schemeId`
 - `DELETE /api/artworks/:artworkId/schemes/:schemeId`
 - `GET /api/artworks/:artworkId/schemes/:schemeId/assets`
+- `GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/preview`
 - `GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/download`
 - `POST /api/artworks/:artworkId/schemes/:schemeId/assets`
 - `DELETE /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId`
@@ -71,13 +72,25 @@ Key request details:
 - `layers` accepts array JSON or JSON-stringified array.
 - Scheme update (`PUT`) accepts optional `version` for optimistic locking.
 - Scheme asset upload field is `asset`.
+- Scheme asset upload supports optional `asset_last_modified` (timestamp or ISO string) for source file time.
 - Scheme asset upload accepts `image/*`, `doc`, `docx`, `xls`, `xlsx`, `txt`, `md`.
 - Scheme related-asset maximum count: `6` per scheme.
 - Asset download endpoint always returns attachment stream with UTF-8 filename support (`Content-Disposition` with `filename*`).
 - `/api/artworks` scheme payload appends:
   - `thumbnail_thumb_path`
   - `initial_thumbnail_thumb_path`
-  - `related_assets[]` (each item includes `thumb_path` for images).
+  - `related_assets[]` (each item includes `thumb_path`, `source_modified_at`, `file_type_label`).
+
+Asset preview behavior:
+- `GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/preview` returns JSON with:
+  - `asset`
+  - `preview.kind` in `image | text | table | unsupported`
+  - `preview.warning` when parser fallback is used
+- Preview parser supports:
+  - `txt` / `md` (text preview)
+  - `docx` (raw text preview)
+  - `xlsx` / `xls` (table preview, first sheet)
+  - `doc` falls back to unsupported warning with download guidance.
 
 Conflict behavior:
 - `VERSION_CONFLICT` -> `409` with payload keys:

@@ -79,7 +79,7 @@ const ArtworksComponent = {
                           class="related-asset-card"
                           v-for="asset in getSchemeRelatedAssets(scheme)"
                           :key="asset.id"
-                          @click="openRelatedAsset(asset, $event)"
+                          @click="openRelatedAsset(asset, $event, art.id, scheme.id)"
                           :title="asset.original_name || asset.file_path"
                         >
                           <img v-if="asset.is_image" :src="assetThumbURL(asset)" @error="onRelatedAssetThumbError($event, asset)" />
@@ -363,9 +363,9 @@ const ArtworksComponent = {
           <el-form-item label="方案名称" prop="name" required>
             <div class="inline-scheme-name dup-inline-row">
               <span class="inline-art-title">{{ editingArtTitle }}</span>
-              <span class="scheme-sep"> - [ </span>
+              <span class="scheme-sep">- [</span>
               <el-input v-model.trim="schemeForm.name" placeholder="例如：金黄" class="scheme-name-input" :maxlength="10" />
-              <span class="scheme-bracket-end"> ]</span>
+              <span class="scheme-bracket-end">]</span>
               <span v-if="schemeNameDuplicate" class="dup-msg">名称重复</span> <!-- 统一查重：仅内联显示，不再弹出 Toast -->
             </div>
           </el-form-item>
@@ -442,7 +442,11 @@ const ArtworksComponent = {
                       <small>查看详情</small>
                     </span>
                   </button>
-                  <span class="scheme-related-name">{{ asset.original_name || asset.file_path }}</span>
+                  <div class="scheme-related-meta">
+                    <span class="scheme-related-name">{{ asset.original_name || asset.file_path }}</span>
+                    <span class="scheme-related-sub">文件时间：{{ assetModifiedTimeLabel(asset) }}</span>
+                    <span class="scheme-related-sub">文件类型：{{ assetTypeLabel(asset) }}</span>
+                  </div>
                   <div class="scheme-related-actions">
                     <el-button size="small" plain @click="downloadRelatedAsset(asset)">下载</el-button>
                     <el-button size="small" type="danger" plain @click="removeExistingRelatedAsset(asset)">删除</el-button>
@@ -460,7 +464,11 @@ const ArtworksComponent = {
                       <small>待上传</small>
                     </span>
                   </button>
-                  <span class="scheme-related-name">{{ asset.name }}</span>
+                  <div class="scheme-related-meta">
+                    <span class="scheme-related-name">{{ asset.name }}</span>
+                    <span class="scheme-related-sub">文件时间：{{ assetModifiedTimeLabel(asset) }}</span>
+                    <span class="scheme-related-sub">文件类型：{{ assetTypeLabel(asset) }}</span>
+                  </div>
                   <div class="scheme-related-actions">
                     <el-button size="small" type="danger" plain @click="removePendingRelatedAsset(asset.uid)">移除</el-button>
                   </div>
@@ -485,13 +493,15 @@ const ArtworksComponent = {
                 <tbody>
                   <tr v-for="(m, idx) in schemeForm.mappings" :key="idx">
                     <td>
-                      <div class="layer-cell">
-                        <template v-if="formDupCounts[m.layer] > 1">
-                          <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + formDupCounts[m.layer] + '次颜色'" placement="top">
-                            <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(m.layer) }">!</span>
-                          </el-tooltip>
-                        </template>
-                        <el-input-number v-model="m.layer" :min="1" :max="200" controls-position="right" size="small" />
+                      <div class="layer-input-cell">
+                        <el-input-number class="layer-number-input" v-model="m.layer" :min="1" :max="200" controls-position="right" size="small" />
+                        <div class="layer-dup-indicator">
+                          <template v-if="formDupCounts[m.layer] > 1">
+                            <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + formDupCounts[m.layer] + '次颜色'" placement="top">
+                              <span class="dup-badge" :style="{ backgroundColor: dupBadgeColor(m.layer) }">!</span>
+                            </el-tooltip>
+                          </template>
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -529,9 +539,9 @@ const ArtworksComponent = {
                         
                         <div v-if="m.colorCode && colorByCode(m.colorCode)" class="mapping-formula-display">
                           <template v-if="parseFormulaLines(colorByCode(m.colorCode).formula).length">
-                            <div class="mapping-formula-chips" style="display:inline-flex; flex-wrap:wrap; gap:4px;">
+                            <div class="mapping-formula-chips">
                               <el-tooltip v-for="(line,i) in parseFormulaLines(colorByCode(m.colorCode).formula)" :key="'mf'+idx+'-'+i" :content="line" placement="top">
-                                <span class="mf-chip" style="display:inline-block; padding:2px 6px; background:#f0f0f0; border-radius:3px; font-size:11px;">{{ line }}</span>
+                                <span class="mf-chip">{{ line }}</span>
                               </el-tooltip>
                             </div>
                           </template>
@@ -588,6 +598,49 @@ const ArtworksComponent = {
           </el-button>
         </template>
       </el-dialog>
+
+      <el-dialog
+        class="asset-preview-dialog"
+        v-model="showAssetPreviewDialog"
+        :title="assetPreviewTitle"
+        width="860px"
+        append-to-body
+      >
+        <div class="asset-preview-meta" v-if="assetPreviewData && assetPreviewData.asset">
+          <span>文件名：{{ assetPreviewData.asset.original_name || assetPreviewData.asset.file_path || '-' }}</span>
+          <span>文件时间：{{ assetModifiedTimeLabel(assetPreviewData.asset) }}</span>
+          <span>文件类型：{{ assetTypeLabel(assetPreviewData.asset) }}</span>
+          <span>文件大小：{{ assetSizeLabel(assetPreviewData.asset) }}</span>
+        </div>
+        <div class="asset-preview-loading" v-if="assetPreviewLoading">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          加载预览中...
+        </div>
+        <div v-else class="asset-preview-body">
+          <pre v-if="assetPreviewData.preview && assetPreviewData.preview.kind === 'text'" class="asset-preview-text">{{ assetPreviewData.preview.text || '暂无文本内容' }}</pre>
+          <div v-else-if="assetPreviewData.preview && assetPreviewData.preview.kind === 'table'" class="asset-preview-table-wrap">
+            <table class="asset-preview-table">
+              <tbody>
+                <tr v-for="(row, rowIndex) in assetPreviewData.preview.rows || []" :key="'apr-'+rowIndex">
+                  <td v-for="(cell, cellIndex) in row" :key="'apc-'+rowIndex+'-'+cellIndex">{{ cell }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="meta-text" v-if="assetPreviewData.preview.truncated">表格较大，仅展示部分内容。</div>
+          </div>
+          <div v-else-if="assetPreviewData.preview && assetPreviewData.preview.kind === 'image'" class="meta-text">
+            图片文件请直接点击缩略图查看大图。
+          </div>
+          <div v-else class="meta-text">
+            {{ (assetPreviewData.preview && assetPreviewData.preview.warning) || '当前文件类型暂不支持内置预览，可下载后查看。' }}
+          </div>
+          <div class="meta-text" v-if="assetPreviewData.preview && assetPreviewData.preview.truncated && assetPreviewData.preview.kind === 'text'">文本较长，仅展示部分内容。</div>
+        </div>
+        <template #footer>
+          <el-button @click="showAssetPreviewDialog = false">关闭</el-button>
+          <el-button type="primary" :disabled="!assetPreviewData || !assetPreviewData.fileUrl" @click="openAssetPreviewSourceFile">打开原文件</el-button>
+        </template>
+      </el-dialog>
     </div>
   `,
   inject: ['globalData'],
@@ -635,6 +688,10 @@ const ArtworksComponent = {
   , highlightColorCode: ''
   , _highlightTimer: null
   , _schemeRefs: new Map()
+  , showAssetPreviewDialog: false
+  , assetPreviewLoading: false
+  , assetPreviewTitle: '相关资料预览'
+  , assetPreviewData: { asset: null, preview: { kind: 'unsupported', warning: '' }, fileUrl: null }
   , // Filter options
     sizeFilters: ['巨尺寸', '大尺寸', '中尺寸', '小尺寸'],
     selectedSizes: [],

@@ -10,6 +10,11 @@
    ========================================================= */
 
 const { db } = require('./index');
+const fs = require('fs').promises;
+const path = require('path');
+const {
+  normalizeUploadedOriginalName,
+} = require('../domains/shared/asset-file-utils');
 
 // 宸ュ叿锛氭鏌ュ垪鏄惁瀛樺湪锛堢敤浜庡鍒楄縼绉伙級
 function columnExists(table, column) {
@@ -27,6 +32,15 @@ function runSafe(sql, params = []) {
     db.run(sql, params, function (err) {
       if (err) return reject(err);
       resolve(this);
+    });
+  });
+}
+
+function allRows(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
     });
   });
 }
@@ -185,6 +199,7 @@ async function runMigrations() {
         file_path TEXT NOT NULL,
         mime_type TEXT,
         file_size INTEGER,
+        source_modified_at DATETIME,
         sort_order INTEGER NOT NULL DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -193,6 +208,9 @@ async function runMigrations() {
     `);
     await runSafe(`CREATE INDEX IF NOT EXISTS idx_color_scheme_assets_scheme_sort ON color_scheme_assets(scheme_id, sort_order)`);
     await runSafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_color_scheme_assets_scheme_file ON color_scheme_assets(scheme_id, file_path)`);
+    if (!(await columnExists('color_scheme_assets', 'source_modified_at'))) {
+      await runSafe(`ALTER TABLE color_scheme_assets ADD COLUMN source_modified_at DATETIME`);
+    }
 
     // Backfill existing initial thumbnail into first related asset slot when missing.
     await runSafe(`
@@ -203,7 +221,8 @@ async function runMigrations() {
         file_path,
         mime_type,
         file_size,
-        sort_order
+        sort_order,
+        source_modified_at
       )
       SELECT
         cs.id,
@@ -215,7 +234,8 @@ async function runMigrations() {
         COALESCE(
           (SELECT MAX(a.sort_order) + 1 FROM color_scheme_assets a WHERE a.scheme_id = cs.id),
           1
-        )
+        ),
+        NULL
       FROM color_schemes cs
       WHERE cs.initial_thumbnail_path IS NOT NULL
         AND TRIM(cs.initial_thumbnail_path) <> ''
@@ -225,6 +245,54 @@ async function runMigrations() {
             AND a.file_path = cs.initial_thumbnail_path
         )
     `);
+
+    // Backfill related asset source modified time from file mtime when available.
+    const uploadsDir = path.join(__dirname, '..', 'uploads');
+    const assetsMissingModifiedTime = await allRows(
+      `
+      SELECT id, file_path
+      FROM color_scheme_assets
+      WHERE source_modified_at IS NULL
+        AND file_path IS NOT NULL
+        AND TRIM(file_path) <> ''
+      `
+    );
+    for (const asset of assetsMissingModifiedTime) {
+      const storedName = path.basename(String(asset.file_path || '').trim());
+      if (!storedName) {
+        continue;
+      }
+      const absolutePath = path.join(uploadsDir, storedName);
+      try {
+        const stat = await fs.stat(absolutePath);
+        if (stat && stat.isFile()) {
+          await runSafe(
+            `UPDATE color_scheme_assets SET source_modified_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [stat.mtime.toISOString(), asset.id]
+          );
+        }
+      } catch {
+        // best-effort backfill only
+      }
+    }
+
+    // Best-effort fix for mojibake legacy file names in related assets.
+    const assetNames = await allRows(`
+      SELECT id, original_name
+      FROM color_scheme_assets
+      WHERE original_name IS NOT NULL
+        AND TRIM(original_name) <> ''
+    `);
+    for (const row of assetNames) {
+      const currentName = String(row.original_name || '');
+      const normalizedName = normalizeUploadedOriginalName(currentName);
+      if (normalizedName && normalizedName !== currentName) {
+        await runSafe(
+          `UPDATE color_scheme_assets SET original_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          [normalizedName, row.id]
+        );
+      }
+    }
 
     // 杩佺Щ锛歝ustom_colors_history 鍘婚櫎瀵?custom_colors 鐨勫閿害鏉燂紝閬垮厤鍒犻櫎鐖惰褰曟椂鍙楅樆
     // 妫€娴嬫槸鍚﹀瓨鍦ㄥ閿紩鐢?

@@ -402,6 +402,7 @@ function getSchemeAssets(schemeId) {
                 file_path,
                 mime_type,
                 file_size,
+                source_modified_at,
                 sort_order,
                 created_at,
                 updated_at
@@ -434,6 +435,7 @@ function getSchemeAssetsForSchemeIds(schemeIds = []) {
                 file_path,
                 mime_type,
                 file_size,
+                source_modified_at,
                 sort_order,
                 created_at,
                 updated_at
@@ -471,6 +473,7 @@ function createSchemeAsset(assetData) {
         file_path,
         mime_type,
         file_size,
+        source_modified_at,
         sort_order,
     } = assetData;
 
@@ -484,10 +487,20 @@ function createSchemeAsset(assetData) {
                 file_path,
                 mime_type,
                 file_size,
+                source_modified_at,
                 sort_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `,
-            [scheme_id, asset_type, original_name, file_path, mime_type, file_size, sort_order],
+            [
+                scheme_id,
+                asset_type,
+                original_name,
+                file_path,
+                mime_type,
+                file_size,
+                source_modified_at || null,
+                sort_order,
+            ],
             function onInsert(err) {
                 if (err) reject(err);
                 else resolve(this.lastID);
@@ -508,6 +521,7 @@ function getSchemeAssetById(assetId) {
                 file_path,
                 mime_type,
                 file_size,
+                source_modified_at,
                 sort_order,
                 created_at,
                 updated_at

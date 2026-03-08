@@ -11,8 +11,19 @@ const AuditService = require('../domains/audit/service');
 const UploadImageService = require('./upload-image-service');
 const fs = require('fs').promises;
 const path = require('path');
+const mammoth = require('mammoth');
+const XLSX = require('xlsx');
+const {
+    detectExtension,
+    normalizeUploadedOriginalName,
+    normalizeSourceModifiedAtInput,
+    resolveAssetFileTypeLabel,
+} = require('../domains/shared/asset-file-utils');
 
 const MAX_SCHEME_ASSETS = 6;
+const MAX_TEXT_PREVIEW_CHARS = 30000;
+const MAX_TABLE_PREVIEW_ROWS = 120;
+const MAX_TABLE_PREVIEW_COLS = 16;
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 const DOC_MIME_SET = new Set([
     'application/msword',
@@ -134,14 +145,17 @@ class ArtworkService {
         if (!asset) return null;
         const assetType = this.resolveAssetType(asset.mime_type, asset.file_path, asset.asset_type);
         const isImage = assetType === 'image';
+        const normalizedName = normalizeUploadedOriginalName(asset.original_name || asset.file_path || '');
         return {
             id: asset.id,
             scheme_id: asset.scheme_id,
             asset_type: assetType,
-            original_name: asset.original_name,
+            original_name: normalizedName || asset.file_path,
             file_path: asset.file_path,
             mime_type: asset.mime_type || null,
             file_size: Number.isFinite(asset.file_size) ? asset.file_size : null,
+            source_modified_at: asset.source_modified_at || null,
+            file_type_label: resolveAssetFileTypeLabel(asset),
             sort_order: Number.isFinite(asset.sort_order) ? asset.sort_order : 0,
             created_at: asset.created_at || null,
             updated_at: asset.updated_at || null,
@@ -468,7 +482,7 @@ class ArtworkService {
         return assets.map((asset) => this.toPublicSchemeAsset(asset));
     }
 
-    async getSchemeAssetDownloadPayload(artworkId, schemeId, assetId) {
+    async resolveSchemeAssetFileContext(artworkId, schemeId, assetId) {
         const scheme = await artworkQueries.getSchemeById(schemeId);
         if (!scheme || Number(scheme.artwork_id) !== Number(artworkId)) {
             throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
@@ -491,7 +505,16 @@ class ArtworkService {
             throw createArtworkError('Asset file not found.', 404, 'NOT_FOUND');
         }
 
-        const originalName = String(asset.original_name || '').trim();
+        return { scheme, asset, storedName, absolutePath };
+    }
+
+    async getSchemeAssetDownloadPayload(artworkId, schemeId, assetId) {
+        const { asset, storedName, absolutePath } = await this.resolveSchemeAssetFileContext(
+            artworkId,
+            schemeId,
+            assetId
+        );
+        const originalName = normalizeUploadedOriginalName(asset.original_name || '');
         const downloadName = String(originalName || storedName).slice(0, 255);
 
         return {
@@ -502,7 +525,104 @@ class ArtworkService {
         };
     }
 
-    async addSchemeAsset(artworkId, schemeId, file, context = {}) {
+    async getSchemeAssetPreviewPayload(artworkId, schemeId, assetId) {
+        const { asset, absolutePath } = await this.resolveSchemeAssetFileContext(
+            artworkId,
+            schemeId,
+            assetId
+        );
+        const extension = detectExtension(asset.original_name || asset.file_path);
+        const basePayload = {
+            asset: this.toPublicSchemeAsset(asset),
+            preview: {
+                kind: 'unsupported',
+                warning: '当前文件类型暂不支持内置预览，可使用“下载”后查看。',
+            },
+        };
+
+        try {
+            if (asset.is_image || this.resolveAssetType(asset.mime_type, asset.file_path, asset.asset_type) === 'image') {
+                basePayload.preview = {
+                    kind: 'image',
+                    warning: null,
+                };
+                return basePayload;
+            }
+
+            if (extension === 'txt' || extension === 'md') {
+                const text = await fs.readFile(absolutePath, 'utf8');
+                const trimmedText = String(text || '').slice(0, MAX_TEXT_PREVIEW_CHARS);
+                basePayload.preview = {
+                    kind: 'text',
+                    text: trimmedText,
+                    truncated: String(text || '').length > trimmedText.length,
+                };
+                return basePayload;
+            }
+
+            if (extension === 'docx') {
+                const result = await mammoth.extractRawText({ path: absolutePath });
+                const text = String(result?.value || '').trim();
+                basePayload.preview = {
+                    kind: 'text',
+                    text: text.slice(0, MAX_TEXT_PREVIEW_CHARS),
+                    truncated: text.length > MAX_TEXT_PREVIEW_CHARS,
+                    warning: null,
+                };
+                return basePayload;
+            }
+
+            if (extension === 'xlsx' || extension === 'xls') {
+                const workbook = XLSX.readFile(absolutePath, { cellDates: true });
+                const firstSheetName = Array.isArray(workbook.SheetNames) ? workbook.SheetNames[0] : null;
+                if (!firstSheetName || !workbook.Sheets[firstSheetName]) {
+                    basePayload.preview = {
+                        kind: 'unsupported',
+                        warning: '表格内容为空，可使用“下载”后查看。',
+                    };
+                    return basePayload;
+                }
+
+                const matrix = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
+                    header: 1,
+                    raw: false,
+                    defval: '',
+                    blankrows: false,
+                });
+                const rows = matrix.slice(0, MAX_TABLE_PREVIEW_ROWS).map((row) =>
+                    (Array.isArray(row) ? row : [row]).slice(0, MAX_TABLE_PREVIEW_COLS)
+                );
+
+                basePayload.preview = {
+                    kind: 'table',
+                    sheetName: firstSheetName,
+                    rows,
+                    truncated:
+                        matrix.length > MAX_TABLE_PREVIEW_ROWS ||
+                        matrix.some((row) => Array.isArray(row) && row.length > MAX_TABLE_PREVIEW_COLS),
+                };
+                return basePayload;
+            }
+
+            if (extension === 'doc') {
+                basePayload.preview = {
+                    kind: 'unsupported',
+                    warning: 'DOC 老格式暂不支持内置解析，请使用“下载”后查看。',
+                };
+                return basePayload;
+            }
+        } catch (error) {
+            basePayload.preview = {
+                kind: 'unsupported',
+                warning: `预览解析失败：${error.message || '未知错误'}，可使用“下载”后查看。`,
+            };
+            return basePayload;
+        }
+
+        return basePayload;
+    }
+
+    async addSchemeAsset(artworkId, schemeId, file, context = {}, options = {}) {
         const scheme = await artworkQueries.getSchemeById(schemeId);
         if (!scheme || Number(scheme.artwork_id) !== Number(artworkId)) {
             throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
@@ -521,7 +641,8 @@ class ArtworkService {
             ? Math.max(...currentAssets.map((asset) => Number(asset.sort_order) || 0)) + 1
             : 1;
         const assetType = this.resolveAssetType(file.mimetype, file.originalname, null);
-        const originalName = String(file.originalname || file.filename || '').slice(0, 255);
+        const originalName = normalizeUploadedOriginalName(file.originalname || file.filename || '');
+        const normalizedSourceModifiedAt = normalizeSourceModifiedAtInput(options.sourceModifiedAt);
 
         await artworkQueries.createSchemeAsset({
             scheme_id: schemeId,
@@ -530,6 +651,7 @@ class ArtworkService {
             file_path: file.filename,
             mime_type: file.mimetype || null,
             file_size: Number.isFinite(file.size) ? file.size : null,
+            source_modified_at: normalizedSourceModifiedAt,
             sort_order: nextOrder,
         });
 

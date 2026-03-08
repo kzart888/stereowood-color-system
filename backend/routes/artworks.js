@@ -11,6 +11,9 @@ const ArtworkService = require('../domains/artworks/service');
 const UploadImageService = require('../domains/shared/upload-image-service');
 const { extractAuditContext } = require('./helpers/request-audit-context');
 const { requireWriteAccess } = require('./helpers/write-access');
+const {
+  normalizeSourceModifiedAtInput,
+} = require('../domains/shared/asset-file-utils');
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
@@ -309,6 +312,33 @@ router.get('/artworks/:artworkId/schemes/:schemeId/assets', async (req, res) => 
   }
 });
 
+// GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/preview
+router.get('/artworks/:artworkId/schemes/:schemeId/assets/:assetId/preview', async (req, res) => {
+  const artworkId = parsePositiveIntegerParam(req.params.artworkId, 'artworkId');
+  if (artworkId.error) {
+    return sendError(res, 400, artworkId.error);
+  }
+  const schemeId = parsePositiveIntegerParam(req.params.schemeId, 'schemeId');
+  if (schemeId.error) {
+    return sendError(res, 400, schemeId.error);
+  }
+  const assetId = parsePositiveIntegerParam(req.params.assetId, 'assetId');
+  if (assetId.error) {
+    return sendError(res, 400, assetId.error);
+  }
+
+  try {
+    const payload = await ArtworkService.getSchemeAssetPreviewPayload(
+      artworkId.value,
+      schemeId.value,
+      assetId.value
+    );
+    return res.json(payload);
+  } catch (error) {
+    return mapArtworkError(res, error, 500);
+  }
+});
+
 // GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/download
 router.get('/artworks/:artworkId/schemes/:schemeId/assets/:assetId/download', async (req, res) => {
   const artworkId = parsePositiveIntegerParam(req.params.artworkId, 'artworkId');
@@ -356,11 +386,13 @@ router.post(
       if (!req.file) {
         return sendError(res, 400, 'asset file is required.');
       }
+      const sourceModifiedAt = normalizeSourceModifiedAtInput(req.body?.asset_last_modified);
       const created = await ArtworkService.addSchemeAsset(
         req.params.artworkId,
         req.params.schemeId,
         req.file,
-        extractAuditContext(req)
+        extractAuditContext(req),
+        { sourceModifiedAt }
       );
       return res.json(created);
     } catch (error) {

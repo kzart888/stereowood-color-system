@@ -56,6 +56,22 @@
     return `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
   }
 
+  function toDateLabel(value) {
+    if (!value) {
+      return '未知';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '未知';
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hour = String(date.getHours()).padStart(2, '0');
+    const minute = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hour}:${minute}`;
+  }
+
   window.ArtworksSchemeDialogMethods = {
     addScheme(art) {
       this.editingArtId = art.id;
@@ -129,6 +145,10 @@
         this._schemeOriginalSnapshot = null;
       }
       this.quickAssetUploadingSchemeId = null;
+      this.showAssetPreviewDialog = false;
+      this.assetPreviewLoading = false;
+      this.assetPreviewTitle = '相关资料预览';
+      this.assetPreviewData = { asset: null, preview: { kind: 'unsupported', warning: '' }, fileUrl: null };
       this._unbindEsc();
     },
 
@@ -283,6 +303,33 @@
       return extension.toUpperCase();
     },
 
+    assetTypeLabel(asset) {
+      if (asset?.file_type_label) {
+        return asset.file_type_label;
+      }
+      if (asset?.mimeType && String(asset.mimeType).toLowerCase().startsWith('image/')) {
+        return '图片';
+      }
+      const ext = this.assetExt(asset);
+      if (ext === 'TXT') return 'TXT 文本';
+      if (ext === 'MD') return 'Markdown 文档';
+      if (ext === 'DOC') return 'Word 文档 (.doc)';
+      if (ext === 'DOCX') return 'Word 文档 (.docx)';
+      if (ext === 'XLS') return 'Excel 表格 (.xls)';
+      if (ext === 'XLSX') return 'Excel 表格 (.xlsx)';
+      return ext;
+    },
+
+    assetModifiedTimeLabel(asset) {
+      const sourceModifiedAt = asset?.source_modified_at || asset?.sourceModifiedAt || asset?.lastModifiedAt;
+      return toDateLabel(sourceModifiedAt);
+    },
+
+    assetSizeLabel(asset) {
+      const value = Number(asset?.file_size ?? asset?.size ?? 0);
+      return toSizeLabel(value);
+    },
+
     async onQuickAddAssetChange(art, scheme, event) {
       const file = event?.target?.files?.[0];
       if (!file) {
@@ -308,6 +355,9 @@
       try {
         const formData = new FormData();
         formData.append('asset', file);
+        if (Number.isFinite(file.lastModified) && file.lastModified > 0) {
+          formData.append('asset_last_modified', String(file.lastModified));
+        }
         await window.ArtworksApi.addSchemeAsset({
           baseURL: this.baseURL,
           artId: art.id,
@@ -351,6 +401,9 @@
         name: rawFile.name,
         mimeType: rawFile.type || '',
         size: rawFile.size || 0,
+        sourceModifiedAt: Number.isFinite(rawFile.lastModified) && rawFile.lastModified > 0
+          ? new Date(rawFile.lastModified).toISOString()
+          : null,
         extension: extension ? extension.toUpperCase() : (isImage ? 'IMG' : 'DOC'),
         isImage,
         previewUrl: null,
@@ -467,17 +520,27 @@
         this.$thumbPreview && this.$thumbPreview.show(event, asset.previewUrl);
         return;
       }
-      this.showDocumentAssetDetails(
-        {
+      this.showAssetPreviewDialog = true;
+      this.assetPreviewLoading = false;
+      this.assetPreviewTitle = '相关资料预览';
+      this.assetPreviewData = {
+        asset: {
           original_name: asset.name,
           mime_type: asset.mimeType,
           file_size: asset.size,
+          source_modified_at: asset.sourceModifiedAt || null,
+          file_type_label: this.assetTypeLabel(asset),
         },
-        null
-      );
+        preview: {
+          kind: 'text',
+          text: '该文件尚未上传。\n请先保存方案，再点击查看完整预览。',
+          truncated: false,
+        },
+        fileUrl: null,
+      };
     },
 
-    openRelatedAsset(asset, event) {
+    async openRelatedAsset(asset, event, artIdFromList = null, schemeIdFromList = null) {
       if (!asset) {
         return;
       }
@@ -486,34 +549,64 @@
         this.$thumbPreview && this.$thumbPreview.show(event, fileUrl);
         return;
       }
-      this.showDocumentAssetDetails(asset, fileUrl);
+      await this.openRelatedAssetPreview(asset, fileUrl, artIdFromList, schemeIdFromList);
     },
 
-    async showDocumentAssetDetails(asset, fileUrl) {
-      const name = asset?.original_name || asset?.file_path || '未命名文件';
-      const type = asset?.mime_type || '未知类型';
-      const size = toSizeLabel(Number(asset?.file_size));
+    async openRelatedAssetPreview(asset, fileUrl, artIdFromList = null, schemeIdFromList = null) {
+      this.showAssetPreviewDialog = true;
+      this.assetPreviewLoading = true;
+      this.assetPreviewTitle = `相关资料预览 - ${asset?.original_name || asset?.file_path || '未命名文件'}`;
+      this.assetPreviewData = {
+        asset: this.normalizeIncomingAsset(asset),
+        preview: { kind: 'loading' },
+        fileUrl: fileUrl || null,
+      };
 
-      const details = `文件名：${name}<br>文件类型：${type}<br>文件大小：${size}`;
-      if (!fileUrl) {
-        await ElementPlus.ElMessageBox.alert(details, '相关资料', {
-          dangerouslyUseHTMLString: true,
-          confirmButtonText: '知道了',
-        });
+      const assetId = Number(asset?.id);
+      const schemeId = Number(schemeIdFromList || this.schemeForm?.id || asset?.scheme_id);
+      const artId = Number(artIdFromList || this.editingArtId);
+      if (!Number.isInteger(assetId) || !Number.isInteger(schemeId) || !Number.isInteger(artId)) {
+        this.assetPreviewData.preview = {
+          kind: 'unsupported',
+          warning: '缺少方案上下文，无法加载预览，请使用“下载”查看。',
+        };
+        this.assetPreviewLoading = false;
         return;
       }
 
       try {
-        await ElementPlus.ElMessageBox.confirm(`${details}<br><br>是否打开原文件？`, '相关资料', {
-          dangerouslyUseHTMLString: true,
-          confirmButtonText: '打开',
-          cancelButtonText: '取消',
-          type: 'info',
+        if (!window.ArtworksApi || typeof window.ArtworksApi.getSchemeAssetPreview !== 'function') {
+          throw new Error('预览接口不可用');
+        }
+        const response = await window.ArtworksApi.getSchemeAssetPreview({
+          baseURL: this.baseURL,
+          artId,
+          schemeId,
+          assetId,
         });
-        window.open(fileUrl, '_blank', 'noopener,noreferrer');
-      } catch {
-        // cancelled
+        const payload = getResponseData(response) || {};
+        this.assetPreviewData = {
+          asset: Object.assign({}, this.normalizeIncomingAsset(asset), payload.asset || {}),
+          preview: payload.preview || { kind: 'unsupported', warning: '无法加载预览内容。' },
+          fileUrl: fileUrl || null,
+        };
+      } catch (error) {
+        this.assetPreviewData.preview = {
+          kind: 'unsupported',
+          warning: error?.response?.data?.error || error?.message || '加载预览失败，请使用“下载”查看。',
+        };
+      } finally {
+        this.assetPreviewLoading = false;
       }
+    },
+
+    openAssetPreviewSourceFile() {
+      const fileUrl = this.assetPreviewData?.fileUrl || null;
+      if (!fileUrl) {
+        msg.warning('当前资料缺少可打开的文件地址。');
+        return;
+      }
+      window.open(fileUrl, '_blank', 'noopener,noreferrer');
     },
 
     async syncSchemeRelatedAssets(artId, schemeId) {
@@ -545,6 +638,11 @@
       for (const item of pending) {
         const formData = new FormData();
         formData.append('asset', item.file);
+        if (item.sourceModifiedAt) {
+          formData.append('asset_last_modified', item.sourceModifiedAt);
+        } else if (Number.isFinite(item.file?.lastModified) && item.file.lastModified > 0) {
+          formData.append('asset_last_modified', String(item.file.lastModified));
+        }
         await window.ArtworksApi.addSchemeAsset({
           baseURL: this.baseURL,
           artId,

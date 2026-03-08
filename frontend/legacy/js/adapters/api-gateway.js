@@ -86,6 +86,8 @@
         getClient().delete(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}`)),
       listSchemeAssets: (baseURL, artworkId, schemeId) =>
         getClient().get(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets`)),
+      getSchemeAssetPreview: (baseURL, artworkId, schemeId, assetId) =>
+        getClient().get(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets/${assetId}/preview`)),
       addSchemeAsset: (baseURL, artworkId, schemeId, formData) =>
         getClient().postMultipart(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets`), formData),
       deleteSchemeAsset: (baseURL, artworkId, schemeId, assetId) =>
