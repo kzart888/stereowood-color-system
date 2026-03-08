@@ -225,11 +225,17 @@
 
 .layer-input-cell {
     display: grid;
-    grid-template-rows: auto 18px;
+    grid-template-rows: 32px 18px;
     justify-items: center;
     align-items: start;
+    align-content: start;
     row-gap: 4px;
-    min-height: 54px;
+    min-height: 0;
+}
+
+.layer-number-input {
+    display: block;
+    margin-top: -6px;
 }
 
 .layer-dup-indicator {
@@ -658,10 +664,18 @@
 
 .mapping-action-btn {
     width: 34px !important;
+    min-width: 34px !important;
     height: 34px !important;
     border-radius: 8px !important;
     padding: 0 !important;
     margin: 0 !important;
+}
+
+.operation-buttons .mapping-action-btn,
+.add-button-container .mapping-action-btn {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
 }
 
 .add-button-container {

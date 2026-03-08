@@ -37,6 +37,12 @@ This file remains the architecture execution source of truth.
   - thumbnail sidecar generation and thumbnail-first rendering
   - execution checklist: `docs/architecture/LEGACY_UI_U0_U7_CHECKLIST.md`
   - review gate: `docs/architecture/U7_REVIEW_GATE.md`
+- U11/U11.1 scheme dialog enhancement is completed:
+  - related-assets download action + attachment-safe filename handling
+  - source file modified-time persistence (`source_modified_at`) + metadata rendering
+  - in-app preview route and dialog for `txt/md/docx/xlsx/xls`
+  - dialog layout and mapping-table alignment/button consistency pass
+  - review gate: `docs/architecture/U11_REVIEW_GATE.md`
 
 ## Phase Status Overview
 
@@ -54,6 +60,7 @@ This file remains the architecture execution source of truth.
 | P8 | Modern platform build-out | Pending | Start new modern frontend branch after stable merge/tag. |
 | U0-U7 | Legacy UI deep optimization | Completed | Related-assets + visual consistency + thumbnail quality pass on legacy runtime. |
 | U8-U10 | UI continuity governance | In progress | Header/button conflict cleanup done; dialog-wide consistency and runtime Chinese copy cleanup continue by module. |
+| U11/U11.1 | Scheme dialog UX + preview completion | Completed | Download+preview flow, source-file time, layout alignment, and UI smoke gate completed. |
 
 ## P7 Completion Checklist (This Iteration)
 
@@ -126,6 +133,7 @@ This file remains the architecture execution source of truth.
 - [x] `npm run phaseL:auth-login-matrix:smoke`
 - [x] `npm run phaseL:auth-login-ui-smoke`
 - [x] `npm run phaseL:auth-v2:verify`
+- [x] `npm run phaseU11:ui-smoke`
 - [x] `npm run gate:full`
 
 ## Remaining Work (P8 Modernization)

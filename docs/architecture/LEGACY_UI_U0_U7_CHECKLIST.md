@@ -76,3 +76,24 @@ Compatibility:
 - Data rollback:
   - table `color_scheme_assets` is additive and does not remove legacy columns.
   - if required, stop writing related assets in UI and keep legacy thumbnail path only.
+
+## U11/U11.1 Follow-Up (2026-03-08)
+
+Scope:
+- U11.1: related-assets download button + backend download endpoint.
+- U11: scheme dialog layout refinement + related-asset metadata rows + source file time + in-app document preview + mapping-table alignment/button consistency.
+
+Completed:
+- Added `GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/download`.
+- Added `GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/preview`.
+- Added `source_modified_at` for `color_scheme_assets` and migration backfill from file `mtime`.
+- Added upload field `asset_last_modified` (optional).
+- Added related-asset metadata rendering (name / source file time / type label).
+- Added in-dialog preview for `txt/md/docx/xlsx/xls` (with fallback warning path for unsupported parse cases).
+- Reworked scheme name row spacing and mapping-table visual alignment.
+- Unified related-asset and mapping action button sizing.
+
+Verification:
+- `npm run phaseU11:ui-smoke` -> PASS
+- `npm run phase0:verify` -> PASS
+- `npm run gate:full` -> PASS

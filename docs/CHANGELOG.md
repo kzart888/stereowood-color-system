@@ -1,6 +1,26 @@
 # Changelog
 
 ## Unreleased (2026-03-08, U0-U7 + legacy UI pass)
+### U11/U11.1 Scheme Dialog and Related Assets Completion
+- Added related-asset download flow in scheme dialog:
+  - UI action buttons `下载 + 删除` on existing assets
+  - backend download route with UTF-8 filename-safe `Content-Disposition`
+  - endpoint: `GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/download`
+- Added related-asset source file time support:
+  - DB column `color_scheme_assets.source_modified_at`
+  - upload field `asset_last_modified` (optional)
+  - migration backfill from upload file `mtime` (best effort)
+- Added related-asset preview route + dialog rendering:
+  - endpoint: `GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/preview`
+  - supported preview kinds: `txt/md/docx/xlsx/xls` + fallback warning path
+- Refined scheme dialog layout:
+  - compact scheme-name row spacing
+  - related-asset metadata block (name/time/type)
+  - mapping table layer-input alignment and duplicate indicator positioning
+  - unified mapping action button size/style
+- Added verification script:
+  - `npm run phaseU11:ui-smoke`
+
 ### P7.1 Login/RBAC/UI Alignment (V2)
 - Aligned login error semantics:
   - `AUTH_ACCOUNT_NOT_FOUND` (404)

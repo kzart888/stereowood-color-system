@@ -23,6 +23,7 @@ Last updated: 2026-03-08 (P7.1 auth/login UX refresh)
 - `docs/architecture/P7_1_REVIEW_GATE.md` - P7.1 code-review-agent gate.
 - `docs/architecture/LEGACY_UI_U0_U7_CHECKLIST.md` - legacy UI deep optimization execution checklist and gate evidence.
 - `docs/architecture/U7_REVIEW_GATE.md` - code-review-agent gate result for legacy UI deep optimization.
+- `docs/architecture/U11_REVIEW_GATE.md` - U11/U11.1 scheme dialog + related-asset preview verification gate.
 - `docs/architecture/P8_MODERN_PLATFORM_BLUEPRINT.md` - modern frontend migration blueprint and cutover rules.
 - `docs/architecture/PHASE_A_BLUEPRINT.md` - original Phase A architecture blueprint.
 - `docs/architecture/MODULE_MAP.md` - module boundaries and target ownership map.
