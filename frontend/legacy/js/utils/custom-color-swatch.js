@@ -39,7 +39,9 @@
   }
 
   function buildImageUrl(color, options = {}) {
-    const candidatePath = color?.image_thumb_path || color?.image_path;
+    const candidatePath = options.forceOriginal
+      ? (color?.image_path || color?.image_thumb_path)
+      : (color?.image_thumb_path || color?.image_path);
     return buildImageUrlFromPath(candidatePath, options);
   }
 

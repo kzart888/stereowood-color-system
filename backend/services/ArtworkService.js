@@ -100,9 +100,9 @@ class ArtworkService {
                         id: row.scheme_id,
                         name: row.scheme_name,  // Frontend expects 'name' not 'scheme_name'
                         thumbnail_path: row.thumbnail_path,
-                        thumbnail_thumb_path: UploadImageService.buildThumbnailName(row.thumbnail_path),
+                        thumbnail_thumb_path: UploadImageService.resolveAvailableThumbnailName(row.thumbnail_path),
                         initial_thumbnail_path: row.initial_thumbnail_path,  // Include initial thumbnail
-                        initial_thumbnail_thumb_path: UploadImageService.buildThumbnailName(row.initial_thumbnail_path),
+                        initial_thumbnail_thumb_path: UploadImageService.resolveAvailableThumbnailName(row.initial_thumbnail_path),
                         version: row.scheme_version ?? null,
                         created_at: row.scheme_created_at,
                         updated_at: row.scheme_updated_at,
@@ -143,7 +143,7 @@ class ArtworkService {
             created_at: asset.created_at || null,
             updated_at: asset.updated_at || null,
             is_image: isImage,
-            thumb_path: isImage ? UploadImageService.buildThumbnailName(asset.file_path) : null,
+            thumb_path: isImage ? UploadImageService.resolveAvailableThumbnailName(asset.file_path) : null,
         };
     }
 

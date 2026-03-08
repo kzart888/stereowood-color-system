@@ -320,6 +320,16 @@
                 el.classList.add('no-image');
             }
         },
+        onMaterialThumbError(event, color) {
+            const element = event?.currentTarget || event?.target;
+            if (!element) return;
+            const fallback = this.materialPreviewSrc(color);
+            if (fallback && element.src !== fallback) {
+                element.src = fallback;
+                return;
+            }
+            this.onThumbError(event);
+        },
 
         async refreshDictionaries() {
             await Promise.all([ this.globalData.loadSuppliers(), this.globalData.loadPurchaseLinks() ]);

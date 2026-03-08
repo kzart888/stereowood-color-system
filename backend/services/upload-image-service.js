@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
@@ -19,6 +20,13 @@ function buildThumbnailName(filePath, size = DEFAULT_THUMB_SIZE) {
   const ext = path.extname(normalized);
   const base = ext ? normalized.slice(0, -ext.length) : normalized;
   return `${base}.thumb${size}.jpg`;
+}
+
+function resolveAvailableThumbnailName(filePath, size = DEFAULT_THUMB_SIZE) {
+  const thumbnailName = buildThumbnailName(filePath, size);
+  if (!thumbnailName) return null;
+  const thumbnailPath = path.join(getUploadsDir(), thumbnailName);
+  return fsSync.existsSync(thumbnailPath) ? thumbnailName : null;
 }
 
 function isImageFile(file = {}) {
@@ -96,6 +104,7 @@ module.exports = {
   DEFAULT_THUMB_SIZE,
   normalizeUploadName,
   buildThumbnailName,
+  resolveAvailableThumbnailName,
   isImageFile,
   isImageMimeOrPath,
   ensureImageThumbnail,

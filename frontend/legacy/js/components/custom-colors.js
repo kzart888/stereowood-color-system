@@ -69,7 +69,7 @@ const CustomColorsComponent = {
                              :style="getSwatchStyle(color)"
                              @click="previewColorSwatch($event, color)">
                             <template v-if="swatchIsImage(color)">
-                                <img :src="getSwatchImage(color)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                                <img :src="getSwatchImage(color)" @error="onSwatchImageError($event, color)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                             </template>
                             <span v-else-if="swatchIsEmpty(color)" class="blank-text">未上传图片</span>
                         </div>

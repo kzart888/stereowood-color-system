@@ -61,7 +61,7 @@ const ArtworksComponent = {
               <div class="scheme-header">
                 <div class="scheme-thumbnail" :class="{ 'no-image': !schemePreviewSource(scheme) }" @click="schemePreviewOriginal(scheme) && $thumbPreview && $thumbPreview.show($event, schemePreviewOriginal(scheme))">
                   <template v-if="!schemePreviewSource(scheme)">未上传图片</template>
-                  <img v-else :src="schemePreviewSource(scheme)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
+                  <img v-else :src="schemePreviewSource(scheme)" @error="onSchemeThumbError($event, scheme)" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" />
                 </div>
                 <div style="flex: 1;">
                   <div class="scheme-name">{{ displaySchemeName(art, scheme) }}</div>
@@ -82,7 +82,7 @@ const ArtworksComponent = {
                           @click="openRelatedAsset(asset, $event)"
                           :title="asset.original_name || asset.file_path"
                         >
-                          <img v-if="asset.is_image" :src="assetThumbURL(asset)" />
+                          <img v-if="asset.is_image" :src="assetThumbURL(asset)" @error="onRelatedAssetThumbError($event, asset)" />
                           <span v-else class="related-asset-doc">
                             <strong>{{ assetExt(asset) }}</strong>
                             <small>查看详情</small>
@@ -436,7 +436,7 @@ const ArtworksComponent = {
                   :key="'existing-'+asset.id"
                 >
                   <button type="button" class="related-asset-card" @click="openRelatedAsset(asset, $event)">
-                    <img v-if="asset.is_image" :src="assetThumbURL(asset)" />
+                    <img v-if="asset.is_image" :src="assetThumbURL(asset)" @error="onRelatedAssetThumbError($event, asset)" />
                     <span v-else class="related-asset-doc">
                       <strong>{{ assetExt(asset) }}</strong>
                       <small>查看详情</small>

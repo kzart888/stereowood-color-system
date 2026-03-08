@@ -506,6 +506,39 @@
       return path ? this.$helpers.buildUploadURL(this.baseURL, path) : '';
     },
 
+    onSchemeThumbError(event, scheme) {
+      const element = event?.target;
+      if (!element) {
+        return;
+      }
+      const fallback = this.schemePreviewOriginal(scheme);
+      if (fallback && element.src !== fallback) {
+        element.src = fallback;
+        return;
+      }
+      const wrapper = element.closest ? element.closest('.scheme-thumbnail') : null;
+      if (wrapper) {
+        wrapper.classList.add('no-image');
+      }
+    },
+
+    onRelatedAssetThumbError(event, asset) {
+      const element = event?.target;
+      if (!element) {
+        return;
+      }
+      const fallbackPath = asset?.file_path;
+      const fallback = fallbackPath ? this.$helpers.buildUploadURL(this.baseURL, fallbackPath) : '';
+      if (fallback && element.src !== fallback) {
+        element.src = fallback;
+        return;
+      }
+      const wrapper = element.closest ? element.closest('.related-asset-card') : null;
+      if (wrapper) {
+        wrapper.classList.add('no-image');
+      }
+    },
+
     async saveScheme() {
       const valid = await this.$refs.schemeFormRef.validate().catch(() => false);
       if (!valid || this.schemeNameDuplicate) {

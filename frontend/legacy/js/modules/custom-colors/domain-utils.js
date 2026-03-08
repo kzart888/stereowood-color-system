@@ -74,6 +74,14 @@
     return swatch && swatch.type === 'image' ? swatch.imageUrl : null;
   }
 
+  function getSwatchOriginalImage(color, options = {}) {
+    const swatch = resolveColorSwatch(color, { ...options, forceOriginal: true });
+    if (!swatch || swatch.type !== 'image') {
+      return null;
+    }
+    return swatch.previewUrl || swatch.imageUrl || null;
+  }
+
   function previewColorSwatch(event, color, options = {}) {
     const swatch = resolveColorSwatch(color, options);
     const thumbPreview = options.thumbPreview;
@@ -190,6 +198,7 @@
     swatchIsEmpty,
     swatchThumbnailClass,
     getSwatchImage,
+    getSwatchOriginalImage,
     previewColorSwatch,
     normalizeHexValue,
     buildPureColorStateFromExisting,

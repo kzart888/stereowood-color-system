@@ -125,7 +125,7 @@ function withThumbPath(row) {
   if (!row) return row;
   return {
     ...row,
-    image_thumb_path: UploadImageService.buildThumbnailName(row.image_path),
+    image_thumb_path: UploadImageService.resolveAvailableThumbnailName(row.image_path),
   };
 }
 

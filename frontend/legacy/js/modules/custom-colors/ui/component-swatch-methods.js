@@ -102,6 +102,34 @@
             return swatch && swatch.type === 'image' ? swatch.imageUrl : null;
         },
 
+        getSwatchOriginalImage(color, options = {}) {
+            if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.getSwatchOriginalImage === 'function') {
+                return window.CustomColorsDomainUtils.getSwatchOriginalImage(color, {
+                    ...options,
+                    baseURL: options.baseURL || this.baseURL || window.location.origin,
+                    buildUploadURL: this.$helpers && typeof this.$helpers.buildUploadURL === 'function'
+                        ? this.$helpers.buildUploadURL
+                        : undefined
+                });
+            }
+            const swatch = this.resolveColorSwatch(color, { ...options, forceOriginal: true });
+            return swatch && swatch.type === 'image' ? (swatch.previewUrl || swatch.imageUrl) : null;
+        },
+
+        onSwatchImageError(event, color) {
+            const element = event && event.target ? event.target : null;
+            if (!element) return;
+            const fallback = this.getSwatchOriginalImage(color);
+            if (fallback && element.src !== fallback) {
+                element.src = fallback;
+                return;
+            }
+            const wrapper = element.closest ? element.closest('.scheme-thumbnail') : null;
+            if (wrapper) {
+                wrapper.classList.add('no-image');
+            }
+        },
+
         previewColorSwatch(event, color, options = {}) {
             if (window.CustomColorsDomainUtils && typeof window.CustomColorsDomainUtils.previewColorSwatch === 'function') {
                 const handled = window.CustomColorsDomainUtils.previewColorSwatch(event, color, {
