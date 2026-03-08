@@ -19,6 +19,9 @@ Prerequisite:
 - Account management page: `/account-management` (admin/super admin)
 - Pilot UI root: `/pilot` (only when `ENABLE_PILOT_UI=true`)
 
+UI default pagination:
+- Main list pages (`custom-colors`, `artworks`, `mont-marte`) default to `24` items per page.
+
 ## Local Database
 - Default local file: `backend/color_management.db`
 - Override with env:

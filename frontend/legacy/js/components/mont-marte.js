@@ -126,7 +126,6 @@ const MontMarteComponent = {
                                     <div class="items-per-page">
                                         <span>每页显示：</span>
                                         <el-select v-model="itemsPerPage" @change="onItemsPerPageChange" size="small">
-                                            <el-option v-if="isDevelopmentMode" :value="2" label="2 项" />
                                             <el-option :value="12" label="12 项" />
                                             <el-option :value="24" label="24 项" />
                                             <el-option :value="48" label="48 项" />

@@ -152,7 +152,10 @@
                 const savedItems = localStorage.getItem('sw-mont-marte-items-per-page');
                 
                 if (savedItems) {
-                    this.itemsPerPage = parseInt(savedItems);
+                    const parsed = parseInt(savedItems);
+                    this.itemsPerPage = window.ConfigHelper && typeof window.ConfigHelper.normalizeItemsPerPage === 'function'
+                        ? window.ConfigHelper.normalizeItemsPerPage(parsed, this.itemsPerPage || 24)
+                        : parsed;
                 }
                 
                 if (savedPage) {
@@ -182,6 +185,10 @@
                     'mont-marte', 
                     savedItems
                 );
+
+                if (savedItems !== null && savedItems !== this.itemsPerPage) {
+                    try { localStorage.setItem('sw-mont-marte-items-per-page', this.itemsPerPage); } catch(e) {}
+                }
             }
         },
         

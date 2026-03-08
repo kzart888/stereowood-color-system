@@ -2,6 +2,10 @@
 
 ## Unreleased (2026-03-08, U0-U7 + legacy UI pass)
 ### U11.2 Scheme Mapping Table Regression Fix + Closure Audit
+- Standardized legacy list default page-size to `24`:
+  - removed dev-only `2` page-size option from `custom-colors` / `artworks` / `mont-marte`
+  - normalized legacy saved `2` page-size preferences to `24`
+  - updated fallback defaults in legacy state paths
 - Fixed scheme dialog mapping-table regression:
   - removed negative-margin alignment on layer-number input
   - removed header inline width hardcoding in mapping table
@@ -18,6 +22,8 @@
 - Added review/closure artifacts:
   - `docs/architecture/U11_2_REVIEW_GATE.md`
   - `docs/architecture/P8_PREMODERNIZATION_CLOSURE_GATE_2026-03-08.md`
+- Updated deployment runbook with current Synology profile and build/push/pull routine:
+  - `DEPLOYMENT_CHECKLIST.md`
 
 ### U11/U11.1 Scheme Dialog and Related Assets Completion
 - Added related-asset download flow in scheme dialog:

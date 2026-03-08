@@ -1,5 +1,7 @@
 # Deployment Checklist for STEREOWOOD Color System
 
+Last updated: 2026-03-08
+
 ## Scope
 - Production deployment on Synology Container Manager (Docker).
 - Keep legacy UI (`frontend/legacy`) as production frontend.
@@ -17,10 +19,16 @@
 ## Synology Current Production Profile (from running container)
 - Image: `docker.xuanyuan.run/kzart888/stereowood-color-system:publish-preview`
 - Port mapping: host `9099` -> container `9099`
+- Restart policy: enabled (auto restart)
+- Memory limit: `512 MB`
+- Container command: `node server.js`
 - Environment:
   - `NODE_ENV=production`
   - `PORT=9099`
   - `DB_FILE=/data/color_management.db`
+  - `AUTH_ENFORCE_WRITES=true` (recommended)
+  - `READ_ONLY_MODE=false`
+  - `SESSION_TTL_HOURS=720`
   - `ENABLE_PILOT_UI=false` (default)
   - `PILOT_DICTIONARY_WRITE=false` (default, enable only for pilot-write rehearsal/cutover candidate)
   - `TZ=Asia/Shanghai`
@@ -47,6 +55,9 @@
 3. Prefer rehearsal validation on copied data before production cutover.
 
 ## Deployment Steps (Synology)
+0. Build and push candidate tag:
+   - `docker build -t docker.xuanyuan.run/kzart888/stereowood-color-system:<tag> .`
+   - `docker push docker.xuanyuan.run/kzart888/stereowood-color-system:<tag>`
 1. Pull candidate image tag to Synology.
 2. Start candidate container on temporary host port (for example `9199`) with the same env and volume mappings.
 3. Verify candidate:
@@ -82,5 +93,6 @@
 
 ## Notes
 - Pagination behavior is config-driven via `/api/config` + `ConfigHelper`; no manual source edits.
+- Legacy list views default to `24` items per page; stale `2`-item preferences are automatically normalized to `24`.
 - Current DB validation evidence is recorded in:
   - `docs/refactor/PRODUCTION_DB_VALIDATION_2026-02-08.md`

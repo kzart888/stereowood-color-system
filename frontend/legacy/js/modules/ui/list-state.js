@@ -20,6 +20,13 @@
     }
   }
 
+  function normalizeItemsPerPage(rawValue, fallback) {
+    if (window.ConfigHelper && typeof window.ConfigHelper.normalizeItemsPerPage === 'function') {
+      return window.ConfigHelper.normalizeItemsPerPage(rawValue, fallback);
+    }
+    return toInt(rawValue) ?? fallback;
+  }
+
   function create(options = {}) {
     const vm = options.vm;
     const selectedKey = options.selectedKey || 'selectedColorId';
@@ -58,8 +65,12 @@
       if (!vm) return;
 
       const savedItems = itemsKey ? getSavedInt(itemsKey) : null;
-      if (savedItems && savedItems >= 0) {
-        vm.itemsPerPage = savedItems;
+      if (savedItems !== null && savedItems >= 0) {
+        const normalizedItems = normalizeItemsPerPage(savedItems, vm.itemsPerPage || 24);
+        vm.itemsPerPage = normalizedItems;
+        if (itemsKey && normalizedItems !== savedItems) {
+          setSavedValue(itemsKey, normalizedItems);
+        }
       }
 
       const savedPage = pageKey ? getSavedInt(pageKey) : null;
@@ -82,6 +93,10 @@
         configSection,
         savedItems
       );
+
+      if (itemsKey && savedItems !== null && vm.itemsPerPage !== savedItems) {
+        setSavedValue(itemsKey, vm.itemsPerPage);
+      }
     }
 
     function toggleSelection(id, event) {
