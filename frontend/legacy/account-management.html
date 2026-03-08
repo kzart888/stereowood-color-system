@@ -59,6 +59,23 @@
       flex-wrap: wrap;
     }
 
+    .toolbar .el-input,
+    .toolbar .el-select,
+    .toolbar .el-button {
+      margin: 0 !important;
+    }
+
+    .toolbar .el-input__wrapper,
+    .toolbar .el-select__wrapper {
+      min-height: 34px;
+    }
+
+    .create-toolbar .muted {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+    }
+
     .toolbar-row {
       display: flex;
       align-items: center;
@@ -90,20 +107,31 @@
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
+      align-items: center;
     }
 
     .action-wrap {
       display: inline-flex;
       align-items: center;
-    }
-
-    .action-group {
-      align-items: center;
+      vertical-align: top;
     }
 
     .action-wrap .el-button,
     .toolbar .el-button {
       margin-left: 0 !important;
+    }
+
+    .action-group .el-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 74px;
+    }
+
+    .el-table__body td:last-child .cell {
+      display: flex;
+      align-items: center;
+      min-height: 34px;
     }
   </style>
 </head>
@@ -121,7 +149,7 @@
     </div>
 
     <div class="card">
-      <div class="toolbar">
+      <div class="toolbar create-toolbar">
         <el-input
           v-model.trim="newUser.username"
           placeholder="输入新账号用户名（3-40位）"
@@ -147,7 +175,7 @@
 
     <div class="card">
       <div class="toolbar-row">
-        <div class="toolbar">
+        <div class="toolbar search-toolbar">
           <el-input v-model.trim="search" placeholder="搜索用户名" style="width:240px;" ></el-input>
           <el-select v-model="status" style="width:140px;">
             <el-option label="全部状态" value="all" ></el-option>
