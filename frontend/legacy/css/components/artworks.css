@@ -167,6 +167,10 @@
     margin: 8px 0;
 }
 
+.mapping-table {
+    table-layout: fixed;
+}
+
 .layer-table th,
 .layer-table td {
     border: 1px solid #ddd;
@@ -326,7 +330,7 @@
 /* 操作按钮容器 */
 .operation-buttons {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     justify-content: center;
     align-items: center;
     padding: 4px 0;
@@ -586,18 +590,18 @@
 
 .mapping-table th:nth-child(2),
 .mapping-table td:nth-child(2) {
-    min-width: 220px;
+    min-width: 170px;
 }
 
 .mapping-table th:nth-child(3),
 .mapping-table td:nth-child(3) {
-    width: 92px;
+    width: 78px;
 }
 
 .mapping-action-btn {
-    width: 28px !important;
-    height: 28px !important;
-    border-radius: 8px !important;
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 6px !important;
     padding: 0 !important;
 }
 
@@ -605,6 +609,12 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+.add-hint {
+    font-size: 12px;
+    color: var(--sw-text-muted);
+    line-height: 1.35;
 }
 
 

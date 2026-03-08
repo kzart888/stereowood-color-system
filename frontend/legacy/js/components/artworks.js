@@ -472,9 +472,9 @@ const ArtworksComponent = {
               <table class="layer-table mapping-table">
                 <thead>
                   <tr>
-                    <th style="width:60px;">层号</th>
-                    <th style="min-width:220px;">自配色号</th>
-                    <th style="width:92px;">操作</th>
+                    <th style="width:72px;">层号</th>
+                    <th>自配色号</th>
+                    <th style="width:78px;">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -559,7 +559,7 @@ const ArtworksComponent = {
                   </tr>
                 </tbody>
               </table>
-              <div class="add-button-container" style="margin-top: 6px;">
+              <div class="add-button-container" style="margin-top: 6px; align-items: center;">
                 <el-button 
                   size="small" 
                   type="primary" 
@@ -568,7 +568,7 @@ const ArtworksComponent = {
                 >
                   <el-icon><Plus /></el-icon>
                 </el-button>
-                <span class="add-hint" style="margin-left: 6px;">按层号顺序填写；保存时会按层号排序；允许相同层号，即同层多色，但会触发提醒图标</span>
+                <span class="add-hint">按层号顺序填写；保存时会按层号排序；允许相同层号，即同层多色，但会触发提醒图标</span>
               </div>
             </div>
           </el-form-item>

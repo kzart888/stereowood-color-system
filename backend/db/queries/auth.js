@@ -94,13 +94,13 @@ function countSuperAdmins() {
   ).then((row) => (row ? row.total : 0));
 }
 
-function createRegistrationRequest({ username, passwordHash }) {
+function createRegistrationRequest({ username, passwordHash, mustChangePassword = 0 }) {
   return dbRun(
     `
     INSERT INTO user_accounts (username, password_hash, role, status, must_change_password)
-    VALUES (?, ?, 'user', 'pending', 1)
+    VALUES (?, ?, 'user', 'pending', ?)
     `,
-    [username, passwordHash]
+    [username, passwordHash, mustChangePassword ? 1 : 0]
   );
 }
 

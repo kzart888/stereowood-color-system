@@ -1,7 +1,7 @@
-# Latest Roadmap and Checklist (P0-P6 + Auth Hardening Refresh)
+# Latest Roadmap and Checklist (P0-P6 + Auth/RBAC/UI Refresh)
 
 Last updated: 2026-03-08  
-Scope: legacy production continuity + completed auth/RBAC hardening + modernization preparation.
+Scope: legacy production continuity + auth/RBAC/login UX alignment + modernization preparation.
 
 This file remains the architecture execution source of truth.
 
@@ -22,10 +22,13 @@ This file remains the architecture execution source of truth.
 - Auth mode is now upgraded:
   - HttpOnly cookie session (30 days default)
   - role model: `super_admin`, `admin`, `user`
-  - first-login forced password change
+  - first-login forced password change only for bootstrap/admin-created/reset accounts
+  - self-register (`register-request`) with strong password does not require first-login password change
   - single active session per account
   - account creation rule: create `user` first, then promote to `admin` if needed
   - separate login page and account-management page
+  - login page uses single input group (login + apply account)
+  - account-management row actions use backend-provided per-row permissions for disabled-state rendering
 - Legacy UI deep optimization (U0-U7) is now completed on the working branch:
   - default pagination moved to 24
   - category-manager drag/alignment polish
@@ -47,8 +50,10 @@ This file remains the architecture execution source of truth.
 | P5 | Obsolete/duplicate cleanup | Completed | Network unification + decomposition + docs cleanup completed. |
 | P6 | Modernization pilot (Vue path) | Completed (gate-ready) | Pilot write slice, parity, and rollback rehearsal completed. |
 | P7 | Auth/RBAC hardening refresh | Completed | Login split, role-based admin, forced password change, cookie session completed. |
+| P7.1 | Login/RBAC interaction alignment (V2) | Completed | Login/apply semantics + password policy split + account permission disabled states + new smoke gates completed. |
 | P8 | Modern platform build-out | Pending | Start new modern frontend branch after stable merge/tag. |
 | U0-U7 | Legacy UI deep optimization | Completed | Related-assets + visual consistency + thumbnail quality pass on legacy runtime. |
+| U8-U10 | UI continuity governance | In progress | Header/button conflict cleanup done; dialog-wide consistency and runtime Chinese copy cleanup continue by module. |
 
 ## P7 Completion Checklist (This Iteration)
 
@@ -80,7 +85,37 @@ This file remains the architecture execution source of truth.
 - [x] Published P7 gate:
   - [x] `docs/architecture/P7_AUTH_RBAC_REVIEW_GATE.md`
 
-## Verification Snapshot (2026-03-07)
+## P7.1 Completion Checklist (This Iteration)
+
+- [x] Login/API semantics aligned:
+  - [x] `AUTH_ACCOUNT_NOT_FOUND` and `AUTH_PASSWORD_INCORRECT` are split on login.
+  - [x] `register-request` creates pending users with `must_change_password=0`.
+  - [x] Admin create/reset flows are fixed to default password `123456` and `must_change_password=1`.
+- [x] Added account-level action permissions in admin list payload:
+  - [x] `can_reset`
+  - [x] `can_revoke`
+  - [x] `can_disable`
+  - [x] `can_enable`
+  - [x] `can_delete`
+  - [x] `can_promote`
+  - [x] `can_demote`
+- [x] Login page refactor:
+  - [x] removed split register section
+  - [x] single username/password area with `登录` and `申请账号`
+  - [x] apply-on-existing-account copy aligned to `账号已存在，可直接登录`
+- [x] Account-management UX alignment:
+  - [x] top create-account row is operable without password input
+  - [x] row action buttons disabled by backend permissions (no avoidable backend-error popups)
+  - [x] batch reset only targets rows with `can_reset=true`
+- [x] Added V2 smoke gates:
+  - [x] `npm run phaseL:auth-login-matrix:smoke`
+  - [x] `npm run phaseL:auth-login-ui-smoke`
+  - [x] `npm run phaseL:auth-v2:verify`
+- [x] Published V2 execution checklist and review gate:
+  - [x] `docs/architecture/P7_1_AUTH_UI_EXECUTION_CHECKLIST.md`
+  - [x] `docs/architecture/P7_1_REVIEW_GATE.md`
+
+## Verification Snapshot (2026-03-08)
 
 - [x] `npm run phase0:verify`
 - [x] `npm run phaseA:a0:verify`
@@ -88,6 +123,9 @@ This file remains the architecture execution source of truth.
 - [x] `npm run phaseP3:verify`
 - [x] `npm run phaseP6:verify`
 - [x] `npm run phaseL:auth-rbac:smoke`
+- [x] `npm run phaseL:auth-login-matrix:smoke`
+- [x] `npm run phaseL:auth-login-ui-smoke`
+- [x] `npm run phaseL:auth-v2:verify`
 - [x] `npm run gate:full`
 
 ## Remaining Work (P8 Modernization)

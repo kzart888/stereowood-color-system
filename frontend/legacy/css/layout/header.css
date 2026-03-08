@@ -75,31 +75,7 @@
     padding: 0 12px !important;
 }
 
-/* === Header Action Buttons === */
-.app-header-right .el-button {
-    height: 30px !important;
-    padding: 0 8px !important;
-    margin: 0 !important;
-}
-
-/* Ensure all header buttons have consistent height */
-.app-header .el-button--small {
-    height: 30px !important;
-    line-height: 28px;
-}
-
-/* Fix all small buttons to be exactly 30px */
-.el-button--small {
-    height: 30px !important;
-    min-height: 30px !important;
-    line-height: 28px !important;
-}
-
-/* Specifically target the add button to be 30px */
-.el-button--primary.el-button--small.add-button {
-    height: 30px !important;
-    min-height: 30px !important;
-}
+/* Header button visuals are centralized in components/buttons.css */
 
 /* Search bar responsive sizing handled in stages below */
 
@@ -201,48 +177,7 @@
 }
 
 /* 双按钮组 */
-.dual-toggle-group {
-    display: inline-flex;
-    align-items: center;
-    height: 32px;
-    box-sizing: border-box;
-    border: 1px solid var(--sw-border-base);
-    border-radius: var(--sw-radius-sm);
-    overflow: hidden;
-    background: var(--sw-bg-white);
-}
-
-.dual-toggle-group button,
-.dual-toggle-group .el-button {
-    height: 30px !important;
-    padding: 0 8px;
-    margin: 0 !important;
-    font-size: 13px;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    background: transparent;
-    transition: all var(--sw-transition-fast);
-    line-height: 30px !important;
-}
-
-.dual-toggle-group button:not(:last-child),
-.dual-toggle-group .el-button:not(:last-child) {
-    border-right: 1px solid var(--sw-border-light) !important;
-}
-
-.dual-toggle-group button:hover,
-.dual-toggle-group .el-button:hover {
-    background: var(--sw-bg-light);
-    color: var(--sw-primary);
-}
-
-.dual-toggle-group button.is-active,
-.dual-toggle-group .el-button.is-active {
-    background: var(--sw-primary);
-    color: white;
-    box-shadow: none !important;
-}
+/* Toggle-group visuals are centralized in components/buttons.css */
 
 /* Add button styles moved to buttons.css for consistency */
 

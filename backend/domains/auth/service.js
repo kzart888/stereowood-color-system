@@ -13,8 +13,10 @@ const AUTH_ERROR = {
   VALIDATION: 'AUTH_VALIDATION_ERROR',
   DUPLICATE: 'AUTH_DUPLICATE_ACCOUNT',
   NOT_FOUND: 'AUTH_NOT_FOUND',
+  ACCOUNT_NOT_FOUND: 'AUTH_ACCOUNT_NOT_FOUND',
   NOT_APPROVED: 'AUTH_NOT_APPROVED',
   INVALID_CREDENTIALS: 'AUTH_INVALID_CREDENTIALS',
+  PASSWORD_INCORRECT: 'AUTH_PASSWORD_INCORRECT',
   ADMIN_KEY_REQUIRED: 'AUTH_ADMIN_KEY_REQUIRED',
   INVALID_STATUS: 'AUTH_INVALID_STATUS',
   INVALID_ROLE: 'AUTH_INVALID_ROLE',
@@ -216,6 +218,35 @@ function ensureManageableByActor(actor, targetAccount, action = 'manage') {
   throw createAuthError(AUTH_ERROR.PERMISSION_DENIED, `Cannot ${action} this account role.`, 403);
 }
 
+function canManageTargetByActor(actor, targetAccount) {
+  if (!actor || !targetAccount) return false;
+
+  const targetRole = normalizeRole(targetAccount.role);
+  if (targetRole === AUTH_ROLE.SUPER_ADMIN) return false;
+  if (actor.id && String(actor.id) === String(targetAccount.id)) return false;
+
+  if (hasRole(actor, [AUTH_ROLE.SUPER_ADMIN])) return true;
+  if (hasRole(actor, [AUTH_ROLE.ADMIN]) && targetRole === AUTH_ROLE.USER) return true;
+  return false;
+}
+
+function buildAccountPermissions(actor, account) {
+  const targetRole = normalizeRole(account && account.role ? account.role : AUTH_ROLE.USER);
+  const canManage = canManageTargetByActor(actor, account);
+  const canPromote = hasRole(actor, [AUTH_ROLE.SUPER_ADMIN]) && targetRole === AUTH_ROLE.USER && canManage;
+  const canDemote = hasRole(actor, [AUTH_ROLE.SUPER_ADMIN]) && targetRole === AUTH_ROLE.ADMIN && canManage;
+
+  return {
+    can_reset: canManage,
+    can_revoke: canManage,
+    can_disable: canManage,
+    can_enable: canManage,
+    can_delete: canManage,
+    can_promote: canPromote,
+    can_demote: canDemote,
+  };
+}
+
 class AuthService {
   async ensureBootstrapSuperAdmin() {
     const total = await authQueries.countSuperAdmins();
@@ -256,6 +287,7 @@ class AuthService {
     const result = await authQueries.createRegistrationRequest({
       username: normalizedUsername,
       passwordHash,
+      mustChangePassword: 0,
     });
 
     const created = await authQueries.getAccountById(result.lastID);
@@ -296,7 +328,13 @@ class AuthService {
     ]);
 
     return {
-      items: items.map((item) => sanitizeAccount(item)),
+      items: items.map((item) => {
+        const sanitized = sanitizeAccount(item);
+        return {
+          ...sanitized,
+          permissions: buildAccountPermissions(actor, item),
+        };
+      }),
       pagination: {
         page: safePage,
         pageSize: safePageSize,
@@ -354,12 +392,12 @@ class AuthService {
 
     const account = await authQueries.getAccountByUsername(normalizedUsername);
     if (!account) {
-      throw createAuthError(AUTH_ERROR.INVALID_CREDENTIALS, 'Invalid credentials.', 401);
+      throw createAuthError(AUTH_ERROR.ACCOUNT_NOT_FOUND, 'Account does not exist.', 404);
     }
 
     const verified = await verifyPassword(password, account.password_hash);
     if (!verified) {
-      throw createAuthError(AUTH_ERROR.INVALID_CREDENTIALS, 'Invalid credentials.', 401);
+      throw createAuthError(AUTH_ERROR.PASSWORD_INCORRECT, 'Incorrect password.', 401);
     }
 
     if (account.status !== 'approved') {
@@ -518,7 +556,15 @@ class AuthService {
       throw createAuthError(AUTH_ERROR.DUPLICATE, 'username already exists.', 409);
     }
 
-    const initialPassword = password && String(password).trim() !== '' ? String(password) : LEGACY_DEFAULT_PASSWORD;
+    if (password !== undefined && String(password).trim() !== '') {
+      throw createAuthError(
+        AUTH_ERROR.VALIDATION,
+        'Custom password is not allowed for admin-created accounts.',
+        400
+      );
+    }
+
+    const initialPassword = LEGACY_DEFAULT_PASSWORD;
     validateTemporaryPassword(initialPassword);
 
     const passwordHash = await hashPassword(initialPassword);
@@ -550,7 +596,15 @@ class AuthService {
     const existing = await authQueries.getAccountById(id);
     ensureManageableByActor(actor, existing, 'reset password for');
 
-    const nextPassword = password && String(password).trim() !== '' ? String(password) : LEGACY_DEFAULT_PASSWORD;
+    if (password !== undefined && String(password).trim() !== '') {
+      throw createAuthError(
+        AUTH_ERROR.VALIDATION,
+        'Custom reset password is not allowed. Use default password 123456.',
+        400
+      );
+    }
+
+    const nextPassword = LEGACY_DEFAULT_PASSWORD;
     validateTemporaryPassword(nextPassword);
 
     const passwordHash = await hashPassword(nextPassword);
@@ -590,6 +644,14 @@ class AuthService {
     );
     if (normalizedIds.length === 0) {
       throw createAuthError(AUTH_ERROR.VALIDATION, 'No valid account ids provided.', 400);
+    }
+
+    if (password !== undefined && String(password).trim() !== '') {
+      throw createAuthError(
+        AUTH_ERROR.VALIDATION,
+        'Custom reset password is not allowed. Use default password 123456.',
+        400
+      );
     }
 
     const results = [];

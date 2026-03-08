@@ -8,108 +8,144 @@
   <style>
     :root {
       color-scheme: light;
-      --bg: #f4f6f8;
+      --bg: #f3f6fa;
       --card: #ffffff;
       --text: #1f2a37;
-      --muted: #65758b;
-      --primary: #0b6bcb;
-      --danger: #c23333;
-      --border: #d5dde7;
+      --muted: #6b7c93;
+      --primary: #3b6fb3;
+      --primary-hover: #2f5f9f;
+      --danger: #c83f3f;
+      --success: #2c8f56;
+      --border: #d5dde8;
+      --radius: 10px;
     }
+
     body {
       margin: 0;
-      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-      background: radial-gradient(circle at top, #eaf2fb 0%, var(--bg) 50%, #eef1f5 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: radial-gradient(circle at 20% 10%, #eef5ff 0%, var(--bg) 45%, #eef1f5 100%);
       color: var(--text);
+      font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+      padding: 10px;
+      box-sizing: border-box;
     }
+
     .login-card {
-      width: min(420px, calc(100vw - 24px));
-      background: var(--card);
+      width: min(430px, calc(100vw - 20px));
       border: 1px solid var(--border);
       border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(18, 47, 82, 0.12);
-      padding: 24px 22px;
+      background: var(--card);
+      box-shadow: 0 12px 32px rgba(18, 43, 73, 0.12);
+      padding: 22px 20px;
+      box-sizing: border-box;
     }
+
     .title {
-      margin: 0 0 6px;
+      margin: 0 0 4px;
       font-size: 22px;
       font-weight: 700;
-      line-height: 1.3;
+      letter-spacing: 0.2px;
     }
+
     .subtitle {
       margin: 0 0 18px;
-      color: var(--muted);
       font-size: 13px;
+      color: var(--muted);
     }
+
     .row {
       margin-bottom: 12px;
     }
+
     label {
       display: block;
       margin-bottom: 6px;
       font-size: 13px;
       color: var(--text);
     }
+
     input {
       width: 100%;
       box-sizing: border-box;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 11px;
+      border-radius: var(--radius);
       font-size: 14px;
+      padding: 10px 12px;
       outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
+
     input:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(11, 107, 203, 0.12);
+      box-shadow: 0 0 0 3px rgba(59, 111, 179, 0.14);
     }
+
     .actions {
       display: flex;
       gap: 10px;
       margin-top: 14px;
     }
+
     button {
-      border: 0;
-      border-radius: 8px;
+      border: none;
+      border-radius: var(--radius);
       padding: 10px 14px;
       font-size: 14px;
       cursor: pointer;
+      transition: background-color 0.15s ease, opacity 0.15s ease;
     }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
     .btn-primary {
       flex: 1;
       background: var(--primary);
       color: #fff;
     }
-    .btn-secondary {
-      background: #eef3f9;
-      color: #27496d;
+
+    .btn-primary:hover:enabled {
+      background: var(--primary-hover);
     }
+
+    .btn-secondary {
+      background: #eef2f7;
+      color: #244463;
+    }
+
+    .btn-secondary:hover:enabled {
+      background: #dde6f1;
+    }
+
     .hint {
       margin-top: 12px;
       font-size: 12px;
       color: var(--muted);
+      line-height: 1.45;
     }
-    .error {
-      margin-top: 10px;
-      color: var(--danger);
-      font-size: 13px;
-      min-height: 18px;
-    }
+
+    .error,
     .success {
-      margin-top: 10px;
-      color: #14833b;
-      font-size: 13px;
       min-height: 18px;
+      margin-top: 10px;
+      font-size: 13px;
+      line-height: 1.4;
     }
+
+    .error { color: var(--danger); }
+    .success { color: var(--success); }
+
     .block {
       border-top: 1px dashed var(--border);
       margin-top: 16px;
       padding-top: 14px;
     }
+
     .hidden {
       display: none;
     }
@@ -118,7 +154,7 @@
 <body>
   <div class="login-card">
     <h1 class="title">STEREOWOOD 颜色管理系统</h1>
-    <p class="subtitle">请输入账号和密码登录</p>
+    <p class="subtitle">请输入账号和密码进行登录或申请账号</p>
 
     <section id="login-section">
       <div class="row">
@@ -130,16 +166,16 @@
         <input id="password" type="password" autocomplete="current-password" />
       </div>
       <div class="actions">
-        <button id="login-btn" class="btn-primary">登录</button>
-        <button id="toggle-register-btn" class="btn-secondary" type="button">申请账号</button>
+        <button id="login-btn" class="btn-primary" type="button">登录</button>
+        <button id="apply-btn" class="btn-secondary" type="button">申请账号</button>
       </div>
-      <div class="hint">一个月内免重复登录；到期后需重新登录。</div>
+      <div class="hint">登录状态默认保持 30 天，过期后需要重新登录。</div>
       <div id="login-error" class="error"></div>
       <div id="login-success" class="success"></div>
     </section>
 
     <section id="change-password-section" class="hidden block">
-      <h3 style="margin:0 0 8px; font-size:16px;">首次登录需修改密码</h3>
+      <h3 style="margin:0 0 8px; font-size:16px;">首次登录需要修改密码</h3>
       <div class="row">
         <label for="current-password">当前密码</label>
         <input id="current-password" type="password" autocomplete="current-password" />
@@ -153,27 +189,10 @@
         <input id="confirm-password" type="password" autocomplete="new-password" />
       </div>
       <div class="actions">
-        <button id="change-password-btn" class="btn-primary">确认修改</button>
+        <button id="change-password-btn" class="btn-primary" type="button">确认修改</button>
       </div>
       <div id="change-password-error" class="error"></div>
       <div id="change-password-success" class="success"></div>
-    </section>
-
-    <section id="register-section" class="hidden block">
-      <h3 style="margin:0 0 8px; font-size:16px;">账号申请</h3>
-      <div class="row">
-        <label for="register-username">申请用户名</label>
-        <input id="register-username" autocomplete="username" />
-      </div>
-      <div class="row">
-        <label for="register-password">初始密码（至少8位）</label>
-        <input id="register-password" type="password" autocomplete="new-password" />
-      </div>
-      <div class="actions">
-        <button id="register-btn" class="btn-primary">提交申请</button>
-      </div>
-      <div id="register-error" class="error"></div>
-      <div id="register-success" class="success"></div>
     </section>
   </div>
 

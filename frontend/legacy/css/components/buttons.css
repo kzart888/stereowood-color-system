@@ -126,6 +126,7 @@
     background: transparent;
     color: var(--sw-text-secondary);
     transition: all var(--sw-transition-fast);
+    position: relative;
 }
 
 .dual-toggle-group button:not(:last-child),
@@ -149,6 +150,10 @@
     color: white !important;
     box-shadow: none !important;
     outline: none !important;
+}
+
+.dual-toggle-group .el-button::before {
+    display: none !important;
 }
 
 .dual-toggle-group .el-button--primary:hover {

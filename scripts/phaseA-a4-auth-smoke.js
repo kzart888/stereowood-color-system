@@ -153,7 +153,10 @@ async function main() {
     assert(login.json && login.json.token && login.json.user && login.json.user.id, 'login response missing token/user');
     const token = login.json.token;
     const actorId = String(login.json.user.id);
-    assert(Boolean(login.json.user.must_change_password), 'expected must_change_password=true on first login');
+    assert(
+      login.json.user.must_change_password === false,
+      'expected must_change_password=false for approved self-registered account'
+    );
 
     const changePassword = await request(
       'POST',

@@ -16,8 +16,7 @@ const username = `p3_user_${Date.now().toString().slice(-6)}`;
 const password = 'P3smoke-pass-123';
 const changedPassword = 'P3smoke-pass-456';
 const managedUser = `p3_admin_created_${Date.now().toString().slice(-6)}`;
-const managedInitialPassword = 'P3managed-pass-111';
-const managedResetPassword = 'P3managed-pass-222';
+const managedChangedPassword = 'P3managed-pass-222';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -144,7 +143,7 @@ async function main() {
     const token2 = login2.json.token;
     assert(token1 !== token2, 'second login must issue a new token');
     assert(Number.isInteger(login2.json.revoked_sessions), 'login response missing revoked_sessions');
-    assert(Boolean(login2.json.user && login2.json.user.must_change_password), 'expected must_change_password=true on first login');
+    assert(!Boolean(login2.json.user && login2.json.user.must_change_password), 'self-registered account should not require password change');
 
     const changePassword = await request(
       'POST',
@@ -167,7 +166,6 @@ async function main() {
       '/api/auth/admin/accounts',
       {
         username: managedUser,
-        password: managedInitialPassword,
         status: 'approved',
       },
       { 'x-admin-key': adminKey }
@@ -188,23 +186,45 @@ async function main() {
       'admin list accounts missing created user'
     );
 
+    const managedFirstLogin = await request('POST', '/api/auth/login', {
+      username: managedUser,
+      password: '123456',
+    });
+    assert(managedFirstLogin.status === 200, `managed first login failed: ${managedFirstLogin.status}`);
+    assert(
+      Boolean(managedFirstLogin.json.user && managedFirstLogin.json.user.must_change_password),
+      'admin-created account should require password change'
+    );
+    const managedTokenFirst = managedFirstLogin.json.token;
+
+    const managedChangePassword = await request(
+      'POST',
+      '/api/auth/change-password',
+      { oldPassword: '123456', newPassword: managedChangedPassword },
+      { authorization: `Bearer ${managedTokenFirst}` }
+    );
+    assert(
+      managedChangePassword.status === 200,
+      `managed change-password failed: ${managedChangePassword.status}`
+    );
+
     const resetPassword = await request(
       'POST',
       `/api/auth/admin/accounts/${managedId}/reset-password`,
-      { password: managedResetPassword },
+      {},
       { 'x-admin-key': adminKey }
     );
     assert(resetPassword.status === 200, `reset password failed: ${resetPassword.status}`);
 
     const oldPasswordLogin = await request('POST', '/api/auth/login', {
       username: managedUser,
-      password: managedInitialPassword,
+      password: managedChangedPassword,
     });
     assert(oldPasswordLogin.status === 401, `old password should fail, got ${oldPasswordLogin.status}`);
 
     const managedLogin = await request('POST', '/api/auth/login', {
       username: managedUser,
-      password: managedResetPassword,
+      password: '123456',
     });
     assert(managedLogin.status === 200, `managed login failed: ${managedLogin.status}`);
     const managedToken = managedLogin.json.token;
@@ -219,7 +239,7 @@ async function main() {
 
     const disabledLogin = await request('POST', '/api/auth/login', {
       username: managedUser,
-      password: managedResetPassword,
+      password: '123456',
     });
     assert(disabledLogin.status === 403, `disabled account login should be 403, got ${disabledLogin.status}`);
 
@@ -233,7 +253,7 @@ async function main() {
 
     const reLogin = await request('POST', '/api/auth/login', {
       username: managedUser,
-      password: managedResetPassword,
+      password: '123456',
     });
     assert(reLogin.status === 200, `re-login after enable failed: ${reLogin.status}`);
     const managedToken2 = reLogin.json.token;

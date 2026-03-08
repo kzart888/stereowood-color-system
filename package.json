@@ -41,6 +41,9 @@
     "phaseP6:pilot-write-docker-smoke": "node scripts/phaseP6-pilot-write-docker-smoke.js",
     "phaseP6:verify": "npm run phaseP6:pilot-write-smoke && npm run phaseP6:pilot-rollback-rehearsal && npm run phaseP6:pilot-write-docker-smoke && npm run phase0:verify",
     "phaseL:auth-rbac:smoke": "node scripts/phaseL-auth-rbac-smoke.js",
+    "phaseL:auth-login-matrix:smoke": "node scripts/auth-login-matrix-smoke.js",
+    "phaseL:auth-login-ui-smoke": "node scripts/auth-login-ui-smoke.js",
+    "phaseL:auth-v2:verify": "npm run phaseL:auth-rbac:smoke && npm run phaseL:auth-login-matrix:smoke && npm run phaseL:auth-login-ui-smoke && npm run phase0:verify",
     "predeploy:check": "node scripts/predeploy-check.js",
     "gate:full": "node scripts/gate-full.js"
   },

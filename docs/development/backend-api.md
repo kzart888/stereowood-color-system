@@ -217,6 +217,14 @@ Public auth endpoints:
 - `GET /api/auth/me`
 - `POST /api/auth/change-password`
 
+`POST /api/auth/register-request` behavior:
+- Input password must be strong (`8-128` chars).
+- Creates `pending` user account.
+- Sets `must_change_password=false` for self-register flow.
+- Duplicate username returns:
+  - `409`
+  - `code: AUTH_DUPLICATE_ACCOUNT`
+
 Admin account endpoints (requires admin role session):
 - `GET /api/auth/admin/pending`
 - `GET /api/auth/admin/accounts`
@@ -232,6 +240,17 @@ Admin account endpoints (requires admin role session):
 - `POST /api/auth/admin/requests/:id/approve`
 - `POST /api/auth/admin/requests/:id/reject`
 
+`GET /api/auth/admin/accounts` item payload adds permission flags:
+- `permissions.can_reset`
+- `permissions.can_revoke`
+- `permissions.can_disable`
+- `permissions.can_enable`
+- `permissions.can_delete`
+- `permissions.can_promote`
+- `permissions.can_demote`
+
+These booleans are actor-aware and intended for frontend disabled-state rendering.
+
 Super-admin-only endpoints:
 - `POST /api/auth/admin/accounts/:id/promote-admin`
 - `POST /api/auth/admin/accounts/:id/demote-admin`
@@ -246,9 +265,22 @@ Compatibility fallback:
 
 Password/session behavior:
 - Default temporary password for admin-created/reset accounts: `123456`.
+- Admin create/reset APIs reject custom password input and always apply default `123456`.
 - New/reset accounts enforce first-login password change.
+- Self-register (`register-request`) does not enforce first-login password change.
 - `POST /api/auth/change-password` clears `must_change_password`.
 - Login enforces one active session per user; newer login revokes older active sessions.
+
+Login error-code behavior:
+- Account not found:
+  - status `404`
+  - `code: AUTH_ACCOUNT_NOT_FOUND`
+- Password incorrect:
+  - status `401`
+  - `code: AUTH_PASSWORD_INCORRECT`
+- Account pending/disabled:
+  - status `403`
+  - `code: AUTH_NOT_APPROVED`
 
 Write-protection behavior:
 - Runtime flags can be changed by admin API:

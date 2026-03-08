@@ -1,6 +1,29 @@
 # Changelog
 
 ## Unreleased (2026-03-08, U0-U7 + legacy UI pass)
+### P7.1 Login/RBAC/UI Alignment (V2)
+- Aligned login error semantics:
+  - `AUTH_ACCOUNT_NOT_FOUND` (404)
+  - `AUTH_PASSWORD_INCORRECT` (401)
+- Changed self-register policy:
+  - pending self-register accounts now default to `must_change_password=false`
+  - admin-created/reset accounts remain default password `123456` + forced first-login change
+- Added actor-aware account permissions in admin list payload:
+  - `can_reset/can_revoke/can_disable/can_enable/can_delete/can_promote/can_demote`
+- Refactored login page into single credential block:
+  - removed separate legacy register section
+  - same username/password inputs drive both `登录` and `申请账号`
+- Updated account-management UX:
+  - operable top create-account bar (no password input)
+  - disabled-state action buttons follow backend permissions
+  - batch reset applies only to permitted rows
+- Added/updated verification scripts:
+  - `npm run phaseL:auth-login-matrix:smoke`
+  - `npm run phaseL:auth-login-ui-smoke`
+  - `npm run phaseL:auth-v2:verify`
+- Updated gate compatibility check:
+  - `scripts/phaseA-a4-auth-smoke.js` now reflects self-register no-force-change policy.
+
 ### Legacy UI Deep Optimization (U0-U7)
 - Changed legacy pagination defaults to `24` for custom-colors / artworks / mont-marte (while preserving existing local preference values).
 - Polished category manager drag interaction and top input-row alignment.

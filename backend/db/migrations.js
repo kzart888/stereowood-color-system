@@ -640,6 +640,16 @@ async function runMigrations() {
       await runSafe(`ALTER TABLE user_accounts ADD COLUMN password_changed_at DATETIME`);
     }
     await runSafe(`CREATE INDEX IF NOT EXISTS idx_user_accounts_role ON user_accounts(role, id DESC)`);
+    await runSafe(`
+      UPDATE user_accounts
+      SET must_change_password = 0,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE status = 'pending'
+        AND role = 'user'
+        AND COALESCE(must_change_password, 1) = 1
+        AND approved_by IS NULL
+        AND password_changed_at IS NULL
+    `);
 
   } catch (e) {
     console.error('鏁版嵁搴撹縼绉诲け璐?', e);

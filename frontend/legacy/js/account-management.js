@@ -8,6 +8,22 @@
     });
   }
 
+  function defaultPermissions() {
+    return {
+      can_reset: false,
+      can_revoke: false,
+      can_disable: false,
+      can_enable: false,
+      can_delete: false,
+      can_promote: false,
+      can_demote: false,
+    };
+  }
+
+  function mergePermissions(source) {
+    return { ...defaultPermissions(), ...(source || {}) };
+  }
+
   const app = createApp({
     data() {
       return {
@@ -25,15 +41,15 @@
         newUser: {
           username: '',
         },
-        loading: false,
       };
     },
     computed: {
-      isSuperAdmin() {
-        return this.me.role === 'super_admin';
+      canCreateUser() {
+        const username = String(this.newUser.username || '').trim();
+        return username.length >= 3;
       },
-      selectedIds() {
-        return this.selectedRows.map((row) => row.id);
+      selectedRowsForBatchReset() {
+        return this.selectedRows.filter((row) => this.allow(row, 'can_reset'));
       },
     },
     async mounted() {
@@ -66,6 +82,34 @@
           fallback
         );
       },
+      allow(row, permissionKey) {
+        const permissions = row && row.permissions ? row.permissions : defaultPermissions();
+        return Boolean(permissions[permissionKey]);
+      },
+      isRowSelectable(row) {
+        return this.allow(row, 'can_reset');
+      },
+      actionBlockedReason(row, permissionKey) {
+        if (this.allow(row, permissionKey)) return '';
+        if (!row) return '';
+
+        if (String(row.id) === String(this.me.id)) {
+          return '不能对当前登录账号执行此操作';
+        }
+        if (row.role === 'super_admin') {
+          return '不能对超级管理员执行此操作';
+        }
+        if (this.me.role === 'admin' && row.role === 'admin') {
+          return '管理员不能操作管理员账号';
+        }
+        return '当前角色无此操作权限';
+      },
+      sanitizeAccountRow(row) {
+        return {
+          ...row,
+          permissions: mergePermissions(row && row.permissions),
+        };
+      },
       async bootstrap() {
         try {
           const meResp = await this.client.get('/api/auth/me');
@@ -76,7 +120,7 @@
         }
 
         if (!['super_admin', 'admin'].includes(this.me.role)) {
-          this.notify('error', '无账号管理权限。');
+          this.notify('error', '无账号管理权限');
           window.location.href = '/app';
           return;
         }
@@ -104,13 +148,15 @@
               pageSize: 200,
             },
           });
-          this.accounts = (response.data && response.data.items) || [];
+          const rawItems = (response.data && response.data.items) || [];
+          this.accounts = rawItems.map((row) => this.sanitizeAccountRow(row));
+          this.selectedRows = [];
         } catch (error) {
           this.notify('error', this.getErrorMessage(error, '加载账号列表失败。'));
         }
       },
       onSelectionChange(rows) {
-        this.selectedRows = rows || [];
+        this.selectedRows = (rows || []).filter((row) => this.allow(row, 'can_reset'));
       },
       async createUser() {
         const username = String(this.newUser.username || '').trim();
@@ -159,6 +205,7 @@
         }
       },
       async resetOne(row) {
+        if (!this.allow(row, 'can_reset')) return;
         try {
           await window.ElementPlus.ElMessageBox.confirm(
             `确认将账号 ${row.username} 的密码重置为 123456 吗？`,
@@ -174,14 +221,15 @@
         }
       },
       async batchReset() {
-        if (!this.selectedIds.length) {
-          this.notify('warning', '请先勾选要重置的账号。');
+        if (!this.selectedRowsForBatchReset.length) {
+          this.notify('warning', '请先勾选可重置密码的账号。');
           return;
         }
 
+        const selectedIds = this.selectedRowsForBatchReset.map((row) => row.id);
         try {
           await window.ElementPlus.ElMessageBox.confirm(
-            `将重置 ${this.selectedIds.length} 个账号密码为 123456，继续吗？`,
+            `将重置 ${selectedIds.length} 个账号密码为 123456，继续吗？`,
             '第一步确认',
             { type: 'warning' }
           );
@@ -200,10 +248,10 @@
             return;
           }
           await this.client.post('/api/auth/admin/accounts/reset-password-batch', {
-            ids: this.selectedIds,
+            ids: selectedIds,
             confirm: 'RESET',
           });
-          this.notify('success', `已重置 ${this.selectedIds.length} 个账号密码。`);
+          this.notify('success', `已重置 ${selectedIds.length} 个账号密码。`);
           await this.loadAccounts();
         } catch (error) {
           if (error === 'cancel' || error === 'close') return;
@@ -211,6 +259,7 @@
         }
       },
       async revoke(row) {
+        if (!this.allow(row, 'can_revoke')) return;
         try {
           await this.client.post(`/api/auth/admin/accounts/${row.id}/revoke-sessions`, {});
           this.notify('success', '已踢下线。');
@@ -219,6 +268,7 @@
         }
       },
       async disable(row) {
+        if (!this.allow(row, 'can_disable')) return;
         try {
           await this.client.post(`/api/auth/admin/accounts/${row.id}/disable`, {});
           this.notify('success', '账号已禁用。');
@@ -228,6 +278,7 @@
         }
       },
       async enable(row) {
+        if (!this.allow(row, 'can_enable')) return;
         try {
           await this.client.post(`/api/auth/admin/accounts/${row.id}/enable`, {});
           this.notify('success', '账号已启用。');
@@ -237,6 +288,7 @@
         }
       },
       async remove(row) {
+        if (!this.allow(row, 'can_delete')) return;
         try {
           await window.ElementPlus.ElMessageBox.confirm(
             `确认删除账号 ${row.username} 吗？此操作不可恢复。`,
@@ -252,6 +304,7 @@
         }
       },
       async promote(row) {
+        if (!this.allow(row, 'can_promote')) return;
         try {
           await this.client.post(`/api/auth/admin/accounts/${row.id}/promote-admin`, {});
           this.notify('success', '已指派为管理员。');
@@ -261,6 +314,7 @@
         }
       },
       async demote(row) {
+        if (!this.allow(row, 'can_demote')) return;
         try {
           await this.client.post(`/api/auth/admin/accounts/${row.id}/demote-admin`, {});
           this.notify('success', '已撤销管理员身份。');
