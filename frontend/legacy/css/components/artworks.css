@@ -169,10 +169,20 @@
 
 .mapping-table {
     table-layout: fixed;
+    width: 100%;
+    max-width: 900px;
 }
 
 .mapping-table td {
     vertical-align: top;
+}
+
+.mapping-col-layer {
+    width: 112px;
+}
+
+.mapping-col-action {
+    width: 116px;
 }
 
 .layer-table th,
@@ -191,7 +201,7 @@
 
 .layer-table td {
     background: white;
-    vertical-align: middle;
+    vertical-align: top;
 }
 
 .layer-table td strong {
@@ -213,36 +223,53 @@
 /* 层号输入框样式 */
 .layer-cell .el-input-number,
 .layer-number-input {
-    width: 60px;
+    width: 86px;
+    min-width: 86px;
 }
 
 .layer-cell .el-input-number .el-input__wrapper,
 .layer-number-input .el-input__wrapper {
-    width: 60px;
-    padding-left: 6px;
-    padding-right: 36px;
+    width: 86px;
+    padding-left: 10px;
+    padding-right: 30px;
+}
+
+.layer-number-input .el-input__inner {
+    text-align: left;
+    line-height: 20px;
+    min-height: 20px;
+    color: var(--sw-text-primary);
+    font-variant-numeric: tabular-nums;
 }
 
 .layer-input-cell {
-    display: grid;
-    grid-template-rows: 32px 18px;
-    justify-items: center;
-    align-items: start;
-    align-content: start;
-    row-gap: 4px;
-    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    min-height: 56px;
 }
 
-.layer-number-input {
-    display: block;
-    margin-top: -6px;
-}
-
-.layer-dup-indicator {
-    min-height: 18px;
+.layer-input-main {
+    min-height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+}
+
+.layer-number-input {
+    display: inline-flex;
+    margin-top: 0;
+}
+
+.layer-dup-indicator {
+    min-height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 /* 重复标记 - 改为内联显示 */
@@ -653,13 +680,12 @@
 
 .mapping-table th:nth-child(2),
 .mapping-table td:nth-child(2) {
-    width: calc(100% - 188px);
     min-width: 0;
 }
 
 .mapping-table th:nth-child(3),
 .mapping-table td:nth-child(3) {
-    width: 100px;
+    text-align: center;
 }
 
 .mapping-action-btn {

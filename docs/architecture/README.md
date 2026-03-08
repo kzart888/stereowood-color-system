@@ -1,6 +1,6 @@
 # Architecture Docs Index
 
-Last updated: 2026-03-08 (P7.1 auth/login UX refresh)
+Last updated: 2026-03-08 (U11.2 + pre-modern closure)
 
 ## Active (Current Source of Truth)
 - `docs/architecture/LATEST_ROADMAP_P0_P6.md` - consolidated future work roadmap and execution checklist.
@@ -24,6 +24,8 @@ Last updated: 2026-03-08 (P7.1 auth/login UX refresh)
 - `docs/architecture/LEGACY_UI_U0_U7_CHECKLIST.md` - legacy UI deep optimization execution checklist and gate evidence.
 - `docs/architecture/U7_REVIEW_GATE.md` - code-review-agent gate result for legacy UI deep optimization.
 - `docs/architecture/U11_REVIEW_GATE.md` - U11/U11.1 scheme dialog + related-asset preview verification gate.
+- `docs/architecture/U11_2_REVIEW_GATE.md` - U11.2 mapping-table regression fix verification gate.
+- `docs/architecture/P8_PREMODERNIZATION_CLOSURE_GATE_2026-03-08.md` - pre-modernization closure audit and branch-cut checklist.
 - `docs/architecture/P8_MODERN_PLATFORM_BLUEPRINT.md` - modern frontend migration blueprint and cutover rules.
 - `docs/architecture/PHASE_A_BLUEPRINT.md` - original Phase A architecture blueprint.
 - `docs/architecture/MODULE_MAP.md` - module boundaries and target ownership map.

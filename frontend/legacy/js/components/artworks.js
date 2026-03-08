@@ -483,18 +483,25 @@ const ArtworksComponent = {
           <el-form-item label="层-自配色">
             <div style="width:100%;">
               <table class="layer-table mapping-table">
+                <colgroup>
+                  <col class="mapping-col-layer" />
+                  <col class="mapping-col-color" />
+                  <col class="mapping-col-action" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style="width:72px;">层号</th>
+                    <th>层号</th>
                     <th>自配色号</th>
-                    <th style="width:78px;">操作</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(m, idx) in schemeForm.mappings" :key="idx">
                     <td>
                       <div class="layer-input-cell">
-                        <el-input-number class="layer-number-input" v-model="m.layer" :min="1" :max="200" controls-position="right" size="small" />
+                        <div class="layer-input-main">
+                          <el-input-number class="layer-number-input" v-model="m.layer" :min="1" :max="200" controls-position="right" size="small" />
+                        </div>
                         <div class="layer-dup-indicator">
                           <template v-if="formDupCounts[m.layer] > 1">
                             <el-tooltip :content="'检测到第' + m.layer + '层被分配了' + formDupCounts[m.layer] + '次颜色'" placement="top">

@@ -187,8 +187,8 @@ async function main() {
       throw new Error(`login failed: ${login.status}`);
     }
     const authHeader = { authorization: `Bearer ${login.data.token}`, 'content-type': 'application/json' };
-    if (!login.data.user || !login.data.user.must_change_password) {
-      throw new Error('expected must_change_password=true on first login');
+    if (!login.data.user || login.data.user.must_change_password !== false) {
+      throw new Error('expected must_change_password=false for self-register account');
     }
 
     const changePassword = await requestJson(`${baseUrl}/api/auth/change-password`, {

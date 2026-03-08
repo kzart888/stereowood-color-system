@@ -1,6 +1,24 @@
 # Changelog
 
 ## Unreleased (2026-03-08, U0-U7 + legacy UI pass)
+### U11.2 Scheme Mapping Table Regression Fix + Closure Audit
+- Fixed scheme dialog mapping-table regression:
+  - removed negative-margin alignment on layer-number input
+  - removed header inline width hardcoding in mapping table
+  - rebalanced fixed/flexible columns for compact layout
+- Extended UI smoke coverage:
+  - added layer-number visibility/no-clipping assertion
+  - added mapping column-width regression assertion
+- Aligned P6 smoke scripts with current auth policy:
+  - self-register login now expects `must_change_password=false`
+  - updated:
+    - `scripts/phaseP6-pilot-write-smoke.js`
+    - `scripts/phaseP6-pilot-rollback-rehearsal.js`
+    - `scripts/phaseP6-pilot-write-docker-smoke.js`
+- Added review/closure artifacts:
+  - `docs/architecture/U11_2_REVIEW_GATE.md`
+  - `docs/architecture/P8_PREMODERNIZATION_CLOSURE_GATE_2026-03-08.md`
+
 ### U11/U11.1 Scheme Dialog and Related Assets Completion
 - Added related-asset download flow in scheme dialog:
   - UI action buttons `下载 + 删除` on existing assets

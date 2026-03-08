@@ -144,7 +144,10 @@ async function ensureAuthenticatedToken() {
   assert(login.status === 200, `login failed: ${login.status}`);
   const token = login.json && login.json.token;
   assert(token, 'login missing token');
-  assert(Boolean(login.json.user && login.json.user.must_change_password), 'expected must_change_password=true on first login');
+  assert(
+    Boolean(login.json.user) && login.json.user.must_change_password === false,
+    'expected must_change_password=false for self-register account',
+  );
 
   const changePassword = await request('/api/auth/change-password', {
     method: 'POST',

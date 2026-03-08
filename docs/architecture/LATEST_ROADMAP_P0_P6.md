@@ -1,6 +1,6 @@
 # Latest Roadmap and Checklist (P0-P6 + Auth/RBAC/UI Refresh)
 
-Last updated: 2026-03-08  
+Last updated: 2026-03-08 (U11.2 + pre-modern closure)
 Scope: legacy production continuity + auth/RBAC/login UX alignment + modernization preparation.
 
 This file remains the architecture execution source of truth.
@@ -43,6 +43,15 @@ This file remains the architecture execution source of truth.
   - in-app preview route and dialog for `txt/md/docx/xlsx/xls`
   - dialog layout and mapping-table alignment/button consistency pass
   - review gate: `docs/architecture/U11_REVIEW_GATE.md`
+- U11.2 mapping-table regression fix is completed:
+  - removed layer-number negative-margin alignment strategy
+  - removed table-header inline width hardcoding in scheme dialog
+  - rebalanced mapping-table fixed/flexible columns for compact density
+  - extended `phaseU11` smoke assertions for layer-number visibility and column-width regression checks
+  - review gate: `docs/architecture/U11_2_REVIEW_GATE.md`
+- Pre-modern closure audit is completed:
+  - closure report: `docs/architecture/P8_PREMODERNIZATION_CLOSURE_GATE_2026-03-08.md`
+  - no open Critical/High blockers found in runtime/doc-contract gate scope
 
 ## Phase Status Overview
 
@@ -58,9 +67,10 @@ This file remains the architecture execution source of truth.
 | P7 | Auth/RBAC hardening refresh | Completed | Login split, role-based admin, forced password change, cookie session completed. |
 | P7.1 | Login/RBAC interaction alignment (V2) | Completed | Login/apply semantics + password policy split + account permission disabled states + new smoke gates completed. |
 | P8 | Modern platform build-out | Pending | Start new modern frontend branch after stable merge/tag. |
+| P8-Prep | Pre-modern closure gate | Completed | Full closure audit and branch-cut checklist published. |
 | U0-U7 | Legacy UI deep optimization | Completed | Related-assets + visual consistency + thumbnail quality pass on legacy runtime. |
 | U8-U10 | UI continuity governance | In progress | Header/button conflict cleanup done; dialog-wide consistency and runtime Chinese copy cleanup continue by module. |
-| U11/U11.1 | Scheme dialog UX + preview completion | Completed | Download+preview flow, source-file time, layout alignment, and UI smoke gate completed. |
+| U11/U11.2 | Scheme dialog UX + preview + table regression fix | Completed | Download+preview flow, source-file time, layout alignment, and table-width/layer-number visibility guardrails completed. |
 
 ## P7 Completion Checklist (This Iteration)
 
@@ -134,6 +144,8 @@ This file remains the architecture execution source of truth.
 - [x] `npm run phaseL:auth-login-ui-smoke`
 - [x] `npm run phaseL:auth-v2:verify`
 - [x] `npm run phaseU11:ui-smoke`
+- [x] `npm run phaseP6:verify` (updated for self-register password policy)
+- [x] `npm run audit:docs-contract`
 - [x] `npm run gate:full`
 
 ## Remaining Work (P8 Modernization)

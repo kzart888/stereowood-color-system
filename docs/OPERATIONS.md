@@ -1,6 +1,6 @@
 # STEREOWOOD Color System - Operations Manual
 
-Last updated: 2026-03-07
+Last updated: 2026-03-08
 
 ## Local Start (Hand Test)
 1. Open terminal in repo root.
@@ -53,7 +53,8 @@ Compatibility note:
   - First login requires password change.
 - New account and reset policy:
   - Default temporary password is `123456`.
-  - First login requires password change to strong password (>=8).
+  - Admin-created and reset accounts require first login password change (>=8).
+  - Self-register accounts use user-defined strong passwords and do not require forced first-login password change.
   - Account creation is `user` first; super admin can later promote user to admin.
 - Session:
   - HttpOnly cookie
@@ -92,6 +93,8 @@ npm run phaseP4:verify
 npm run phaseP5:verify
 npm run phaseP6:verify
 npm run phaseL:auth-rbac:smoke
+npm run phaseU11:ui-smoke
+npm run phaseL:auth-v2:verify
 npm run gate:full
 ```
 

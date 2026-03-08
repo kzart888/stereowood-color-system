@@ -213,7 +213,11 @@ async function runFlagOnCheck(port) {
     const token = login.json && login.json.token;
     assert(token, 'login missing token');
     trace.revokedSessions = login.json.revoked_sessions || 0;
-    assert(Boolean(login.json.user && login.json.user.must_change_password), 'expected must_change_password=true on first login');
+    // Self-register accounts use user-defined strong passwords and should not be forced to change on first login.
+    assert(
+      Boolean(login.json.user) && login.json.user.must_change_password === false,
+      'expected must_change_password=false for self-register account',
+    );
 
     const authHeaders = { authorization: `Bearer ${token}` };
     const changePassword = await request(port, '/api/auth/change-password', {

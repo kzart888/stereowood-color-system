@@ -272,6 +272,48 @@ async function runUiSmoke(data) {
       `layer/color input top alignment drift: ${JSON.stringify(alignmentDelta)}`
     );
 
+    const layerNumberVisibility = await page.evaluate(() => {
+      const input = document.querySelector('.scheme-dialog .mapping-table tbody tr .layer-number-input input');
+      if (!input) return null;
+      const rect = input.getBoundingClientRect();
+      return {
+        value: input.value,
+        clientWidth: Math.round(input.clientWidth),
+        scrollWidth: Math.round(input.scrollWidth),
+        renderedWidth: Math.round(rect.width),
+      };
+    });
+    assert(layerNumberVisibility, 'unable to capture layer-number input');
+    assert(/^\d+$/.test(layerNumberVisibility.value), `layer-number value not visible: ${JSON.stringify(layerNumberVisibility)}`);
+    assert(
+      layerNumberVisibility.clientWidth >= 26 &&
+        layerNumberVisibility.scrollWidth <= layerNumberVisibility.clientWidth + 2,
+      `layer-number input appears clipped: ${JSON.stringify(layerNumberVisibility)}`
+    );
+
+    const mappingWidths = await page.evaluate(() => {
+      const table = document.querySelector('.scheme-dialog .mapping-table');
+      const firstRow = document.querySelector('.scheme-dialog .mapping-table tbody tr');
+      if (!table || !firstRow) return null;
+      const cells = firstRow.querySelectorAll('td');
+      if (cells.length < 3) return null;
+      const tableWidth = Math.round(table.getBoundingClientRect().width);
+      const layerWidth = Math.round(cells[0].getBoundingClientRect().width);
+      const colorWidth = Math.round(cells[1].getBoundingClientRect().width);
+      const actionWidth = Math.round(cells[2].getBoundingClientRect().width);
+      return {
+        tableWidth,
+        layerWidth,
+        colorWidth,
+        actionWidth,
+        colorRatio: Number((colorWidth / Math.max(1, tableWidth)).toFixed(2)),
+      };
+    });
+    assert(mappingWidths, 'unable to capture mapping column widths');
+    assert(mappingWidths.layerWidth >= 96, `layer column width too small: ${JSON.stringify(mappingWidths)}`);
+    assert(mappingWidths.actionWidth >= 100, `action column width too small: ${JSON.stringify(mappingWidths)}`);
+    assert(mappingWidths.colorRatio <= 0.79, `color column still too wide: ${JSON.stringify(mappingWidths)}`);
+
     const buttonSizing = await page.evaluate(() => {
       const plusBtn = document.querySelector('.scheme-dialog .mapping-table tbody tr .operation-buttons .mapping-action-btn:nth-child(1)');
       const minusBtn = document.querySelector('.scheme-dialog .mapping-table tbody tr .operation-buttons .mapping-action-btn:nth-child(2)');
@@ -307,6 +349,8 @@ async function runUiSmoke(data) {
         'U11_TXT_PREVIEW=PASS',
         'U11_XLSX_PREVIEW=PASS',
         'U11_LAYER_ALIGNMENT=PASS',
+        'U11_LAYER_NUMBER_VISIBILITY=PASS',
+        'U11_MAPPING_COLUMN_WIDTH=PASS',
         'U11_ACTION_BUTTON_UNIFORM=PASS',
       ].join('\n') + '\n'
     );
