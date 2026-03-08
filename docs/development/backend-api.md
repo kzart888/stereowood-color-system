@@ -58,6 +58,7 @@ Source: `backend/routes/artworks.js` -> `backend/services/ArtworkService.js` -> 
 - `PUT /api/artworks/:artworkId/schemes/:schemeId`
 - `DELETE /api/artworks/:artworkId/schemes/:schemeId`
 - `GET /api/artworks/:artworkId/schemes/:schemeId/assets`
+- `GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/download`
 - `POST /api/artworks/:artworkId/schemes/:schemeId/assets`
 - `DELETE /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId`
 - `PUT /api/artworks/:artworkId/schemes/:schemeId/assets/reorder`
@@ -72,6 +73,7 @@ Key request details:
 - Scheme asset upload field is `asset`.
 - Scheme asset upload accepts `image/*`, `doc`, `docx`, `xls`, `xlsx`, `txt`, `md`.
 - Scheme related-asset maximum count: `6` per scheme.
+- Asset download endpoint always returns attachment stream with UTF-8 filename support (`Content-Disposition` with `filename*`).
 - `/api/artworks` scheme payload appends:
   - `thumbnail_thumb_path`
   - `initial_thumbnail_thumb_path`

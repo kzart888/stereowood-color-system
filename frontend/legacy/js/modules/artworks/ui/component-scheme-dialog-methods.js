@@ -380,6 +380,64 @@
       }
     },
 
+    async downloadRelatedAsset(asset) {
+      const assetId = Number(asset?.id);
+      const schemeId = Number(this.schemeForm?.id || asset?.scheme_id);
+      const artId = Number(this.editingArtId);
+      if (!Number.isInteger(assetId) || assetId <= 0) {
+        msg.warning('相关资料不存在，无法下载。');
+        return;
+      }
+      if (!Number.isInteger(artId) || artId <= 0 || !Number.isInteger(schemeId) || schemeId <= 0) {
+        msg.warning('缺少方案上下文，无法下载。');
+        return;
+      }
+      if (!window.ArtworksApi || typeof window.ArtworksApi.getSchemeAssetDownloadUrl !== 'function') {
+        msg.error('缺少相关资料下载接口。');
+        return;
+      }
+
+      try {
+        const downloadUrl = window.ArtworksApi.getSchemeAssetDownloadUrl({
+          baseURL: this.baseURL,
+          artId,
+          schemeId,
+          assetId,
+        });
+
+        const response = await fetch(downloadUrl, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          let errorMessage = '下载相关资料失败';
+          try {
+            const payload = await response.json();
+            if (payload?.error) {
+              errorMessage = payload.error;
+            }
+          } catch {
+            // keep default message when response is not JSON
+          }
+          throw new Error(errorMessage);
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download =
+          String(asset.original_name || asset.file_path || `asset-${assetId}`).trim() || `asset-${assetId}`;
+        anchor.style.display = 'none';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      } catch (error) {
+        msg.error(error?.message || '下载相关资料失败');
+      }
+    },
+
     removePendingRelatedAsset(uid) {
       const pending = Array.isArray(this.schemeForm.newRelatedFiles) ? this.schemeForm.newRelatedFiles : [];
       const target = pending.find((item) => item.uid === uid);

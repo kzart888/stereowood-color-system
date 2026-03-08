@@ -85,6 +85,41 @@ function parseVersion(value) {
   return { value: parsed };
 }
 
+function parsePositiveIntegerParam(value, fieldName) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return { error: `${fieldName} must be a positive integer.` };
+  }
+  return { value: parsed };
+}
+
+function toAsciiFileName(fileName) {
+  const normalized = String(fileName || '')
+    .replace(/[\r\n]/g, ' ')
+    .replace(/["\\]/g, '_')
+    .trim();
+  const ascii = normalized
+    .normalize('NFKD')
+    .replace(/[^\x20-\x7E]/g, '_')
+    .replace(/\s+/g, ' ');
+  return ascii || 'download';
+}
+
+function encodeRFC5987Value(fileName) {
+  return encodeURIComponent(String(fileName || 'download'))
+    .replace(/['()]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)
+    .replace(/\*/g, '%2A');
+}
+
+function buildAttachmentDisposition(fileName) {
+  const safeName = String(fileName || 'download')
+    .replace(/[\r\n]/g, ' ')
+    .trim();
+  const asciiName = toAsciiFileName(safeName);
+  const encodedName = encodeRFC5987Value(safeName || 'download');
+  return `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`;
+}
+
 function parseLayersInput(layers) {
   if (!layers) {
     return [];
@@ -269,6 +304,43 @@ router.get('/artworks/:artworkId/schemes/:schemeId/assets', async (req, res) => 
   try {
     const assets = await ArtworkService.listSchemeAssets(req.params.artworkId, req.params.schemeId);
     return res.json(assets);
+  } catch (error) {
+    return mapArtworkError(res, error, 500);
+  }
+});
+
+// GET /api/artworks/:artworkId/schemes/:schemeId/assets/:assetId/download
+router.get('/artworks/:artworkId/schemes/:schemeId/assets/:assetId/download', async (req, res) => {
+  const artworkId = parsePositiveIntegerParam(req.params.artworkId, 'artworkId');
+  if (artworkId.error) {
+    return sendError(res, 400, artworkId.error);
+  }
+  const schemeId = parsePositiveIntegerParam(req.params.schemeId, 'schemeId');
+  if (schemeId.error) {
+    return sendError(res, 400, schemeId.error);
+  }
+  const assetId = parsePositiveIntegerParam(req.params.assetId, 'assetId');
+  if (assetId.error) {
+    return sendError(res, 400, assetId.error);
+  }
+
+  try {
+    const payload = await ArtworkService.getSchemeAssetDownloadPayload(
+      artworkId.value,
+      schemeId.value,
+      assetId.value
+    );
+    if (payload.mimeType) {
+      res.type(payload.mimeType);
+    } else {
+      res.type(payload.filePath || payload.downloadName);
+    }
+    res.setHeader('Content-Disposition', buildAttachmentDisposition(payload.downloadName));
+    return res.sendFile(payload.absolutePath, (error) => {
+      if (error && !res.headersSent) {
+        res.status(error.statusCode || 404).json({ error: 'Asset file not found.' });
+      }
+    });
   } catch (error) {
     return mapArtworkError(res, error, 500);
   }

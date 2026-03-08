@@ -141,6 +141,21 @@
     throw new Error('Artworks gateway reorderSchemeAssets() is unavailable');
   }
 
+  function getSchemeAssetDownloadUrl(options = {}) {
+    const baseURL = getBaseURL(options.baseURL);
+    const artId = options.artId;
+    const schemeId = options.schemeId;
+    const assetId = options.assetId;
+    if (!artId || !schemeId || !assetId) {
+      throw new Error('artId, schemeId and assetId are required');
+    }
+    const gateway = getGateway();
+    if (gateway && gateway.artworks && typeof gateway.artworks.getSchemeAssetDownloadUrl === 'function') {
+      return gateway.artworks.getSchemeAssetDownloadUrl(baseURL, artId, schemeId, assetId);
+    }
+    throw new Error('Artworks gateway getSchemeAssetDownloadUrl() is unavailable');
+  }
+
   window.ArtworksApi = {
     createArtwork,
     saveScheme,
@@ -150,6 +165,7 @@
     addSchemeAsset,
     deleteSchemeAsset,
     reorderSchemeAssets,
+    getSchemeAssetDownloadUrl,
     getErrorPayload,
   };
 })(window);

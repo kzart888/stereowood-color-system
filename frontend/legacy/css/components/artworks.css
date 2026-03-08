@@ -569,6 +569,25 @@
     text-overflow: ellipsis;
 }
 
+.scheme-related-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.scheme-related-actions .el-button + .el-button {
+    margin-left: 0;
+}
+
+.scheme-related-actions .el-button {
+    min-width: 64px;
+    height: 30px;
+    border-radius: 6px;
+    padding: 0 10px;
+}
+
 /* === Dialog Layout Polish === */
 .scheme-dialog .el-form-item {
     margin-bottom: 14px;

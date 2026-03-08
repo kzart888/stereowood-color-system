@@ -443,7 +443,10 @@ const ArtworksComponent = {
                     </span>
                   </button>
                   <span class="scheme-related-name">{{ asset.original_name || asset.file_path }}</span>
-                  <el-button size="small" type="danger" plain @click="removeExistingRelatedAsset(asset)">删除</el-button>
+                  <div class="scheme-related-actions">
+                    <el-button size="small" plain @click="downloadRelatedAsset(asset)">下载</el-button>
+                    <el-button size="small" type="danger" plain @click="removeExistingRelatedAsset(asset)">删除</el-button>
+                  </div>
                 </div>
                 <div
                   class="scheme-related-item"
@@ -458,7 +461,9 @@ const ArtworksComponent = {
                     </span>
                   </button>
                   <span class="scheme-related-name">{{ asset.name }}</span>
-                  <el-button size="small" type="danger" plain @click="removePendingRelatedAsset(asset.uid)">移除</el-button>
+                  <div class="scheme-related-actions">
+                    <el-button size="small" type="danger" plain @click="removePendingRelatedAsset(asset.uid)">移除</el-button>
+                  </div>
                 </div>
                 <div v-if="!schemeForm.relatedAssets.length && !schemeForm.newRelatedFiles.length" class="meta-text">
                   暂无相关资料

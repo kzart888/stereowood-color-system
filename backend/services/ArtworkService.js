@@ -9,8 +9,11 @@ const artworkQueries = require('../db/queries/artworks');
 const { db } = require('../db/index');
 const AuditService = require('../domains/audit/service');
 const UploadImageService = require('./upload-image-service');
+const fs = require('fs').promises;
+const path = require('path');
 
 const MAX_SCHEME_ASSETS = 6;
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 const DOC_MIME_SET = new Set([
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -463,6 +466,40 @@ class ArtworkService {
         }
         const assets = await artworkQueries.getSchemeAssets(schemeId);
         return assets.map((asset) => this.toPublicSchemeAsset(asset));
+    }
+
+    async getSchemeAssetDownloadPayload(artworkId, schemeId, assetId) {
+        const scheme = await artworkQueries.getSchemeById(schemeId);
+        if (!scheme || Number(scheme.artwork_id) !== Number(artworkId)) {
+            throw createArtworkError('Scheme not found.', 404, 'NOT_FOUND');
+        }
+
+        const asset = await artworkQueries.getSchemeAssetById(assetId);
+        if (!asset || Number(asset.scheme_id) !== Number(schemeId)) {
+            throw createArtworkError('Asset not found.', 404, 'NOT_FOUND');
+        }
+
+        const storedName = UploadImageService.normalizeUploadName(asset.file_path);
+        if (!storedName) {
+            throw createArtworkError('Asset file not found.', 404, 'NOT_FOUND');
+        }
+
+        const absolutePath = path.join(UPLOADS_DIR, storedName);
+        try {
+            await fs.access(absolutePath);
+        } catch {
+            throw createArtworkError('Asset file not found.', 404, 'NOT_FOUND');
+        }
+
+        const originalName = String(asset.original_name || '').trim();
+        const downloadName = String(originalName || storedName).slice(0, 255);
+
+        return {
+            absolutePath,
+            filePath: storedName,
+            mimeType: asset.mime_type || null,
+            downloadName,
+        };
     }
 
     async addSchemeAsset(artworkId, schemeId, file, context = {}) {

@@ -90,6 +90,8 @@
         getClient().postMultipart(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets`), formData),
       deleteSchemeAsset: (baseURL, artworkId, schemeId, assetId) =>
         getClient().delete(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets/${assetId}`)),
+      getSchemeAssetDownloadUrl: (baseURL, artworkId, schemeId, assetId) =>
+        withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets/${assetId}/download`),
       reorderSchemeAssets: (baseURL, artworkId, schemeId, orderedIds) =>
         getClient().put(withBase(baseURL, `/api/artworks/${artworkId}/schemes/${schemeId}/assets/reorder`), { orderedIds }),
     },
