@@ -94,6 +94,16 @@
 
     .action-wrap {
       display: inline-flex;
+      align-items: center;
+    }
+
+    .action-group {
+      align-items: center;
+    }
+
+    .action-wrap .el-button,
+    .toolbar .el-button {
+      margin-left: 0 !important;
     }
   </style>
 </head>
@@ -117,8 +127,8 @@
           placeholder="输入新账号用户名（3-40位）"
           style="width:260px;"
           @keyup.enter="createUser"
-        />
-        <el-button type="primary" @click="createUser" :disabled="!canCreateUser">创建账号</el-button>
+        ></el-input>
+        <el-button type="primary" @click="createUser">创建账号</el-button>
         <span class="muted">新账号默认密码为 123456，首次登录必须修改密码。</span>
       </div>
     </div>
@@ -138,12 +148,12 @@
     <div class="card">
       <div class="toolbar-row">
         <div class="toolbar">
-          <el-input v-model.trim="search" placeholder="搜索用户名" style="width:240px;" />
+          <el-input v-model.trim="search" placeholder="搜索用户名" style="width:240px;" ></el-input>
           <el-select v-model="status" style="width:140px;">
-            <el-option label="全部状态" value="all" />
-            <el-option label="approved" value="approved" />
-            <el-option label="pending" value="pending" />
-            <el-option label="disabled" value="disabled" />
+            <el-option label="全部状态" value="all" ></el-option>
+            <el-option label="approved" value="approved" ></el-option>
+            <el-option label="pending" value="pending" ></el-option>
+            <el-option label="disabled" value="disabled" ></el-option>
           </el-select>
           <el-button @click="loadAccounts">查询</el-button>
           <el-button type="warning" @click="batchReset">重置已选密码</el-button>
@@ -152,9 +162,9 @@
       </div>
 
       <el-table :data="accounts" @selection-change="onSelectionChange" border size="small" style="width:100%;">
-        <el-table-column type="selection" width="44" :selectable="isRowSelectable" />
-        <el-table-column label="ID" prop="id" width="68" />
-        <el-table-column label="用户名" prop="username" min-width="140" />
+        <el-table-column type="selection" width="44" :selectable="isRowSelectable" ></el-table-column>
+        <el-table-column label="ID" prop="id" width="68" ></el-table-column>
+        <el-table-column label="用户名" prop="username" min-width="140" ></el-table-column>
         <el-table-column label="身份" min-width="120">
           <template #default="scope">
             <el-tag size="small" :type="roleTagType(scope.row.role)">{{ roleLabel(scope.row.role) }}</el-tag>

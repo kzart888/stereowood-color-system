@@ -44,10 +44,6 @@
       };
     },
     computed: {
-      canCreateUser() {
-        const username = String(this.newUser.username || '').trim();
-        return username.length >= 3;
-      },
       selectedRowsForBatchReset() {
         return this.selectedRows.filter((row) => this.allow(row, 'can_reset'));
       },
