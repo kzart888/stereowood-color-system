@@ -634,8 +634,17 @@ const ArtworksComponent = {
             </table>
             <div class="meta-text" v-if="assetPreviewData.preview.truncated">表格较大，仅展示部分内容。</div>
           </div>
-          <div v-else-if="assetPreviewData.preview && assetPreviewData.preview.kind === 'image'" class="meta-text">
-            图片文件请直接点击缩略图查看大图。
+          <div v-else-if="assetPreviewData.preview && assetPreviewData.preview.kind === 'image'" class="asset-preview-image-wrap">
+            <img
+              v-if="(assetPreviewData.preview.imageUrl || assetPreviewData.preview.image_url || assetPreviewData.fileUrl)"
+              class="asset-preview-image"
+              :src="assetPreviewData.preview.imageUrl || assetPreviewData.preview.image_url || assetPreviewData.fileUrl"
+              alt="相关资料图片预览"
+            />
+            <div v-else class="meta-text">
+              图片地址不可用，请使用“打开原文件”查看。
+            </div>
+            <div class="meta-text" v-if="assetPreviewData.preview.warning">{{ assetPreviewData.preview.warning }}</div>
           </div>
           <div v-else class="meta-text">
             {{ (assetPreviewData.preview && assetPreviewData.preview.warning) || '当前文件类型暂不支持内置预览，可下载后查看。' }}

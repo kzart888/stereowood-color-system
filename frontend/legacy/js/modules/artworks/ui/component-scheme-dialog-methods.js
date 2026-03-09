@@ -516,10 +516,17 @@
       if (!asset) {
         return;
       }
-      if (asset.isImage && asset.previewUrl) {
-        this.$thumbPreview && this.$thumbPreview.show(event, asset.previewUrl);
-        return;
-      }
+      const preview = asset.isImage && asset.previewUrl
+        ? {
+            kind: 'image',
+            imageUrl: asset.previewUrl,
+            warning: '该图片尚未上传，保存方案后可使用“打开原文件”。',
+          }
+        : {
+            kind: 'text',
+            text: '该文件尚未上传。\n请先保存方案，再点击查看完整预览。',
+            truncated: false,
+          };
       this.showAssetPreviewDialog = true;
       this.assetPreviewLoading = false;
       this.assetPreviewTitle = '相关资料预览';
@@ -531,11 +538,7 @@
           source_modified_at: asset.sourceModifiedAt || null,
           file_type_label: this.assetTypeLabel(asset),
         },
-        preview: {
-          kind: 'text',
-          text: '该文件尚未上传。\n请先保存方案，再点击查看完整预览。',
-          truncated: false,
-        },
+        preview,
         fileUrl: null,
       };
     },
@@ -545,10 +548,6 @@
         return;
       }
       const fileUrl = asset.file_path ? this.$helpers.buildUploadURL(this.baseURL, asset.file_path) : null;
-      if (asset.is_image && fileUrl) {
-        this.$thumbPreview && this.$thumbPreview.show(event, fileUrl);
-        return;
-      }
       await this.openRelatedAssetPreview(asset, fileUrl, artIdFromList, schemeIdFromList);
     },
 
@@ -585,10 +584,17 @@
           assetId,
         });
         const payload = getResponseData(response) || {};
+        const payloadPreview = payload.preview || { kind: 'unsupported', warning: '无法加载预览内容。' };
+        const normalizedPreview =
+          payloadPreview.kind === 'image'
+            ? Object.assign({}, payloadPreview, {
+                imageUrl: payloadPreview.imageUrl || payloadPreview.image_url || fileUrl || null,
+              })
+            : payloadPreview;
         this.assetPreviewData = {
           asset: Object.assign({}, this.normalizeIncomingAsset(asset), payload.asset || {}),
-          preview: payload.preview || { kind: 'unsupported', warning: '无法加载预览内容。' },
-          fileUrl: fileUrl || null,
+          preview: normalizedPreview,
+          fileUrl: fileUrl || normalizedPreview.imageUrl || null,
         };
       } catch (error) {
         this.assetPreviewData.preview = {

@@ -177,6 +177,21 @@ async function bootstrapData() {
   );
   assert(xlsxAsset.status === 200, `xlsx asset upload failed: ${xlsxAsset.status}`);
 
+  const imageBuffer = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WnR6uQAAAAASUVORK5CYII=',
+    'base64'
+  );
+  const imageForm = new FormData();
+  imageForm.append('asset', new Blob([imageBuffer], { type: 'image/png' }), 'u11-preview-image.png');
+  imageForm.append('asset_last_modified', String(Date.now() - 1_800_000));
+  const imageAsset = await requestForm(
+    'POST',
+    `/api/artworks/${artworkId}/schemes/${schemeId}/assets`,
+    imageForm,
+    { authorization: `Bearer ${token}` }
+  );
+  assert(imageAsset.status === 200, `image asset upload failed: ${imageAsset.status}`);
+
   return {
     password: updatedPassword,
     artworkId,
@@ -250,6 +265,27 @@ async function runUiSmoke(data) {
     await page.waitForSelector('.asset-preview-dialog .asset-preview-table');
     const firstTableCell = (await page.locator('.asset-preview-dialog .asset-preview-table td').first().textContent()) || '';
     assert(firstTableCell.includes('列1'), 'xlsx preview table mismatch');
+    await page.locator('.asset-preview-dialog .el-dialog__footer .el-button').first().click();
+
+    const imageRow = page
+      .locator('.scheme-dialog .scheme-related-item')
+      .filter({ hasText: 'u11-preview-image.png' })
+      .first();
+    await imageRow.locator('.related-asset-card').click();
+    await page.waitForSelector('.asset-preview-dialog .asset-preview-image');
+    await page.waitForFunction(() => {
+      const image = document.querySelector('.asset-preview-dialog .asset-preview-image');
+      return image && image.complete && image.naturalWidth > 0;
+    });
+    const imageState = await page.evaluate(() => {
+      const image = document.querySelector('.asset-preview-dialog .asset-preview-image');
+      if (!image) return null;
+      return {
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+      };
+    });
+    assert(imageState && imageState.naturalWidth > 0, `image preview did not render: ${JSON.stringify(imageState)}`);
     await page.locator('.asset-preview-dialog .el-dialog__footer .el-button').first().click();
 
     const duplicateBadgeCount = await page.locator('.scheme-dialog .layer-dup-indicator .dup-badge').count();
@@ -348,6 +384,7 @@ async function runUiSmoke(data) {
         'U11_ASSET_METADATA_AND_DOWNLOAD=PASS',
         'U11_TXT_PREVIEW=PASS',
         'U11_XLSX_PREVIEW=PASS',
+        'U11_IMAGE_PREVIEW=PASS',
         'U11_LAYER_ALIGNMENT=PASS',
         'U11_LAYER_NUMBER_VISIBILITY=PASS',
         'U11_MAPPING_COLUMN_WIDTH=PASS',
