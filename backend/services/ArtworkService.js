@@ -25,6 +25,8 @@ const MAX_TEXT_PREVIEW_CHARS = 30000;
 const MAX_TABLE_PREVIEW_ROWS = 120;
 const MAX_TABLE_PREVIEW_COLS = 16;
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+const REPLACEMENT_CHAR_RE = /\uFFFD/g;
+const CJK_CHAR_RE = /[\u3400-\u9FFF]/g;
 const DOC_MIME_SET = new Set([
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -34,6 +36,171 @@ const DOC_MIME_SET = new Set([
     'text/markdown',
     'text/x-markdown',
 ]);
+
+function stripLeadingBom(text) {
+    return String(text || '').replace(/^\uFEFF/, '');
+}
+
+function printableRatio(text) {
+    const value = String(text || '');
+    if (!value) {
+        return 1;
+    }
+
+    let printable = 0;
+    for (const char of value) {
+        const code = char.codePointAt(0);
+        if (code === 0x09 || code === 0x0A || code === 0x0D) {
+            printable += 1;
+            continue;
+        }
+        if (code >= 0x20 && code !== 0x7F) {
+            printable += 1;
+        }
+    }
+    return printable / value.length;
+}
+
+function decodeUtf16Be(buffer) {
+    let input = buffer;
+    if (input.length >= 2 && input[0] === 0xFE && input[1] === 0xFF) {
+        input = input.subarray(2);
+    }
+    const normalizedLength = input.length - (input.length % 2);
+    const swapped = Buffer.allocUnsafe(normalizedLength);
+    for (let index = 0; index < normalizedLength; index += 2) {
+        swapped[index] = input[index + 1];
+        swapped[index + 1] = input[index];
+    }
+    return stripLeadingBom(swapped.toString('utf16le'));
+}
+
+function decodeTextBuffer(buffer, encoding) {
+    if (encoding === 'utf8') {
+        const input =
+            buffer.length >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF
+                ? buffer.subarray(3)
+                : buffer;
+        return stripLeadingBom(input.toString('utf8'));
+    }
+
+    if (encoding === 'utf16le') {
+        const input =
+            buffer.length >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE
+                ? buffer.subarray(2)
+                : buffer;
+        return stripLeadingBom(input.toString('utf16le'));
+    }
+
+    if (encoding === 'utf16be') {
+        return decodeUtf16Be(buffer);
+    }
+
+    if (encoding === 'gb18030') {
+        const decoder = new TextDecoder('gb18030');
+        return stripLeadingBom(decoder.decode(buffer));
+    }
+
+    throw new Error(`Unsupported text encoding: ${encoding}`);
+}
+
+function scoreDecodedText(text, options = {}) {
+    const value = String(text || '');
+    const replacementCount = (value.match(REPLACEMENT_CHAR_RE) || []).length;
+    const cjkCount = (value.match(CJK_CHAR_RE) || []).length;
+    const ratio = printableRatio(value);
+
+    let score = 0;
+    score -= replacementCount * 1000;
+    score += ratio * 200;
+    if (options.preferCjk && cjkCount > 0) {
+        score += Math.min(cjkCount, 500);
+    }
+    if (options.bomPreferred) {
+        score += 600;
+    }
+
+    return {
+        score,
+        replacementCount,
+        cjkCount,
+        printableRatio: ratio,
+    };
+}
+
+function shouldPreferCjkDecoding(buffer) {
+    if (!buffer || buffer.length === 0) {
+        return false;
+    }
+    const sample = buffer.subarray(0, Math.min(buffer.length, 2048));
+    let highByteCount = 0;
+    for (const byte of sample) {
+        if (byte >= 0x80) {
+            highByteCount += 1;
+        }
+    }
+    return highByteCount / sample.length >= 0.2;
+}
+
+function detectBomEncoding(buffer) {
+    if (!buffer || buffer.length < 2) {
+        return null;
+    }
+    if (buffer.length >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+        return 'utf8';
+    }
+    if (buffer[0] === 0xFF && buffer[1] === 0xFE) {
+        return 'utf16le';
+    }
+    if (buffer[0] === 0xFE && buffer[1] === 0xFF) {
+        return 'utf16be';
+    }
+    return null;
+}
+
+function decodeTextPreviewBuffer(buffer) {
+    const bomEncoding = detectBomEncoding(buffer);
+    const preferCjk = shouldPreferCjkDecoding(buffer);
+    const candidates = [];
+    const addCandidate = (encoding, bomPreferred = false) => {
+        if (!encoding || candidates.some((item) => item.encoding === encoding)) {
+            return;
+        }
+        candidates.push({ encoding, bomPreferred });
+    };
+
+    if (bomEncoding) {
+        addCandidate(bomEncoding, true);
+    }
+    addCandidate('utf8');
+    addCandidate('gb18030');
+    addCandidate('utf16le');
+    addCandidate('utf16be');
+
+    let best = null;
+    for (const candidate of candidates) {
+        try {
+            const decoded = decodeTextBuffer(buffer, candidate.encoding);
+            const metrics = scoreDecodedText(decoded, {
+                preferCjk,
+                bomPreferred: candidate.bomPreferred,
+            });
+            if (!best || metrics.score > best.metrics.score) {
+                best = {
+                    text: decoded,
+                    metrics,
+                };
+            }
+        } catch {
+            // ignore unsupported/invalid decoder path and continue with next candidate
+        }
+    }
+
+    if (best && typeof best.text === 'string') {
+        return best.text;
+    }
+    return buffer.toString('utf8');
+}
 
 function createArtworkError(message, statusCode, code, extra = {}) {
     const error = new Error(message);
@@ -550,7 +717,8 @@ class ArtworkService {
             }
 
             if (extension === 'txt' || extension === 'md') {
-                const text = await fs.readFile(absolutePath, 'utf8');
+                const rawBuffer = await fs.readFile(absolutePath);
+                const text = decodeTextPreviewBuffer(rawBuffer);
                 const trimmedText = String(text || '').slice(0, MAX_TEXT_PREVIEW_CHARS);
                 basePayload.preview = {
                     kind: 'text',

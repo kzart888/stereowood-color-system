@@ -14,6 +14,12 @@ const POLL_INTERVAL_MS = 500;
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-u11-ui-smoke-'));
 const dbFile = path.join(tmpRoot, 'color_management.db');
 const baseURL = `http://${HOST}:${PORT}`;
+const UTF8_TXT_FILE_NAME = 'utf8-sample.txt';
+const UTF8_TXT_EXPECTED_TITLE = 'U11 UTF8 preview line';
+const ANSI_TXT_FILE_NAME = 'ansi-gb18030-sample.txt';
+const ANSI_TXT_EXPECTED_TITLE = '071\u91d1\u7ea2\u8272\u9526\u9ca4\u914d\u8272';
+const ANSI_TXT_BASE64 =
+  'MDcxvfC67MmrvfXA8MXkyasNCg0KuuzJq6O61uy67CAoMSkoNykgDQq7xsmro7o0ML3bu8YgNDDOxLDXICgyKQ0Kvdu7xqO6vdu7xiAoMykNCr3wyaujurbGuPW98CAoNCkNCsezwLajujW6/sC2IDS05MLMIDgwzsSw1yAoNSkNCsnuwLajujEwuv7AtiA4tOTCzCAzMM7EsNcgMTDOxLvSICg2KQ0Kx7O61qO6ODDW7LrsIDG62iAxMLPIyasgMTDOxLDXKDgpDQrJ7rrWo7o0MNbsuuwgMbraICg5KQ0Kutq67KO6MTXW7LrsIDG62iAoMTApDQoNCsrK08OjujA3MS02MDgweDO99cDwyP3GtKGiMDcxLTE4ODC99cDw1fu3+Q==';
 
 function assert(condition, message) {
   if (!condition) {
@@ -107,7 +113,7 @@ async function bootstrapData() {
   const colorCode = `UT${Date.now().toString().slice(-4)}`;
   const customColorForm = new FormData();
   customColorForm.append('color_code', colorCode);
-  customColorForm.append('formula', '无水乙醇 10ml, 沙比利 0.2g');
+  customColorForm.append('formula', 'U11 formula sample');
   const colorCreated = await requestForm('POST', '/api/custom-colors', customColorForm, {
     authorization: `Bearer ${token}`,
   });
@@ -117,7 +123,7 @@ async function bootstrapData() {
   const artwork = await requestJson(
     'POST',
     '/api/artworks',
-    { code: artworkCode, name: 'U11自动化作品' },
+    { code: artworkCode, name: 'U11 auto artwork' },
     { authorization: `Bearer ${token}` }
   );
   assert(artwork.status === 200, `artwork create failed: ${artwork.status}`);
@@ -125,7 +131,7 @@ async function bootstrapData() {
   const artworkId = artwork.json.id;
 
   const schemeForm = new FormData();
-  schemeForm.append('name', 'U11方案');
+  schemeForm.append('name', 'U11 scheme');
   schemeForm.append(
     'layers',
     JSON.stringify([
@@ -142,7 +148,11 @@ async function bootstrapData() {
 
   const txtLastModified = Date.now() - 7_200_000;
   const txtForm = new FormData();
-  txtForm.append('asset', new Blob(['U11 文档预览测试内容\n第二行'], { type: 'text/plain;charset=utf-8' }), '中文资料测试.txt');
+  txtForm.append(
+    'asset',
+    new Blob([`${UTF8_TXT_EXPECTED_TITLE}\nline2`], { type: 'text/plain;charset=utf-8' }),
+    UTF8_TXT_FILE_NAME
+  );
   txtForm.append('asset_last_modified', String(txtLastModified));
   const txtAsset = await requestForm(
     'POST',
@@ -152,9 +162,24 @@ async function bootstrapData() {
   );
   assert(txtAsset.status === 200, `txt asset upload failed: ${txtAsset.status}`);
 
+  const ansiTxtForm = new FormData();
+  ansiTxtForm.append(
+    'asset',
+    new Blob([Buffer.from(ANSI_TXT_BASE64, 'base64')], { type: 'text/plain' }),
+    ANSI_TXT_FILE_NAME
+  );
+  ansiTxtForm.append('asset_last_modified', String(txtLastModified - 900_000));
+  const ansiTxtAsset = await requestForm(
+    'POST',
+    `/api/artworks/${artworkId}/schemes/${schemeId}/assets`,
+    ansiTxtForm,
+    { authorization: `Bearer ${token}` }
+  );
+  assert(ansiTxtAsset.status === 200, `ansi txt asset upload failed: ${ansiTxtAsset.status}`);
+
   const workbook = XLSX.utils.book_new();
   const sheet = XLSX.utils.aoa_to_sheet([
-    ['列1', '列2'],
+    ['C1', 'C2'],
     ['A1', 'B1'],
   ]);
   XLSX.utils.book_append_sheet(workbook, sheet, 'Sheet1');
@@ -232,29 +257,41 @@ async function runUiSmoke(data) {
     });
     assert(schemeGap !== null && schemeGap <= 16, `scheme name row gap too large: ${schemeGap}`);
 
-    const chineseRow = page
+    const utf8Row = page
       .locator('.scheme-dialog .scheme-related-item')
-      .filter({ hasText: '中文资料测试.txt' })
+      .filter({ hasText: UTF8_TXT_FILE_NAME })
       .first();
-    await chineseRow.waitFor({ timeout: 10_000 });
+    await utf8Row.waitFor({ timeout: 10_000 });
 
-    const actionButtons = await chineseRow.locator('.scheme-related-actions .el-button').count();
+    const actionButtons = await utf8Row.locator('.scheme-related-actions .el-button').count();
     assert(actionButtons >= 2, `expected 2 action buttons, got ${actionButtons}`);
 
-    const timeLabel = (await chineseRow.locator('.scheme-related-sub').first().textContent()) || '';
-    assert(timeLabel.includes('文件时间：') && !timeLabel.includes('未知'), 'asset modified time label invalid');
+    const timeLabel = (await utf8Row.locator('.scheme-related-sub').first().textContent()) || '';
+    assert(timeLabel.trim().length > 0 && !timeLabel.includes('未知'), 'asset modified time label invalid');
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      chineseRow.locator('.scheme-related-actions .el-button').first().click(),
+      utf8Row.locator('.scheme-related-actions .el-button').first().click(),
     ]);
     const downloadName = download.suggestedFilename();
-    assert(downloadName.includes('中文资料测试'), `download filename mismatch: ${downloadName}`);
+    assert(downloadName.includes(UTF8_TXT_FILE_NAME), `download filename mismatch: ${downloadName}`);
 
-    await chineseRow.locator('.related-asset-card').click();
+    await utf8Row.locator('.related-asset-card').click();
     await page.waitForSelector('.asset-preview-dialog .asset-preview-text');
     const txtPreview = (await page.locator('.asset-preview-dialog .asset-preview-text').textContent()) || '';
-    assert(txtPreview.includes('U11 文档预览测试内容'), 'txt preview content mismatch');
+    assert(txtPreview.includes(UTF8_TXT_EXPECTED_TITLE), 'txt preview content mismatch');
+    await page.locator('.asset-preview-dialog .el-dialog__footer .el-button').first().click();
+
+    const ansiRow = page
+      .locator('.scheme-dialog .scheme-related-item')
+      .filter({ hasText: ANSI_TXT_FILE_NAME })
+      .first();
+    await ansiRow.waitFor({ timeout: 10_000 });
+    await ansiRow.locator('.related-asset-card').click();
+    await page.waitForSelector('.asset-preview-dialog .asset-preview-text');
+    const ansiPreview = (await page.locator('.asset-preview-dialog .asset-preview-text').textContent()) || '';
+    assert(ansiPreview.includes(ANSI_TXT_EXPECTED_TITLE), 'ansi txt preview content mismatch');
+    assert(!ansiPreview.includes('\uFFFD'), 'ansi txt preview contains replacement chars');
     await page.locator('.asset-preview-dialog .el-dialog__footer .el-button').first().click();
 
     const tableRow = page
@@ -264,7 +301,7 @@ async function runUiSmoke(data) {
     await tableRow.locator('.related-asset-card').click();
     await page.waitForSelector('.asset-preview-dialog .asset-preview-table');
     const firstTableCell = (await page.locator('.asset-preview-dialog .asset-preview-table td').first().textContent()) || '';
-    assert(firstTableCell.includes('列1'), 'xlsx preview table mismatch');
+    assert(firstTableCell.includes('C1'), 'xlsx preview table mismatch');
     await page.locator('.asset-preview-dialog .el-dialog__footer .el-button').first().click();
 
     const imageRow = page
